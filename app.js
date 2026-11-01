@@ -84,11 +84,26 @@ function pointerDrag(e, onMove, onEnd){
   window.addEventListener('touchend', done);
 }
 
+/* ═══ Безопасный разбор localStorage: при битых данных предлагаем скачать копию ═══ */
+function safeParseRaw(raw, label){
+  if(raw==null || raw==='') return null;
+  try{ return JSON.parse(raw); }
+  catch(e){
+    try{
+      const blob=new Blob([raw],{type:'application/octet-stream'});
+      const a=document.createElement('a');
+      a.href=URL.createObjectURL(blob); a.download=label+'.повреждено.json';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
+    }catch(e2){}
+    toast('Данные «'+label+'» повреждены — повреждённая копия скачана файлом');
+    return null;
+  }
+}
 function load(){
-  try{
-    const raw = localStorage.getItem(STORE_KEY);
-    if(raw){ blocks = JSON.parse(raw); return true; }
-  }catch(e){}
+  const raw = localStorage.getItem(STORE_KEY);
+  const data = safeParseRaw(raw, 'shirma_blocks');
+  if(Array.isArray(data) && data.length){ blocks = data; return true; }
   return false;
 }
 function makeBlock(type,title,extra){
@@ -509,7 +524,9 @@ function matches(b){
   if(!searchFilter) return true;
   const q = searchFilter.toLowerCase();
   const props = Object.values(b.props||{}).join(' ').toLowerCase();
-  return (b.title||'').toLowerCase().includes(q) || (b.text||'').toLowerCase().includes(q) || props.includes(q);
+  const resNames = Array.isArray(b.res) ? b.res.map(r=>(r&&r.name)||'').join(' ') : '';
+  return (b.title||'').toLowerCase().includes(q) || (b.text||'').toLowerCase().includes(q)
+    || props.includes(q) || resNames.toLowerCase().includes(q);
 }
 
 /* ═══ Делегирование событий канваса ═══
@@ -541,6 +558,8 @@ function initCanvasEvents(){
       if(resEl) resEl.textContent = `d20 ${roll} + ${bonus} = ${total}${crit}`;
       const rr=document.getElementById('rollResult');
       if(rr) rr.textContent = `Атака: ${total}`;
+      if(roll===20) playSound('crit');
+      else if(roll===1) playSound('fail');
       return;
     }
     const statMod = t.closest('.stat .mod');
@@ -750,6 +769,104 @@ document.getElementById('btnLayout').addEventListener('click', ()=>{
   render();
 });
 
+/* ═══ Темы (светлая/тёмная) ═══ */
+const THEME_KEY = 'shirma_theme_v1';
+function applyTheme(t){
+  if(t==='light'){ document.documentElement.setAttribute('data-theme','light'); }
+  else { document.documentElement.removeAttribute('data-theme'); }
+  const b=document.getElementById('btnTheme');
+  if(b){ b.textContent = t==='light' ? '🌙 Тёмная' : '☀️ Светлая'; }
+}
+function currentTheme(){
+  try{ return localStorage.getItem(THEME_KEY)==='light' ? 'light' : 'dark'; }catch(e){ return 'dark'; }
+}
+(function(){
+  applyTheme(currentTheme());
+  const b=document.getElementById('btnTheme');
+  if(b) b.addEventListener('click', ()=>{
+    const nt = currentTheme()==='light' ? 'dark' : 'light';
+    try{ localStorage.setItem(THEME_KEY, nt); }catch(e){}
+    applyTheme(nt);
+  });
+})();
+
+/* ═══ Звуки (Web Audio, синтез — файлов нет) ═══ */
+const SOUND_KEY = 'shirma_sound_v1';
+let soundOn = true;
+try{ soundOn = localStorage.getItem(SOUND_KEY)!=='0'; }catch(e){}
+let audioCtx = null;
+function audioReady(){
+  try{
+    if(!soundOn) return null;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if(!AC) return null;
+    if(!audioCtx) audioCtx = new AC();
+    if(audioCtx.state==='suspended') audioCtx.resume();
+    return audioCtx;
+  }catch(e){ return null; }
+}
+function beep(freq, dur, type, vol, delay){
+  try{
+    const ctx=audioReady(); if(!ctx) return;
+    const t0 = ctx.currentTime + (delay||0);
+    const o=ctx.createOscillator(), g=ctx.createGain();
+    o.type = type||'sine'; o.frequency.value = freq;
+    g.gain.setValueAtTime(vol||0.07, t0);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0+dur);
+    o.connect(g); g.connect(ctx.destination);
+    o.start(t0); o.stop(t0+dur+0.05);
+  }catch(e){}
+}
+function playSound(name){
+  if(!soundOn) return;
+  if(name==='turn'){ beep(500,.08,'triangle'); beep(760,.11,'triangle',.05,.08); }
+  else if(name==='crit'){ beep(660,.09,'square',.05); beep(880,.09,'square',.05,.09); beep(1320,.16,'square',.04,.18); }
+  else if(name==='tick'){ beep(880,.04,'sine',.03); }
+  else if(name==='round'){ beep(560,.09,'sine'); beep(560,.09,'sine',.06,.15); }
+  else if(name==='ding'){ beep(980,.14,'sine'); beep(1470,.22,'sine',.05,.12); }
+}
+const soundBtn = document.getElementById('btnSound');
+function soundBtnState(){ if(soundBtn){ soundBtn.textContent = soundOn?'🔔':'🔕'; soundBtn.title = soundOn?'Звуки включены (клик — выключить)':'Звуки выключены (клик — включить)'; } }
+if(soundBtn) soundBtn.addEventListener('click', ()=>{
+  soundOn=!soundOn;
+  try{ localStorage.setItem(SOUND_KEY, soundOn?'1':'0'); }catch(e){}
+  soundBtnState();
+  toast(soundOn?'Звуки включены':'Звуки выключены');
+});
+soundBtnState();
+
+/* ═══ Таймер боя: 1 раунд = 6 секунд ═══ */
+let timerRunning=false, timerSeconds=0, timerInterval=null;
+const timerBtn = document.getElementById('btnTimer');
+const timerLbl = document.createElement('span');
+timerLbl.className='hint'; timerLbl.id='timerLabel';
+if(timerBtn && timerBtn.parentElement) timerBtn.parentElement.insertBefore(timerLbl, timerBtn.nextSibling);
+function paintTimer(){
+  const rounds=Math.floor(timerSeconds/6), s=timerSeconds%6;
+  timerLbl.textContent = timerRunning
+    ? `раунд ${rounds+1} · ${s}с`
+    : (timerSeconds ? `таймер: ${timerSeconds}с (${rounds+1} раунд)` : '');
+}
+function timerToggle(){
+  if(timerRunning){
+    clearInterval(timerInterval); timerRunning=false;
+    playSound('ding'); toast('Таймер остановлен');
+  } else {
+    audioReady();
+    timerRunning=true;
+    timerInterval=setInterval(()=>{
+      timerSeconds++;
+      const roundTick = timerSeconds%6===0;
+      paintTimer();
+      if(roundTick) playSound('round'); else playSound('tick');
+    },1000);
+    toast('Секундомер боя: 1 раунд = 6 секунд');
+  }
+  if(timerBtn) timerBtn.textContent = timerRunning?'⏹':'⏱ 6с';
+  paintTimer();
+}
+if(timerBtn) timerBtn.addEventListener('click', timerToggle);
+
 /* ═══ Sidebar toggle ═══ */
 const sideToggle = document.getElementById('sideToggle');
 const side = document.getElementById('side');
@@ -835,6 +952,16 @@ const libSearch = document.getElementById('libSearch');
 const libKind = document.getElementById('libKind');
 const libResults = document.getElementById('libResults');
 
+/* ═══ Модалки: единое закрытие с возвратом фокуса на кнопку-открыватель ═══ */
+let modalOpener = null;
+function openModal(m, opener){ modalOpener = opener || null; m.hidden = false; }
+function closeModal(m){
+  if(!m || m.hidden) return;
+  m.hidden = true;
+  if(modalOpener && document.contains(modalOpener)){ try{ modalOpener.focus(); }catch(e){} }
+  modalOpener = null;
+}
+
 /* ═══ Bestiary (ленивая загрузка тяжёлого bestiary-data.js) ═══ */
 let bestiaryLoadingPromise = null;
 function ensureBestiary(){
@@ -863,8 +990,8 @@ function renderBestiary(){
   let list;
   if(!q){ list = bestAll.slice(0, bestShowCount); }
   else{
+    // при поиске НЕ трогаем bestShowCount — раньше он раздувался навсегда
     list = bestAll.filter(m => normalizeLib(m.n+' '+m.en+' '+m.type).includes(q));
-    bestShowCount = Math.max(bestShowCount, list.length);
   }
   if(!list.length){ bestResults.innerHTML='<div class="lib-empty">Ничего не найдено.</div>'; return; }
   bestResultClose.style.display='none';
@@ -1008,32 +1135,35 @@ document.getElementById('btnBestiary').addEventListener('click', ()=>{
     bestState = { list:true, monster:null };
     bestSearch.value='';
     bestShowCount = 60;
-    bestModal.hidden=false;
+    openModal(bestModal, document.getElementById('btnBestiary'));
     renderBestiary();
   }).catch(err=>{
-    bestModal.hidden=false;
+    openModal(bestModal, document.getElementById('btnBestiary'));
     bestResults.innerHTML = `<div class="lib-empty">Ошибка загрузки бестиария: ${escapeHtml(String(err.message||err))}. Проверьте, что файл bestiary-data.js лежит рядом с index.html.</div>`;
   });
 });
-document.getElementById('bestClose').addEventListener('click', ()=> bestModal.hidden=true);
-bestModal.addEventListener('click', e=>{ if(e.target===bestModal) bestModal.hidden=true; });
+document.getElementById('bestClose').addEventListener('click', ()=> closeModal(bestModal));
+bestModal.addEventListener('click', e=>{ if(e.target===bestModal) closeModal(bestModal); });
 const bestSearchDebounced = debounce(renderBestiary, 180);
-bestSearch.addEventListener('input', ()=>{ bestState.list=true; bestState.monster=null; bestSearchDebounced(); });
+bestSearch.addEventListener('input', ()=>{
+  bestState.list=true; bestState.monster=null;
+  if(!bestSearch.value.trim()) bestShowCount = 60;   // сброс раздутого счётчика при очистке поиска
+  bestSearchDebounced();
+});
 
 document.getElementById('btnLibrary').addEventListener('click', ()=>{
+  openModal(libModal, document.getElementById('btnLibrary'));
   ensureLibrary().then(()=>{
-    libModal.hidden = false;
     libSearch.value='';
     libKind.value='all';
     libSearch.focus();
     renderLib();
   }).catch(err=>{
-    libModal.hidden = false;
     libResults.innerHTML = `<div class="lib-empty">Ошибка загрузки библиотеки: ${escapeHtml(String(err.message||err))}. Проверьте, что файл library-data.js лежит рядом с index.html.</div>`;
   });
 });
-document.getElementById('libClose').addEventListener('click', ()=> libModal.hidden = true);
-libModal.addEventListener('click', e=>{ if(e.target===libModal) libModal.hidden=true; });
+document.getElementById('libClose').addEventListener('click', ()=> closeModal(libModal));
+libModal.addEventListener('click', e=>{ if(e.target===libModal) closeModal(libModal); });
 const libSearchDebounced = debounce(renderLib, 180);
 libSearch.addEventListener('input', ()=> libSearchDebounced());
 libKind.addEventListener('change', ()=> renderLib());
@@ -1231,10 +1361,10 @@ document.getElementById('btnShop').addEventListener('click', ()=>{
   const cats=shopCats();
   shopCat.innerHTML = '<option value="all">Все категории</option>'+cats.map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
   shopSearch.value=''; shopCat.value='all';
-  shopModal.hidden=false; renderShop();
+  openModal(shopModal, document.getElementById('btnShop')); renderShop();
 });
-document.getElementById('shopClose').addEventListener('click', ()=> shopModal.hidden=true);
-shopModal.addEventListener('click', e=>{ if(e.target===shopModal) shopModal.hidden=true; });
+document.getElementById('shopClose').addEventListener('click', ()=> closeModal(shopModal));
+shopModal.addEventListener('click', e=>{ if(e.target===shopModal) closeModal(shopModal); });
 const shopSearchDebounced = debounce(renderShop, 180);
 shopSearch.addEventListener('input', ()=> shopSearchDebounced());
 shopCat.addEventListener('change', renderShop);
@@ -1242,6 +1372,7 @@ shopCat.addEventListener('change', renderShop);
 /* ═══ Tabs ═══ */
 let currentTab = 'chars';
 let blocksTab = 'chars'; // 'chars' | 'monsters'
+KEYS.tab = 'shirma_tab_last_v1';
 const tabs = {
   chars: document.getElementById('view-chars'),
   notes: document.getElementById('view-notes'),
@@ -1250,6 +1381,7 @@ const tabs = {
 };
 function showTab(name){
   currentTab = name;
+  try{ localStorage.setItem(KEYS.tab, name); }catch(e){}
   document.querySelectorAll('.tab').forEach(t=> t.classList.toggle('active', t.dataset.tab===name));
   tabs.chars.hidden = true;
   tabs.notes.hidden = true;
@@ -1277,7 +1409,8 @@ document.querySelectorAll('.tab').forEach(t=> t.addEventListener('click', ()=> s
 const STORE_NOTES = KEYS.notes;
 let noteBlocks = [];
 function loadNotes(){
-  try{ const raw=localStorage.getItem(STORE_NOTES); if(raw){ noteBlocks=JSON.parse(raw); return true; } }catch(e){}
+  const data = safeParseRaw(localStorage.getItem(STORE_NOTES), 'shirma_notes');
+  if(Array.isArray(data) && data.length){ noteBlocks=data; return true; }
   return false;
 }
 function saveNotes(){ try{ localStorage.setItem(KEYS.notes, JSON.stringify(noteBlocks)); }catch(e){} }
@@ -1340,7 +1473,23 @@ document.getElementById('notesClear').addEventListener('click', ()=>{ if(confirm
 const STORE_MAP = KEYS.map;
 let mapState = { bg:null, tokens:[], zoom:1, combat:{ active:false, round:1, turn:0, order:[] } };
 function loadMap(){
-  try{ const raw=localStorage.getItem(STORE_MAP); if(raw){ mapState=JSON.parse(raw); if(!mapState.zoom) mapState.zoom=1; if(mapState.locked==null) mapState.locked=false; if(mapState.scrollX==null) mapState.scrollX=0; if(mapState.scrollY==null) mapState.scrollY=0; if(!mapState.combat||!mapState.combat.order) setCombat(mapState.combat); mapState.tokens=(mapState.tokens||[]).map(t=>{ if(t.initMod==null) t.initMod=0; if(t.down==null) t.down=false; if(t.hp===undefined){ t.hp=null; t.hpMax=null; } return t; }); return true; } }catch(e){}
+  const data = safeParseRaw(localStorage.getItem(STORE_MAP), 'shirma_map');
+  if(data && typeof data==='object' && !Array.isArray(data)){
+    mapState=Object.assign({ bg:null, tokens:[], zoom:1, combat:{active:false,round:1,turn:0,order:[]} }, data);
+    if(!mapState.zoom) mapState.zoom=1;
+    if(mapState.locked==null) mapState.locked=false;
+    if(mapState.scrollX==null) mapState.scrollX=0;
+    if(mapState.scrollY==null) mapState.scrollY=0;
+    if(mapState.tokens && Array.isArray(mapState.tokens)) mapState.tokens=mapState.tokens.map(t=>{
+      if(t.initMod==null) t.initMod=0;
+      if(t.down==null) t.down=false;
+      if(t.hp===undefined){ t.hp=null; t.hpMax=null; }
+      return t;
+    }); else mapState.tokens=[];
+    if(!mapState.combat||!mapState.combat.order) setCombat(mapState.combat);
+    mapState.concentration = (mapState.concentration || null);
+    return true;
+  }
   return false;
 }
 function saveMap(){ try{ localStorage.setItem(STORE_MAP, JSON.stringify(mapState)); }catch(e){} }
@@ -1397,6 +1546,7 @@ function renderMap(){
   }
   updateMapLockBtn();
   renderCombatTracker();
+  updateConcInput();
   requestAnimationFrame(()=>{ mc.scrollLeft=mapState.scrollX||0; mc.scrollTop=mapState.scrollY||0; });
 }
 function updateMapLockBtn(){
@@ -1416,6 +1566,7 @@ function rollInitiative(){
   toks.forEach(t=>{ if(t.init==null) t.init = doOneD20() + (t.initMod||0); });
   const order = toks.slice().sort((a,b)=> b.init - a.init).map(t=>t.id);
   setCombat({ active:true, round:1, turn:0, order });
+  combatStartRoundReset();
   saveMap(); renderMap();
   toast('Бой начался · раунд 1');
 }
@@ -1426,13 +1577,37 @@ function combatTurn(delta){
   if(turn>=c.order.length){ turn=0; round++; }
   if(turn<0){ round--; if(round<1){ round=1; turn=0; } else turn=c.order.length-1; }
   setCombat({ active:true, round, turn, order:c.order });
+  if(delta>0) playSound('turn');
   saveMap(); renderMap();
+}
+function combatStartRoundReset(){
+  // при старте боя концентрация считает раунды заново
+  if(mapState.concentration && mapState.concentration.name){
+    mapState.concentration.since = 1;
+  }
 }
 function combatEnd(){
   mapState.tokens.forEach(t=>{ t.init=null; });
   setCombat({ active:false, round:1, turn:0, order:[] });
   saveMap(); renderMap();
   toast('Бой завершён');
+}
+/* Урон всем врагам сразу (AoE-чистка: файербол и т.п.) */
+function aoeDamage(){
+  const val = prompt('Урон всем NPC-токенам с ХП. Сколько?', '8');
+  if(val===null) return;
+  const n = Math.abs(Math.round(parseFloat(val)))||0;
+  if(n<=0){ toast('Введите число урона'); return; }
+  let hits=0, kills=0;
+  mapState.tokens.forEach(t=>{
+    if(t.npc && t.hp!=null && t.hp>0){
+      t.hp = t.hp - n; hits++;
+      if(t.hp<=0){ t.hp=0; t.down=true; kills++; }
+    }
+  });
+  saveMap(); renderMap();
+  playSound('crit');
+  toast(hits ? `AoE ${n} → врагов: ${hits}${kills?' · выбыло '+kills:''}` : 'Врагов с ХП на карте нет');
 }
 function renderCombatTracker(){
   const tr=document.getElementById('combatTracker');
@@ -1446,6 +1621,9 @@ function renderCombatTracker(){
   if(btnEnd) btnEnd.hidden = !active;
   if(!active) return;
   const curId = c.order[c.turn];
+  const conc = mapState.concentration && mapState.concentration.name
+    ? `<span class="ct-conc" title="Концентрация держится с раунда ${mapState.concentration.since||1}">🎯 ${escapeHtml(mapState.concentration.name)} · ${Math.max(1, c.round-(mapState.concentration.since||1)+1)} р.</span>`
+    : '';
   tr.innerHTML = `<span class="ct-round">Раунд ${c.round}</span>` + c.order.map((id,i)=>{
     const t=mapState.tokens.find(x=>x.id===id);
     if(!t) return '';
@@ -1453,11 +1631,45 @@ function renderCombatTracker(){
     const down = t.hp!=null && t.hp<=0;
     return `<span class="ct-item ${i===c.turn?'active':''} ${down?'down':''} ${t.npc?'npc':''}" data-ctid="${t.id}" title="Клик — выбрать токен">
       <b>${t.init!=null?('d20 '+t.init):''}</b> ${escapeHtml(t.title||'Токен')}${hpTxt}${down?' · ☠':''}</span>`;
-  }).join('') + `<button id="ctNext" title="Следующий ход (R)">▸ Ход</button>`;
+  }).join('') + conc
+    + `<button id="ctAoE" title="Урон всем врагам сразу (NPC-токены с ХП)">💥 AoE</button>`
+    + `<button id="ctExport" title="Скачать состояние боя в Markdown">⬇ MD</button>`
+    + `<button id="ctNext" title="Следующий ход (R)">▸ Ход</button>`;
   tr.querySelectorAll('[data-ctid]').forEach(el=>{
     el.addEventListener('click', ()=>{ selectedTokenId=el.dataset.ctid; saveMap(); renderMap(); });
   });
   const nx=tr.querySelector('#ctNext'); if(nx) nx.addEventListener('click', ()=> combatTurn(1));
+  const aoe=tr.querySelector('#ctAoE'); if(aoe) aoe.addEventListener('click', e=>{ e.stopPropagation(); aoeDamage(); });
+  const ext=tr.querySelector('#ctExport'); if(ext) ext.addEventListener('click', ()=> exportCombatMarkdown());
+}
+/* Состояние боя → Markdown (для отчёта в чат/логи) */
+function exportCombatMarkdown(){
+  const c=mapState.combat;
+  if(!c || !c.active || !c.order.length){ toast('Бой не активен'); return; }
+  const L=[];
+  L.push('# Состояние боя');
+  L.push('');
+  L.push('**Раунд:** '+c.round+'  ·  **Ход:** '+(mapState.tokens.find(t=>t.id===c.order[c.turn])||{}).title);
+  L.push('');
+  L.push('| Иниц. | Участник | ХП | Статус |');
+  L.push('|---|---|---|---|');
+  c.order.forEach((id,i)=>{
+    const t=mapState.tokens.find(x=>x.id===id);
+    if(!t) return;
+    const down = t.down || (t.hp!=null && t.hp<=0);
+    L.push(
+      '| '+(t.init!=null? t.init : '—')
+      +' | '+(i===c.turn?'**▸ ':'')+(t.title||'Токен')+(i===c.turn?' (ходит)**':'')
+      +' | '+(t.hp!=null ? (t.hp+(t.hpMax!=null? '/'+t.hpMax:'')) : '—')
+      +' | '+(down?'☠ выбыл':(t.npc?'враг':'ПК'))+' |'
+    );
+  });
+  if(mapState.concentration && mapState.concentration.name){
+    L.push('');
+    L.push('🎯 **Концентрация:** «'+mapState.concentration.name+'» — '+Math.max(1, c.round-(mapState.concentration.since||1)+1)+' р.');
+  }
+  downloadFile('бой-раунд'+c.round+'.md', L.join('\n'), 'text/markdown;charset=utf-8');
+  toast('Состояние боя сохранено в Markdown');
 }
 let selectedTokenId = null;
 function tokenEl(t){
@@ -1611,7 +1823,7 @@ document.getElementById('mapTokStat').addEventListener('click', ()=>{
     const m=bestAll.find(x=>x.id===t.mobId);
     if(!m){ toast('Монстр не найден в бестиарии'); return; }
     bestState={ list:false, monster:m };
-    bestModal.hidden=false;
+    openModal(bestModal, document.getElementById('mapTokStat'));
     renderBestMonster(m);
   }).catch(err=> toast('Не удалось загрузить бестиарий'));
 });
@@ -1650,6 +1862,33 @@ document.getElementById('mapTokDel').addEventListener('click', ()=>{
   mapState.tokens = mapState.tokens.filter(x=>x.id!==selectedTokenId);
   selectedTokenId=null; saveMap(); renderMap();
 });
+/* ═══ Концентрация ═══ */
+function updateConcInput(){
+  const inp=document.getElementById('concInput');
+  if(inp && document.activeElement!==inp){ inp.value = (mapState.concentration && mapState.concentration.name) || ''; }
+}
+(function bindConcentration(){
+  const inp=document.getElementById('concInput');
+  const clr=document.getElementById('concClear');
+  if(inp) inp.addEventListener('change', ()=>{
+    const name=(inp.value||'').trim();
+    if(name){
+      const round=(mapState.combat && mapState.combat.round)||1;
+      mapState.concentration={ name, since: round };
+    } else {
+      mapState.concentration=null;
+    }
+    saveMap(); renderMap();
+    toast(name?'Концентрация: «'+name+'»':'Концентрация сброшена');
+  });
+  if(inp) inp.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); inp.blur(); } });
+  if(clr) clr.addEventListener('click', ()=>{
+    mapState.concentration=null;
+    if(inp) inp.value='';
+    saveMap(); renderMap();
+    toast('Концентрация сброшена');
+  });
+})();
 document.getElementById('mapZoomIn').addEventListener('click', ()=> mapZoom(0.25));
 document.getElementById('mapZoomOut').addEventListener('click', ()=> mapZoom(-0.25));
 document.getElementById('mapZoomReset').addEventListener('click', ()=>{ if(mapState.locked) return; mapState.zoom=1; saveMap(); renderMap(); });
@@ -1683,14 +1922,75 @@ function fillTableSelect(){
 document.getElementById('btnTables').addEventListener('click', ()=>{
   fillTableSelect();
   tablesResult.innerHTML = '<div class="lib-empty">Выберите таблицу и бросьте кость.</div>';
-  tablesModal.hidden = false;
+  openModal(tablesModal, document.getElementById('btnTables'));
 });
-document.getElementById('tablesClose').addEventListener('click', ()=> tablesModal.hidden=true);
-tablesModal.addEventListener('click', e=>{ if(e.target===tablesModal) tablesModal.hidden=true; });
+document.getElementById('tablesClose').addEventListener('click', ()=> closeModal(tablesModal));
+tablesModal.addEventListener('click', e=>{ if(e.target===tablesModal) closeModal(tablesModal); });
 /* Esc закрывает любое открытое окно */
 window.addEventListener('keydown', e=>{
   if(e.key!=='Escape') return;
-  [libModal, bestModal, shopModal, tablesModal].forEach(m=>{ if(!m.hidden) m.hidden=true; });
+  [libModal, bestModal, shopModal, tablesModal, goModalOrNull()].forEach(m=> closeModal(m));
+});
+/* ═══ Глобальный поиск (Ctrl+K / Cmd+K) ═══ */
+let goModalRef = document.getElementById('goModal');
+function goModalOrNull(){ return goModalRef; }
+const goInput = document.getElementById('goInput');
+const goResults = document.getElementById('goResults');
+const goClose = document.getElementById('goClose');
+
+function renderGo(qRaw){
+  if(!goResults) return;
+  const q = normalizeLib(qRaw||'');
+  if(!q){ goResults.innerHTML='<div class="lib-empty">Начните вводить: блоки, монстры, заклинания, предметы, правила.</div>'; return; }
+  const LIMIT=60, rows=[];
+  const hit = t => normalizeLib(t).includes(q);
+  const push = r => { if(rows.length<LIMIT) rows.push(r); };
+  blocks.forEach(b=>{ if(hit((b.title||'')+' '+(b.text||'')+' '+Object.values(b.props||{}).join(' '))) push({kind:'block',label:b.title||'Блок',meta:TYPE_LABEL[b.type]||'',b}); });
+  (bestAll||[]).forEach(m=>{ if(hit((m.n||'')+' '+(m.en||'')+' '+(m.type||''))) push({kind:'monster',label:'👹 '+(m.n||''),meta:m.type||'',mon:m}); });
+  ((LIB&&LIB.spells)||[]).forEach(sp=>{ if(hit((sp.n||'')+' '+(sp.sc||'')+' '+(sp.cls||''))) push({kind:'spell',label:'📜 '+sp.n,meta:(sp.l!==undefined?('Ур.'+sp.l+' · '):'')+(sp.sc||''),sp}); });
+  ((LIB&&LIB.items)||[]).forEach(it=>{ if(hit(it.n||'')) push({kind:'item',label:'🎒 '+it.n,meta:it.t||'',it}); });
+  RULES_FOR_LIB.forEach(r=>{ if(hit((r.title||'')+' '+(r.text||''))) push({kind:'rule',label:r.title,meta:'Правила',rule:r}); });
+  if(!rows.length){ goResults.innerHTML='<div class="lib-empty">Ничего не найдено.</div>'; return; }
+  const badge={block:'Блок',monster:'Монстр',spell:'Закл.',item:'Предм.',rule:'Прав.'};
+  goResults.innerHTML = rows.map((r,i)=>`<div class="lib-row go-row" data-go="${i}">
+    <span class="lib-kind">${badge[r.kind]||''}</span>
+    <div class="lib-main"><div class="lib-title">${escapeHtml(r.label)}</div>${r.meta?`<div class="lib-meta">${escapeHtml(r.meta)}</div>`:''}</div>
+  </div>`).join('');
+  goResults.querySelectorAll('[data-go]').forEach(el=> el.addEventListener('click', ()=>{
+    const r=rows[+el.dataset.go]; if(!r) return;
+    runGoAction(r); closeModal(goModalRef);
+  }));
+}
+function runGoAction(r){
+  if(r.kind==='block'){
+    const b=r.b;
+    searchFilter = b.title||'';
+    const s=document.getElementById('search'); if(s) s.value=searchFilter;
+    showTab(b.type==='mob'?'monsters':'chars');
+    toast('Найдено на ширме: '+(b.title||'блок'));
+  } else if(r.kind==='monster'){ addMonsterBlock(r.mon); toast('Монстр добавлен на ширму'); }
+  else if(r.kind==='spell'){ addSpellBlock(r.sp); toast('Заклинание добавлено на ширму'); }
+  else if(r.kind==='item'){ addItemBlock(r.it); toast('Предмет добавлен на ширму'); }
+  else if(r.kind==='rule'){ addRuleBlock(r.rule); toast('Правило добавлено на ширму'); }
+}
+function openGo(){
+  if(!goModalRef) return;
+  openModal(goModalRef, document.activeElement);
+  if(goInput){ goInput.value=''; goInput.focus(); }
+  renderGo('');
+  ensureBestiary().then(()=>{ if(!bestAll.length) bestAll=(window.BESTIARY||[]).slice(); renderGo(goInput?goInput.value:''); }).catch(()=>{});
+  ensureLibrary().then(()=> renderGo(goInput?goInput.value:'')).catch(()=>{});
+}
+if(goClose) goClose.addEventListener('click', ()=> closeModal(goModalRef));
+if(goInput){
+  const renderGoDebounced = debounce(()=> renderGo(goInput.value), 140);
+  goInput.addEventListener('input', renderGoDebounced);
+  goInput.addEventListener('keydown', e=>{
+    if(e.key==='Enter' && goResults){ const first=goResults.querySelector('[data-go]'); if(first) first.click(); }
+  });
+}
+window.addEventListener('keydown', e=>{
+  if((e.ctrlKey||e.metaKey) && !e.shiftKey && e.key.toLowerCase()==='k'){ e.preventDefault(); openGo(); }
 });
 document.getElementById('tablesRoll').addEventListener('click', ()=>{
   const key = Object.keys(RANDOM_TABLES)[+tablesSelect.value];
@@ -1711,10 +2011,28 @@ let activeSessionId = null;
 let sessionsInited = false;
 
 function loadSessions(){
-  try{ const raw=localStorage.getItem(STORE_SESSIONS); if(raw){ sessions=JSON.parse(raw)||[]; return true; } }catch(e){}
+  const data = safeParseRaw(localStorage.getItem(STORE_SESSIONS), 'shirma_sessions');
+  if(Array.isArray(data)){ sessions=data; return sessions.length>0; }
   sessions=[]; return false;
 }
-const persistSessions = debounce(()=>{ try{ const out=sessions.map(s=>({...s, html:stripSessionHtml(s.html)})); localStorage.setItem(STORE_SESSIONS, JSON.stringify(out)); }catch(e){ console.warn('Не удалось сохранить сессии:', e); } }, 300);
+/* Резервная копия сессий в IndexedDB (не ограничена квотой localStorage) */
+const SESS_IDB_KEY = 'sess_backup_v1';
+function sessionsFromIdb(){
+  const raw = mediaCache[SESS_IDB_KEY];
+  if(raw==null) return null;
+  try{
+    const arr = JSON.parse(typeof raw==='string' ? raw : String(raw));
+    return (Array.isArray(arr) && arr.length) ? arr : null;
+  }catch(e){ return null; }
+}
+const persistSessions = debounce(()=>{
+  try{
+    const out=sessions.map(s=>({...s, html:stripSessionHtml(s.html)}));
+    const str=JSON.stringify(out);
+    try{ localStorage.setItem(STORE_SESSIONS, str); }catch(e){ console.warn('Сессии не влезли в localStorage — храним в IndexedDB'); }
+    idbPut(SESS_IDB_KEY, str); // всегда дублируем в IndexedDB
+  }catch(e){ console.warn('Не удалось сохранить сессии:', e); }
+}, 300);
 function scheduleSaveSessions(){
   persistSessions();
   const el=document.getElementById('sessionSaved');
@@ -1742,7 +2060,10 @@ function hydrateSessionHtml(html){
 function ensureSessions(){
   if(!sessionsInited){
     sessionsInited = true;
-    loadSessions();
+    if(!loadSessions()){
+      const backup = sessionsFromIdb();         // localStorage пуст/не влез — пробуем IndexedDB
+      if(backup){ sessions=backup; toast('Сессии восстановлены из резервной копии'); }
+    }
     bindSessionControls();
     if(!sessions.length){ newSession(true); }
     else { renderSessionsList(); selectSession(sessions[0].id); }
@@ -2002,7 +2323,9 @@ function exportSessionPdf(){
     if(migrated){ persistBlocks(); saveMap(); }
     render(); renderMap(); renderNotes();
   });
-  save(); render();
-  renderMap();
+  let savedTab='chars';
+  try{ savedTab=localStorage.getItem(KEYS.tab)||'chars'; }catch(e){}
+  if(!['chars','monsters','notes','sessions','map'].includes(savedTab)) savedTab='chars';
+  showTab(savedTab);   // remember последняя вкладка
   renderNotes();
 })();

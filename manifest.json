@@ -1,0 +1,20 @@
+{
+  "name": "Ширма мастера — D&D 5.5",
+  "short_name": "Ширма",
+  "description": "Локальный инструмент мастера D&D 5.5: персонажи, бестиарий, карта боя, магазин, заметки и сессии. Работает офлайн.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#1b1e22",
+  "theme_color": "#1b1e22",
+  "lang": "ru",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any maskable"
+    }
+  ]
+}

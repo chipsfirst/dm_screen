@@ -3,7 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#1b1e22">
 <title>Ширма мастера — D&D 5.5</title>
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="manifest" href="manifest.json">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -41,6 +44,9 @@
       <button id="btnRoll">Бросить</button>
       <span id="rollResult"></span>
       <span id="rollLog"></span>
+      <span class="toolbar-sep"></span>
+      <button id="btnTimer" title="Секундомер боя: отсчёт раундов по 6 секунд (проверка длительностей)">⏱ 6с</button>
+      <button id="btnSound" title="Звуки: ходы боя, криты, секунды раунда (синтез Web Audio)">🔔</button>
     </div>
     <div class="main-head">
       <div class="crumbs">Блоки: <b id="crumbsRoot">корень</b><span id="crumbsPath"></span></div>
@@ -60,6 +66,7 @@
         <span class="acts-group">
           <button id="btnLayout" title="Переключить: лента / свободный холст">Раскладка</button>
           <button id="btnUndo" title="Отменить последнее действие (Ctrl+Z)">↩ Отменить</button>
+          <button id="btnTheme" title="Переключить светлую/тёмную тему">☀️ Светлая</button>
           <button id="btnExport">Экспорт JSON</button>
           <button id="btnImport">Импорт</button>
           <input type="file" id="fileInput" accept=".json" class="hidden" aria-label="Импорт резервной копии">
@@ -159,12 +166,20 @@
             <input id="mapTokHpMax" class="tok-hp-in" type="number" aria-label="Максимум ХП" placeholder="макс">
             <button id="mapTokHpHeal" title="Лечение: +5 ХП">+5</button>
           </span>
+          <span class="tok-hp-ctl" title="Модификатор инициативы учитывается при «Начать бой»">
+            <input id="mapTokInit" class="tok-hp-in tok-init-in" type="number" aria-label="Модификатор инициативы" placeholder="иниц">
+          </span>
           <button id="mapTokStat" title="Открыть статблок монстра" hidden>📜</button>
           <button id="mapTokDown" title="Выбыл / вернуть в бой">☠</button>
           <button id="mapTokImg" title="Загрузить картинку на токен" aria-label="Загрузить картинку на токен">🖼</button>
           <input type="file" id="mapTokImgInput" accept="image/*" class="hidden">
           <button id="mapTokImgClear" title="Убрать картинку" aria-label="Убрать картинку с токена">✂</button>
           <button id="mapTokDel" title="Удалить токен" aria-label="Удалить токен">🗑</button>
+        </span>
+        <span class="acts-sep"></span>
+        <span class="conc-ctl" title="Заклинание концентрации: счёт раундов виден в трекере боя">
+          <input id="concInput" class="conc-in" type="text" placeholder="🎯 Концентрация…" aria-label="Название заклинания концентрации">
+          <button id="concClear" title="Сбросить концентрацию" aria-label="Сбросить концентрацию">✕</button>
         </span>
       </div>
       <div class="combat-tracker" id="combatTracker" hidden></div>
@@ -240,6 +255,17 @@
     <div class="modal-results" id="tablesResult">
       <div class="lib-empty">Выберите таблицу и бросьте кость.</div>
     </div>
+  </div>
+</div>
+
+<!-- Global search modal (Ctrl+K) -->
+<div class="modal" id="goModal" hidden>
+  <div class="modal-box modal-lg">
+    <div class="modal-search" style="border-bottom:none">
+      <input id="goInput" type="search" placeholder="Глобальный поиск: блоки, монстры, заклинания, предметы, правила… (Ctrl+K)" aria-label="Глобальный поиск">
+      <button class="modal-close" id="goClose" title="Закрыть">✕</button>
+    </div>
+    <div class="modal-results" id="goResults"></div>
   </div>
 </div>
 
