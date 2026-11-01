@@ -3,70 +3,52 @@
     --bg:#1b1e22; --panel:#23272d; --panel2:#2a2f36; --line:#343a42;
     --text:#d8dde3; --muted:#8b959f; --accent:#c9a227; --accent2:#e6b93c;
     --danger:#c0564f;
+    --font-body:'Alegreya','Book Antiqua','Palatino Linotype',Palatino,Georgia,serif;
+    --font-head:'Cinzel','Trajan Pro','Trajan','Book Antiqua','Palatino Linotype',Palatino,Georgia,'Times New Roman',serif;
+  }
+  html[data-theme="light"]{
+    --bg:#eef1f5; --panel:#ffffff; --panel2:#f2f4f8; --line:#d4d9e0;
+    --text:#1c2128; --muted:#6b7480; --accent:#8a6d1f; --accent2:#9a7a20;
+    --danger:#b03a32;
   }
   *{box-sizing:border-box}
   html,body{height:100%}
   body{
-    margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
-    background:var(--bg); color:var(--text); font-size:14px;
+    margin:0; font-family:var(--font-body); background:var(--bg); color:var(--text); font-size:14px; line-height:1.45;
   }
   .app{display:flex; height:100vh}
-
-  /* ── Sidebar ─────────────────────────────── */
-  .side{
-    flex:0 0 auto; width:280px; background:var(--panel);
-    border-right:1px solid var(--line); display:flex; flex-direction:column;
-    transition:width .18s ease;
-    overflow:hidden; white-space:nowrap;
-  }
-  .side.collapsed{width:0; border-right:none}
-  .side-toggle{
-    position:fixed; left:290px; top:10px; z-index:60; padding:6px 10px; font-size:16px;
-    width:auto; background:var(--panel2); border:1px solid var(--line); border-radius:8px;
-    cursor:pointer; color:var(--text); box-shadow:0 3px 12px rgba(0,0,0,.4);
-    transition:left .18s ease;
-  }
-  body.side-hide .side-toggle{left:8px}
-  .side-hide .side-head, .side-hide .search, .side-hide .tree, .side-hide .side-foot{display:none}
-  .side-head{
-    padding:14px 14px 10px; border-bottom:1px solid var(--line);
-    display:flex; align-items:center; justify-content:space-between;
-  }
-  .side-head h1{margin:0; font-size:16px; color:var(--accent2); letter-spacing:.3px}
-  .side-head .sub{color:var(--muted); font-size:11px}
-  .search{padding:10px 14px; border-bottom:1px solid var(--line)}
-  .search input{
-    width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--line);
-    background:var(--panel2); color:var(--text); outline:none;
-  }
-  .search input:focus{border-color:var(--accent)}
-  .tree{flex:1; overflow-y:auto; padding:8px 6px}
-  .node{padding:7px 10px; border-radius:6px; cursor:pointer; display:flex; align-items:center; gap:7px; margin-bottom:2px}
-  .node:hover{background:var(--panel2)}
-  .node.active{background:var(--panel2); outline:1px solid var(--accent); outline-offset:-1px}
-  .node .ic{width:14px; text-align:center; color:var(--accent); flex-shrink:0}
-  .node .tt{flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
-  .node .tt.collapsed{opacity:.55}
-  .node .chk{font-size:11px; color:var(--muted)}
-  .type-tag{font-size:10px; padding:1px 5px; border-radius:4px; border:1px solid var(--line); color:var(--muted)}
-  .type-tag.pc{color:#7fb3e6; border-color:#7fb3e6}
-  .type-tag.rule{color:#86c48f; border-color:#86c48f}
-  .type-tag.note{color:#d49bd6; border-color:#d49bd6}
-  .side-foot{padding:10px; border-top:1px solid var(--line); display:flex; gap:8px}
-  .side-foot button{flex:1}
+  h1,h2,h3,h4,.block-head .title,.tabbar .tab,.main-head,.editor-toolbar,.session-title-input{font-family:var(--font-head)}
+  button,input,select,textarea{font-family:inherit}
 
   /* ── Main ───────────────────────────────── */
+  *{box-sizing:border-box}
   .main{flex:1; display:flex; flex-direction:column; min-width:0; min-height:0; height:100vh; overflow:hidden}
   .main-head{
     padding:12px 18px; border-bottom:1px solid var(--line);
     display:flex; align-items:center; justify-content:space-between; gap:12px;
   }
-  .crumbs{color:var(--muted); font-size:12px}
+  .crumbs{color:var(--muted); font-size:12px; display:flex; align-items:center; gap:10px; min-width:0}
   .crumbs b{color:var(--text); font-weight:600}
+  .crumbs .crumb-text{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .crumbs .crumb-count{color:var(--muted); font-size:11px; background:var(--panel2); border:1px solid var(--line); padding:2px 8px; border-radius:20px; white-space:nowrap}
+  .top-search{width:220px; max-width:32vw; padding:7px 12px; border-radius:8px; border:1px solid var(--line); background:var(--panel2); color:var(--text); outline:none; font-size:13px}
+  .top-search:focus{border-color:var(--accent)}
   .main-head .actions{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
   .actions .acts-group{display:flex; gap:6px; align-items:center}
   .actions .acts-sep{width:1px; height:22px; background:var(--line); margin:0 4px}
   .actions button{white-space:nowrap}
+
+  /* Сворачиваемая верхняя панель */
+  body.top-collapsed .dicebar,
+  body.top-collapsed .main-head{display:none}
+  .top-handle{
+    position:fixed; top:6px; right:18px; z-index:120;
+    width:34px; height:24px; border-radius:6px; font-size:12px; line-height:1;
+    cursor:pointer;
+  }
+  #topCollapse{font-weight:700; color:var(--muted)}
+  #topCollapse:hover{color:var(--text)}
+  .dicebar, .main-head{transition:opacity .15s ease}
 
   /* Tabs */
   .tabbar{display:flex; gap:4px; padding:8px 18px 0; border-bottom:1px solid var(--line); background:var(--panel)}
@@ -132,6 +114,10 @@
   .block.border-rule{border-top:3px solid #86c48f}
   .block.border-note{border-top:3px solid #d49bd6}
   .block.border-mob{border-top:3px solid #c0564f}
+  .type-tag{font-size:10px; padding:1px 5px; border-radius:4px; border:1px solid var(--line); color:var(--muted)}
+  .type-tag.pc{color:#7fb3e6; border-color:#7fb3e6}
+  .type-tag.rule{color:#86c48f; border-color:#86c48f}
+  .type-tag.note{color:#d49bd6; border-color:#d49bd6}
   .type-tag.mob{color:#c0564f; border-color:#c0564f}
   .block.border-img{border-top:3px solid #e6b93c}
   .block-head{
@@ -234,6 +220,7 @@
 
   /* dice bar */
   .dicebar{display:flex; align-items:center; gap:6px; padding:8px 18px; border-bottom:1px solid var(--line); background:var(--panel); flex-wrap:wrap}
+  .dicebar .dicebar-spacer{flex:1}
   .dicebar .db-label{color:var(--muted); font-size:12px; margin-right:4px}
   .die-btn{min-width:40px; text-align:center}
   .die-btn.active{background:var(--accent); color:#1b1e22; border-color:var(--accent)}
@@ -437,3 +424,49 @@
     z-index:300; pointer-events:none; max-width:80vw;
   }
   .toast.show{opacity:1; transform:translate(-50%,0)}
+
+  /* ── Вкладка «Бой» ───────────────────────── */
+  .battle-wrap{flex:1; display:flex; flex-direction:column; min-height:0}
+  .battle-toolbar{display:flex; gap:8px; align-items:center; flex-wrap:wrap; padding:8px 12px; border-bottom:1px solid var(--line); background:var(--panel)}
+  .battle-list{flex:1; overflow-y:auto; padding:12px; min-height:0}
+  .battle-empty{color:var(--muted); text-align:center; padding:40px 16px; font-size:14px}
+  .battle-card{
+    display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+    padding:8px 12px; margin-bottom:6px; background:var(--panel);
+    border:1px solid var(--line); border-left:4px solid var(--accent2); border-radius:8px;
+  }
+  .battle-card.opp{border-left-color:var(--danger)}
+  .battle-card .bt-side{font-size:16px; flex-shrink:0}
+  .battle-card .bt-name{flex:1; min-width:120px; background:transparent; border:none; color:var(--text); font-weight:600; font-size:14px; outline:none}
+  .battle-card .bt-lbl{color:var(--muted); font-size:11px; text-transform:uppercase; flex-shrink:0}
+  .battle-card .bt-in{width:56px; padding:4px 6px; font-size:13px; text-align:center; background:var(--panel2); color:var(--text); border:1px solid var(--line); border-radius:6px; outline:none}
+  .battle-card .bt-in:focus{border-color:var(--accent)}
+  .battle-card .bt-init{background:var(--panel2)}
+  .battle-card .bt-del{background:none; border:none; color:var(--danger); cursor:pointer; font-size:13px; flex-shrink:0}
+  .battle-card .bt-del:hover{text-decoration:underline}
+  .battle-card .bt-grp{display:inline-flex; align-items:center; gap:5px}
+  .battle-card .bt-grp + .bt-grp{margin-left:2px}
+  .battle-card .bt-hpgrp{gap:4px}
+  .battle-card .bt-hpbtn{width:24px; height:26px; padding:0; font-size:15px; line-height:1; flex-shrink:0}
+  .battle-card .bt-dmg{width:64px; background:var(--panel2); border:1px dashed var(--line); color:var(--danger); font-weight:600}
+  .battle-card .bt-dmg::placeholder{color:var(--muted); font-weight:400}
+  .battle-card .bt-atkbonus{width:48px}
+  .battle-card .bt-atk{white-space:nowrap; font-weight:700}
+  .battle-card .bt-acts{flex-basis:100%; display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-top:6px}
+  .battle-card .bt-acts-select{flex:1; min-width:180px; max-width:520px}
+  .battle-card .bt-applied{flex-basis:100%; display:flex; gap:5px; flex-wrap:wrap; margin-top:2px}
+  .battle-card .bt-chip{
+    display:inline-flex; align-items:flex-start; gap:6px; max-width:100%;
+    padding:3px 8px; border-radius:6px; background:var(--panel2); border:1px solid var(--line);
+    font-size:12px; color:var(--text); line-height:1.4;
+  }
+  .battle-card .bt-chip .bt-chip-del{background:none; border:none; color:var(--danger); cursor:pointer; font-size:12px; padding:0; flex-shrink:0}
+
+  /* ── Таблицы эффектов монстров по типам ── */
+  .me-type{margin-bottom:14px}
+  .me-head{font-family:var(--font-head); font-size:15px; font-weight:700; margin-bottom:2px; color:var(--accent2)}
+  .me-table{width:100%; border-collapse:collapse; font-size:13px; margin-top:4px}
+  .me-table th,.me-table td{border:1px solid var(--line); padding:5px 8px; text-align:left; vertical-align:top}
+  .me-table th{background:var(--panel2); color:var(--muted); font-weight:700; text-transform:uppercase; font-size:11px}
+  .me-table td:first-child{font-weight:600; white-space:nowrap}
+  .me-table tr:nth-child(even) td{background:rgba(127,179,230,.05)}

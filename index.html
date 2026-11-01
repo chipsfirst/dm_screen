@@ -8,26 +8,15 @@
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="manifest" href="manifest.json">
 <link rel="stylesheet" href="style.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Alegreya:wght@400;500;700&family=Cinzel:wght@500;700&display=swap" rel="stylesheet">
 </head>
 <body>
 <div class="app">
-  <button class="side-toggle" id="sideToggle" title="Показать/скрыть панель" aria-label="Показать или скрыть боковую панель">☰</button>
-  <!-- Sidebar -->
-  <aside class="side" id="side">
-    <div class="side-head">
-      <div>
-        <h1>Ширма мастера</h1>
-        <div class="sub">D&D 5.5 · <span id="blockCount">0</span> блоков</div>
-      </div>
-    </div>
-    <div class="search">
-      <input id="search" type="search" placeholder="Поиск по всем блокам…">
-    </div>
-    <div class="tree" id="tree"></div>
-  </aside>
-
   <!-- Main -->
   <main class="main">
+    <button id="topHandle" class="top-handle" hidden title="Развернуть верхнюю панель" aria-label="Развернуть верхнюю панель">▾</button>
     <div class="dicebar">
       <span class="db-label">Кости:</span>
       <button class="die-btn" data-die="d4">d4</button>
@@ -47,18 +36,21 @@
       <span class="toolbar-sep"></span>
       <button id="btnTimer" title="Секундомер боя: отсчёт раундов по 6 секунд (проверка длительностей)">⏱ 6с</button>
       <button id="btnSound" title="Звуки: ходы боя, криты, секунды раунда (синтез Web Audio)">🔔</button>
+      <span class="dicebar-spacer"></span>
+      <input id="search" class="top-search" type="search" placeholder="Поиск по всем блокам… (Ctrl+K)" aria-label="Поиск по всем блокам">
     </div>
     <div class="main-head">
-      <div class="crumbs">Блоки: <b id="crumbsRoot">корень</b><span id="crumbsPath"></span></div>
+      <div class="crumbs">
+        <span class="crumb-text">Блоки: <b id="crumbsRoot">корень</b><span id="crumbsPath"></span></span>
+        <span class="crumb-count" title="Блоков в ширме"><span id="blockCount">0</span> блоков</span>
+      </div>
       <div class="actions">
         <span class="acts-group">
           <button id="addPc" title="Лист персонажа">+ ПК</button>
-          <button id="addNpc" title="Блок с правилами">+ Пр.</button>
-          <button id="addNote" title="Заметка">+ Заметка</button>
-          <button id="addFile" title="Импортировать картинку или документ">+ Файл</button>
           <button id="btnLibrary" title="Поиск по локальной библиотеке (заклинания, предметы, правила)">🔍 База</button>
           <button id="btnBestiary" title="Бестиарий: монстры D&D 5e (поиск)">👹 Бестиарий</button>
           <button id="btnShop" title="Магазин: снаряжение и цены">🛒 Магазин</button>
+          <button id="btnMonEffects" title="Таблицы эффектов по типам монстров">🐾 Эффекты</button>
           <button id="btnTables" title="Броски по случайным таблицам (d100)">🎲 Таблицы</button>
           <input type="file" id="mediaInput" multiple accept="image/*,.pdf,.txt,.md,.rtf" class="hidden" aria-label="Импорт файлов">
         </span>
@@ -67,6 +59,7 @@
           <button id="btnLayout" title="Переключить: лента / свободный холст">Раскладка</button>
           <button id="btnUndo" title="Отменить последнее действие (Ctrl+Z)">↩ Отменить</button>
           <button id="btnTheme" title="Переключить светлую/тёмную тему">☀️ Светлая</button>
+          <button id="topCollapse" title="Свернуть/развернуть верхнюю панель">╲╱</button>
           <button id="btnExport">Экспорт JSON</button>
           <button id="btnImport">Импорт</button>
           <input type="file" id="fileInput" accept=".json" class="hidden" aria-label="Импорт резервной копии">
@@ -77,9 +70,9 @@
     <div class="tabbar">
       <button class="tab active" data-tab="chars">👤 Персонажи</button>
       <button class="tab" data-tab="monsters">👹 Монстры</button>
-      <button class="tab" data-tab="notes">📋 Холст заметок</button>
       <button class="tab" data-tab="sessions">📓 Сессии</button>
       <button class="tab" data-tab="map">🗺 Карта боя</button>
+      <button class="tab" data-tab="battle">⚔ Бой</button>
     </div>
     <div class="tabview" id="view-chars">
       <div class="canvas" id="canvas"></div>
@@ -127,18 +120,6 @@
         </div>
       </div>
     </div>
-    <div class="tabview" id="view-notes" hidden>
-      <div class="map-toolbar">
-        <span class="hint">Свободный холст: таскайте блоки в любое место</span>
-        <span class="acts-sep"></span>
-        <button id="notesAdd" title="Заметка">+ Заметка</button>
-        <button id="notesAddRule" title="Блок с правилами">+ Правило</button>
-        <span class="acts-sep"></span>
-        <button id="notesClear" title="Очистить холст">✕ Очистить</button>
-        <span class="hint">Двойной клик по пустому месту добавляет заметку</span>
-      </div>
-      <div class="note-canvas" id="notesCanvas"></div>
-    </div>
     <div class="tabview" id="view-map" hidden>
       <div class="map-toolbar">
         <button id="mapUpload" title="Загрузить картинку местности как фон">🖼 Загрузить карту</button>
@@ -184,6 +165,19 @@
       </div>
       <div class="combat-tracker" id="combatTracker" hidden></div>
       <div class="map-canvas" id="mapCanvas"></div>
+    </div>
+    <div class="tabview" id="view-battle" hidden>
+      <div class="battle-wrap">
+        <div class="battle-toolbar">
+          <span class="hint">Порядок по инициативе (убывание). КД, ХП и Инициативу можно менять прямо в карточках.</span>
+          <span class="acts-sep"></span>
+          <button id="battleAddOpp" title="Добавить противника">⬤ Противник</button>
+          <button id="battleAddChar" title="Добавить персонажа">👤 Персонаж</button>
+          <span class="acts-sep"></span>
+          <button id="battleClear" title="Убрать всех участников">✕ Очистить</button>
+        </div>
+        <div id="battleList" class="battle-list"></div>
+      </div>
     </div>
   </main>
 </div>
@@ -266,6 +260,23 @@
       <button class="modal-close" id="goClose" title="Закрыть">✕</button>
     </div>
     <div class="modal-results" id="goResults"></div>
+  </div>
+</div>
+
+<!-- Monster type effects modal -->
+<div class="modal" id="monEffModal" hidden>
+  <div class="modal-box modal-lg">
+    <div class="modal-head">
+      <strong>Эффекты монстров по типам</strong>
+      <button class="modal-close" id="monEffClose">✕</button>
+    </div>
+    <div class="modal-search">
+      <select id="monEffType" aria-label="Тип монстра">
+        <option value="">Все типы…</option>
+      </select>
+      <span class="hint">Типичные эффекты, состояния и тактики для быстрой игры</span>
+    </div>
+    <div class="modal-results" id="monEffResults"></div>
   </div>
 </div>
 

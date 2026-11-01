@@ -28,7 +28,7 @@
 Статблоки из платных книг копировать в публичный доступ нельзя — используй их
 только в личной локальной копии. Ответственность за соблюдение лицензий — на тебе.
 """
-import json, os, re, ast, glob
+import json, os, re, ast, glob, copy
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(HERE, 'data')
@@ -40,8 +40,64 @@ CURLY_RE = re.compile(r'\{@[^}]+\}')
 AB_ORDER = ['Str', 'Dex', 'Con', 'Int', 'Wis', 'Cha']
 AB_LOW = {'Str': 'str', 'Dex': 'dex', 'Con': 'con', 'Int': 'int', 'Wis': 'wis', 'Cha': 'cha'}
 AB_RU = {'Str': 'Сил', 'Dex': 'Лов', 'Con': 'Тел', 'Int': 'Инт', 'Wis': 'Муд', 'Cha': 'Хар'}
-SIZE_RU = {'T': 'Tiny', 'S': 'Small', 'M': 'Medium', 'L': 'Large', 'H': 'Huge', 'G': 'Gargantuan'}
-ALIGN_MAP = {'L': 'Lawful', 'C': 'Chaotic', 'N': 'Neutral', 'G': 'Good', 'E': 'Evil', 'U': 'Unaligned', 'A': 'Any'}
+SIZE_RU = {'T': 'Крошечный', 'S': 'Маленький', 'M': 'Средний', 'L': 'Большой', 'H': 'Огромный', 'G': 'Гигантский'}
+ALIGN_MAP = {'L': 'Законоправный', 'C': 'Хаотичный', 'N': 'Нейтральный', 'G': 'Добрый', 'E': 'Злой', 'U': 'Без мировоззрения', 'A': 'Любое'}
+# Распространённые соответствия EN->RU для структурированных полей (актуально для SRD/официальной лексики).
+TYPE_RU = {
+    'aberration': 'Аберрация', 'beast': 'Зверь', 'celestial': 'Небожитель', 'construct': 'Конструкт',
+    'dragon': 'Дракон', 'elemental': 'Элементаль', 'fey': 'Фея', 'fiend': 'Исчадие',
+    'giant': 'Гигант', 'humanoid': 'Гуманоид', 'monstrosity': 'Чудовище', 'ooze': 'Тварь-желе',
+    'plant': 'Растение', 'undead': 'Нежить',
+}
+TAG_RU = {
+    'aatype': 'людоед', 'aarakocra': 'ааракокра', 'aboloth': 'аболет', 'acolyte': 'послушник',
+    'aesimon': 'э́симон', 'angel': 'ангел', 'any race': 'любая раса', 'baddut': 'баддун',
+    'balorn': 'балор', 'bird': 'птица', 'bugbear': 'бугбер', 'bullywug': 'булливуг',
+    'cat': 'кошка', 'centaur': 'кентавр', 'changeling': 'перевертень', 'commoner': 'простолюдин',
+    'dog': 'собака', 'druid': 'друид', 'dwarf': 'дварф', 'elf': 'эльф', 'gith': 'гиф',
+    'githyanki': 'гитянки', 'gnoll': 'гнолл', 'gnome': 'гном', 'goblinoid': 'гоблиноид',
+    'goblins': 'гоблины', 'grimlock': 'гримлок', 'grung': 'грунг', 'guard': 'стражник',
+    'hag': 'ведьма', 'halfling': 'полурослик', 'human': 'человек', 'kobold': 'кобольд',
+    'krakull': 'кракен', 'kuo-toa': 'куо-тоа', 'leonin': 'львин', 'lizardfolk': 'ящеролюд',
+    'locathah': 'локатх', 'merfolk': 'тритон', 'minotaur': 'минотавр', 'nagpa': 'нагпа',
+    'orc': 'орк', 'outlander': 'дикарь', 'rat': 'крыса', 'sahuagin': 'сагуагин',
+    'satyr': 'сатир', 'skeleton': 'скелет', 'snake': 'змея', 'spider': 'паук',
+    'thri-kreen': 'три-кин', 'troll': 'тролль', 'vampire': 'вампир', 'wererat': 'крысооборотень',
+    'wolf': 'волк', 'yakfolk': 'яколид', 'zilla': 'ящер',
+    'shapechanger': 'оборотень', 'constructs': 'конструкты', 'undead': 'нежить',
+    'titan': 'титан', 'devil': 'дьявол', 'demon': 'демон',
+}
+SKILL_RU = {
+    'Acrobatics': 'Акробатика', 'Animal Handling': 'Уход за животными', 'Arcana': 'Аркана',
+    'Athletics': 'Атлетика', 'Deception': 'Обман', 'History': 'История', 'Insight': 'Проницательность',
+    'Intimidation': 'Запугивание', 'Investigation': 'Расследование', 'Medicine': 'Медицина',
+    'Nature': 'Природа', 'Perception': 'Восприятие', 'Performance': 'Выступление',
+    'Persuasion': 'Убеждение', 'Religion': 'Религия', 'Sleight of Hand': 'Ловкость рук',
+    'Stealth': 'Скрытность', 'Survival': 'Выживание',
+}
+SENSE_RU = {
+    'blindsight': 'слепое зрение', 'darkvision': 'тёмное зрение', 'truesight': 'истинное зрение',
+    'tremorsense': 'чувство вибрации', 'Passive Perception': 'Пассивное Восприятие',
+    'hover': 'зависание',
+}
+LANG_RU = {
+    'Common': 'Общий', 'Dwarvish': 'Дварфийский', 'Elvish': 'Эльфийский', 'Giant': 'Гигантский',
+    'Gnomish': 'Гномий', 'Goblin': 'Гоблинский', 'Halfling': 'Полурослический', 'Orc': 'Оркский',
+    'Abyssal': 'Бездны', 'Celestial': 'Небесный', 'Draconic': 'Драконий', 'Deep Speech': 'Глубинная речь',
+    'Infernal': 'Инфернальный', 'Primordial': 'Первобытный', 'Sylvan': 'Сильванский',
+    'Undercommon': 'Подобщий', 'Telepathy': 'Телепатия',
+}
+
+
+def localize(s, *maps):
+    """Заменяет английские слова на русские по порядку словарей (по токенам)."""
+    if not isinstance(s, str):
+        return s
+    out = s
+    for mp in maps:
+        for en, ru in mp.items():
+            out = re.sub(rf'(?i)\b{re.escape(en)}\b', ru, out)
+    return out
 
 
 def strip(s):
@@ -131,11 +187,53 @@ def acts_5e(m):
                 txt = ''
             if txt:
                 out.append({'tag': tag, 'text': txt})
+    out += acts_spellcasting(m)
     return out
 
 
+def acts_spellcasting(m):
+    out = []
+    for sc in (m.get('spellcasting') or []):
+        if not isinstance(sc, dict):
+            continue
+        nm = strip(sc.get('name', 'Spellcasting'))
+        parts = []
+        parts += flat_entries(sc.get('headerEntries') or [])
+        for k in ('will', 'daily', 'recharge'):
+            if isinstance(sc.get(k), list):
+                parts += flat_entries(sc[k])
+        for lvl in (sc.get('spells') or []):
+            if isinstance(lvl, dict):
+                parts += flat_entries(lvl.get('spells') or [])
+        txt = strip((nm + '. ' + ' '.join(parts)) if parts else nm)
+        if txt:
+            out.append({'tag': 'Черты', 'text': txt})
+    return out
+
+
+SIZE_WORD_RU = {
+    'Tiny': 'Крошечный', 'Small': 'Маленький', 'Medium': 'Средний', 'Large': 'Большой',
+    'Huge': 'Огромный', 'Gargantuan': 'Гигантский', 'Colossal': 'Колоссальный',
+}
+TYPE_WORD_RU = {
+    'Aberration': 'Аберрация', 'Beast': 'Зверь', 'Celestial': 'Небожитель', 'Construct': 'Конструкт',
+    'Dragon': 'Дракон', 'Elemental': 'Элементаль', 'Fey': 'Фея', 'Fiend': 'Исчадие',
+    'Giant': 'Гигант', 'Humanoid': 'Гуманоид', 'Monstrosity': 'Чудовище', 'Ooze': 'Тварь-желе',
+    'Plant': 'Растение', 'Undead': 'Нежить',
+}
+ALIGN_WORD_RU = {
+    'Lawful': 'Законоправный', 'Chaotic': 'Хаотичный', 'Neutral': 'Нейтральный',
+    'Good': 'Добрый', 'Evil': 'Злой', 'Unaligned': 'Без мировоззрения', 'Any': 'Любое',
+    'Neutral Evil': 'Нейтрально-злой', 'Neutral Good': 'Нейтрально-добрый', 'Any Alignment': 'Любое',
+}
+DRAGON_WORD_RU = {
+    'Chromatic': 'Хроматический', 'Metallic': 'Металлический', 'Gem': 'Самоцветный',
+}
+SIZE_ABBR_WORD_RU = {'T': 'Крошечный', 'S': 'Маленький', 'M': 'Средний', 'L': 'Большой', 'H': 'Огромный', 'G': 'Гигантский'}
+
+
 def type_custom(m):
-    return str(m.get('type', ''))[:80]
+    return localize(str(m.get('type', '')), SIZE_WORD_RU, TYPE_WORD_RU, ALIGN_WORD_RU, DRAGON_WORD_RU)[:80]
 
 
 def type_5e(m):
@@ -152,10 +250,16 @@ def type_5e(m):
         tags = t.get('tags') or []
     else:
         tt = str(t or '')
-    tt = tt.capitalize() if tt else ''
+    tt = TYPE_RU.get(tt.lower(), tt.capitalize() if tt else '')
     base = ' '.join(x for x in [sz, tt] if x)
     if tags:
-        base += ' (' + ', '.join(str(x) for x in tags) + ')'
+        tag_words = []
+        for x in tags:
+            if isinstance(x, dict):
+                tag_words.append(localize(str(x.get('tag', '')), TAG_RU))
+            else:
+                tag_words.append(localize(str(x), TAG_RU))
+        base += ' (' + ', '.join(w for w in tag_words if w) + ')'
     al = m.get('alignment')
     if isinstance(al, list) and al:
         words = [ALIGN_MAP.get(c, c) for c in al]
@@ -251,8 +355,8 @@ def row_custom(m, mon):
         'type': type_custom(m), 'cr': str(m.get('CR', ''))[:24],
         'ac': str(m.get('AC', ''))[:24], 'hp': str(m.get('HP', ''))[:30],
         'sp': str(m.get('Speed', ''))[:60], 'init': str(m.get('initiative', ''))[:16],
-        'ab': ab_str(ab), 'sk': str(m.get('skills', ''))[:120],
-        'sen': str(m.get('senses', ''))[:80], 'lang': str(m.get('languages', ''))[:80],
+        'ab': ab_str(ab), 'sk': localize(str(m.get('skills', '')), SKILL_RU)[:120],
+        'sen': localize(str(m.get('senses', '')), SENSE_RU)[:80], 'lang': localize(str(m.get('languages', '')), LANG_RU)[:80],
         'img': m.get('image_src', '') or '', 'ab_list': ab, 'acts': acts_custom(m)[:60],
         '_src': str(m.get('source', '')),
     }
@@ -277,7 +381,8 @@ def row_5e(m, mon):
         'n': mon.get(name, name), 'en': name,
         'type': type_5e(m), 'cr': str(cr)[:24],
         'ac': ac_5e(m), 'hp': hp_5e(m), 'sp': sp_5e(m), 'init': init[:16],
-        'ab': ab_str(ab), 'sk': sk_s[:120], 'sen': sen_s[:80], 'lang': lang_s[:80],
+        'ab': ab_str(ab), 'sk': localize(sk_s, SKILL_RU)[:120],
+        'sen': localize(sen_s, SENSE_RU)[:80], 'lang': localize(lang_s, LANG_RU)[:80],
         'img': '', 'ab_list': ab, 'acts': acts_5e(m)[:60],
         '_src': str(m.get('source', '')),
     }
@@ -290,17 +395,80 @@ def load_list(path):
     return data if isinstance(data, list) else []
 
 
+def merge_copy(base_row, entry, mon):
+    """Разворачивает _copy: клонирует базовый статблок и применяет правки записи."""
+    import copy as _copy
+    row = _copy.deepcopy(base_row)
+    name = str(entry.get('name', ''))
+    row['en'] = name
+    row['n'] = mon.get(name, name)
+    if 'ac' in entry:
+        v = ac_5e(entry)
+        if v:
+            row['ac'] = v
+    if 'hp' in entry:
+        v = hp_5e(entry)
+        if v:
+            row['hp'] = v
+    if 'cr' in entry:
+        row['cr'] = str(entry['cr'])[:24]
+    if 'speed' in entry:
+        v = sp_5e(entry)
+        if v:
+            row['sp'] = v
+    ab = row.get('ab_list') or []
+    changed = False
+    for k in AB_ORDER:
+        low = AB_LOW[k]
+        if isinstance(entry.get(low), (int, float)):
+            v = int(entry[low])
+            for x in ab:
+                if x['k'] == k:
+                    x['v'] = v
+                    x['m'] = mod_of(v)
+                    changed = True
+    if changed:
+        row['ab_list'] = ab
+        row['ab'] = ab_str(ab)
+    if any(k in entry for k in ('type', 'size', 'alignment')):
+        t = type_5e(entry)
+        if t:
+            if 'size' not in entry:
+                bsz = (base_row.get('type', '').split(' ')[0] or '')
+                if bsz and not t.lower().startswith(bsz.lower()):
+                    t = (bsz + ' ' + t).strip()
+            row['type'] = t[:80]
+    extra = []
+    for key, tag in (('trait', 'Черты'), ('action', 'Действия'), ('bonus', 'Бонус'),
+                     ('reaction', 'Реакция'), ('legendary', 'Легендарные')):
+        for it in (entry.get(key) or []):
+            if isinstance(it, str):
+                txt = strip(it)
+            elif isinstance(it, dict):
+                nm = strip(it.get('name', ''))
+                body = ' '.join(flat_entries(it.get('entries') or []))
+                txt = strip((nm + '. ' + body) if nm else body)
+            else:
+                txt = ''
+            if txt:
+                extra.append({'tag': tag, 'text': txt})
+    extra += acts_spellcasting(entry)
+    if extra:
+        row['acts'] = (row.get('acts') or []) + extra
+    return row
+
+
 def main():
     mon = load_mon()
     rows = []
-    seen = set()
-    skipped_copy = 0
+    byname = {}
+    pending = []
 
     def add(row):
         key = (row['en'] or '').strip().lower()
-        if not key or key in seen:
+        if not key or key in byname:
             return False
-        seen.add(key)
+        byname[key] = row
         rows.append(row)
         return True
 
@@ -311,7 +479,7 @@ def main():
             add(row_custom(m, mon))
         print(f'monsters2024.json: всего {len(rows)}')
 
-    # 2) сырые файлы 5e.tools
+    # 2) сырые файлы 5e.tools (+ собираем _copy-алиасы на развёртывание)
     files = sorted(glob.glob(os.path.join(RAWDIR, 'bestiary-*.json')))
     if not files:
         print(f'Нет файлов в {RAWDIR}. Положи туда data/bestiary/*.json из 5etools-src и запусти снова.')
@@ -325,11 +493,31 @@ def main():
         for m in items:
             if not isinstance(m, dict) or not m.get('name'):
                 continue
-            if '_copy' in m:  # копии-ссылки на другой статблок — пропускаем
-                skipped_copy += 1
+            if '_copy' in m:
+                pending.append(m)
                 continue
             add(row_5e(m, mon))
         print(f'  + {os.path.basename(path)}: +{len(rows) - before} новых')
+
+    # 3) разворачиваем _copy-алиасы в несколько проходов (копия может ссылаться на копию)
+    resolved = 0
+    passes = 0
+    while pending and passes < 12:
+        passes += 1
+        still = []
+        progress = False
+        for m in pending:
+            base = byname.get(str(m.get('_copy', {}).get('name', '')).strip().lower())
+            if not base:
+                still.append(m)
+                continue
+            if add(merge_copy(base, m, mon)):
+                resolved += 1
+                progress = True
+        pending = still
+        if not progress:
+            break
+    skipped_ref = len(pending)
 
     # финальный формат для приложения
     out = []
@@ -341,7 +529,8 @@ def main():
     header = (f'// Бестиарий D&D — {len(out)} монстров. '
               f'Собран _merge_bestiary.py из data/. Источники: 5e.tools / SRD.\n')
     open(OUT, 'w', encoding='utf-8').write(header + 'window.BESTIARY = ' + json.dumps(out, ensure_ascii=False) + ';\n')
-    print(f'Готово: {OUT} — {len(out)} монстров (пропущено копий-ссылок: {skipped_copy})')
+    print(f'Готово: {OUT} — {len(out)} монстров '
+          f'(развёрнуто _copy-алиасов: {resolved}, без базы: {skipped_ref})')
 
 
 if __name__ == '__main__':
