@@ -70,10 +70,54 @@
       <button class="tab active" data-tab="chars">👤 Персонажи</button>
       <button class="tab" data-tab="monsters">👹 Монстры</button>
       <button class="tab" data-tab="notes">📋 Холст заметок</button>
+      <button class="tab" data-tab="sessions">📓 Сессии</button>
       <button class="tab" data-tab="map">🗺 Карта боя</button>
     </div>
     <div class="tabview" id="view-chars">
       <div class="canvas" id="canvas"></div>
+    </div>
+    <div class="tabview" id="view-sessions" hidden>
+      <div class="sessions-wrap">
+        <aside class="sessions-list">
+          <div class="sessions-list-head">
+            <button id="sessionNew" title="Новая сессия">＋ Сессия</button>
+          </div>
+          <div id="sessionsList" class="sessions-list-items"></div>
+        </aside>
+        <div class="sessions-editor">
+          <div class="editor-toolbar" id="sessionToolbar">
+            <button data-cmd="bold" title="Жирный (Ctrl+B)"><b>Ж</b></button>
+            <button data-cmd="italic" title="Курсив (Ctrl+I)"><i>К</i></button>
+            <button data-cmd="underline" title="Подчёркнутый"><u>Ч</u></button>
+            <button data-cmd="strikeThrough" title="Зачёркнутый"><s>З</s></button>
+            <span class="acts-sep"></span>
+            <button data-block="h1" title="Заголовок 1">H1</button>
+            <button data-block="h2" title="Заголовок 2">H2</button>
+            <button data-block="h3" title="Заголовок 3">H3</button>
+            <button data-block="p" title="Обычный текст">¶</button>
+            <span class="acts-sep"></span>
+            <button data-cmd="insertUnorderedList" title="Список">• —</button>
+            <button data-cmd="insertOrderedList" title="Нумерованный список">1.</button>
+            <button data-block="blockquote" title="Цитата">❝</button>
+            <button data-block="pre" title="Код">‹/›</button>
+            <span class="acts-sep"></span>
+            <button data-link="1" title="Ссылка">🔗</button>
+            <button id="sessionImgBtn" type="button" title="Вставить картинку" aria-label="Вставить картинку">🖼</button>
+            <input type="file" id="sessionImgInput" accept="image/*" class="hidden" aria-label="Выбрать картинку">
+            <button data-cmd="removeFormat" title="Очистить форматирование">✕ фмт</button>
+            <button data-cmd="undo" title="Отменить">↶</button>
+            <button data-cmd="redo" title="Повторить">↷</button>
+          </div>
+          <div class="editor-title-row">
+            <input id="sessionTitle" class="session-title-input" placeholder="Название сессии" aria-label="Название сессии">
+            <span class="hint" id="sessionSaved"></span>
+            <button id="sessionExportMd" title="Экспорт в Markdown">⬇ MD</button>
+            <button id="sessionExportPdf" title="Экспорт в PDF (печать)">🖨 PDF</button>
+            <button id="sessionDelete" title="Удалить сессию" class="del">🗑</button>
+          </div>
+          <div id="sessionEditor" class="session-editor" contenteditable="true" spellcheck="false" aria-label="Текст сессии"></div>
+        </div>
+      </div>
     </div>
     <div class="tabview" id="view-notes" hidden>
       <div class="map-toolbar">

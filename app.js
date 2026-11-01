@@ -883,6 +883,7 @@ let blocksTab = 'chars'; // 'chars' | 'monsters'
 const tabs = {
   chars: document.getElementById('view-chars'),
   notes: document.getElementById('view-notes'),
+  sessions: document.getElementById('view-sessions'),
   map: document.getElementById('view-map'),
 };
 function showTab(name){
@@ -890,6 +891,7 @@ function showTab(name){
   document.querySelectorAll('.tab').forEach(t=> t.classList.toggle('active', t.dataset.tab===name));
   tabs.chars.hidden = true;
   tabs.notes.hidden = true;
+  tabs.sessions.hidden = true;
   tabs.map.hidden = true;
   if(name==='chars'||name==='monsters'){
     blocksTab = name;
@@ -898,6 +900,9 @@ function showTab(name){
   } else if(name==='notes'){
     tabs.notes.hidden = false;
     renderNotes();
+  } else if(name==='sessions'){
+    tabs.sessions.hidden = false;
+    ensureSessions();
   } else if(name==='map'){
     tabs.map.hidden = false;
     renderMap();
@@ -1152,6 +1157,281 @@ document.getElementById('tablesRoll').addEventListener('click', ()=>{
       <div class="lib-title" style="margin-top:6px; font-size:15px">${escapeHtml(val)}</div>
     </div></div>`;
 });
+
+/* ════════════ Сессии (редактор в стиле Obsidian) ════════════ */
+const STORE_SESSIONS = 'shirma_sessions_v1';
+let sessions = [];
+let activeSessionId = null;
+let sessionsInited = false;
+
+function loadSessions(){
+  try{ const raw=localStorage.getItem(STORE_SESSIONS); if(raw){ sessions=JSON.parse(raw)||[]; return true; } }catch(e){}
+  sessions=[]; return false;
+}
+const persistSessions = debounce(()=>{ try{ const out=sessions.map(s=>({...s, html:stripSessionHtml(s.html)})); localStorage.setItem(STORE_SESSIONS, JSON.stringify(out)); }catch(e){ console.warn('Не удалось сохранить сессии:', e); } }, 300);
+function scheduleSaveSessions(){
+  persistSessions();
+  const el=document.getElementById('sessionSaved');
+  if(el){ el.textContent='Сохранение…'; setTimeout(()=>{ if(el) el.textContent='Сохранено'; }, 350); }
+}
+function findSession(id){ return sessions.find(s=>s.id===id); }
+function stripSessionHtml(html){
+  if(!html) return html||'';
+  const d=document.createElement('div'); d.innerHTML=html;
+  d.querySelectorAll('img[data-mkey]').forEach(img=> img.removeAttribute('src'));
+  return d.innerHTML;
+}
+function hydrateSessionHtml(html){
+  if(!html) return html||'';
+  const d=document.createElement('div'); d.innerHTML=html;
+  let changed=false;
+  d.querySelectorAll('img[data-mkey]').forEach(img=>{
+    const k=img.getAttribute('data-mkey');
+    const src=(k && mediaCache[k]) || '';
+    if(src){ img.setAttribute('src',src); changed=true; }
+  });
+  return changed ? d.innerHTML : (html||'');
+}
+
+function ensureSessions(){
+  if(!sessionsInited){
+    sessionsInited = true;
+    loadSessions();
+    bindSessionControls();
+    if(!sessions.length){ newSession(true); }
+    else { renderSessionsList(); selectSession(sessions[0].id); }
+  } else {
+    renderSessionsList();
+  }
+}
+function renderSessionsList(){
+  const box=document.getElementById('sessionsList');
+  if(!box) return;
+  if(!sessions.length){ box.innerHTML='<div class="hint" style="padding:8px">Нет сессий</div>'; return; }
+  box.innerHTML = sessions.map(s=>{
+    const date = s.updated ? new Date(s.updated).toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
+    return `<div class="session-item ${s.id===activeSessionId?'active':''}" data-sid="${s.id}">
+      <div class="si-title">${escapeHtml(s.title||'Без названия')}</div>
+      <div class="si-date">${date}</div>
+    </div>`;
+  }).join('');
+  box.querySelectorAll('[data-sid]').forEach(el=> el.addEventListener('click', ()=> selectSession(el.dataset.sid)));
+}
+function selectSession(id){
+  const s=findSession(id); if(!s) return;
+  activeSessionId=id;
+  const titleEl=document.getElementById('sessionTitle');
+  const ed=document.getElementById('sessionEditor');
+  if(titleEl) titleEl.value = s.title||'';
+  if(ed) ed.innerHTML = hydrateSessionHtml(s.html||'');
+  const sv=document.getElementById('sessionSaved'); if(sv) sv.textContent='';
+  renderSessionsList();
+}
+function newSession(silent){
+  const now=Date.now();
+  const s={ id:'s'+now.toString(36)+Math.random().toString(36).slice(2,6), title:'Сессия '+new Date(now).toLocaleDateString('ru-RU'), html:'', updated:now };
+  sessions.unshift(s);
+  persistSessions();
+  activeSessionId=s.id;
+  const titleEl=document.getElementById('sessionTitle');
+  const ed=document.getElementById('sessionEditor');
+  if(titleEl) titleEl.value=s.title;
+  if(ed) ed.innerHTML='';
+  renderSessionsList();
+  if(!silent){ scheduleSaveSessions(); }
+}
+function bindSessionControls(){
+  const titleEl=document.getElementById('sessionTitle');
+  const ed=document.getElementById('sessionEditor');
+  const delBtn=document.getElementById('sessionDelete');
+  const newBtn=document.getElementById('sessionNew');
+  if(newBtn) newBtn.addEventListener('click', ()=> newSession());
+  if(titleEl) titleEl.addEventListener('input', ()=>{
+    const s=findSession(activeSessionId); if(!s) return;
+    s.title=titleEl.value; s.updated=Date.now(); scheduleSaveSessions(); renderSessionsList();
+  });
+  if(ed) ed.addEventListener('input', ()=>{
+    const s=findSession(activeSessionId); if(!s){ return; }
+    s.html=ed.innerHTML; s.updated=Date.now(); scheduleSaveSessions();
+  });
+  if(delBtn) delBtn.addEventListener('click', ()=>{
+    if(!activeSessionId) return;
+    if(!confirm('Удалить эту сессию?')) return;
+    sessions = sessions.filter(s=>s.id!==activeSessionId);
+    persistSessions();
+    if(sessions.length){ selectSession(sessions[0].id); } else { activeSessionId=null; const t=document.getElementById('sessionTitle'); const e=document.getElementById('sessionEditor'); if(t)t.value=''; if(e)e.innerHTML=''; renderSessionsList(); }
+  });
+  const mdBtn=document.getElementById('sessionExportMd');
+  const pdfBtn=document.getElementById('sessionExportPdf');
+  if(mdBtn) mdBtn.addEventListener('click', exportSessionMd);
+  if(pdfBtn) pdfBtn.addEventListener('click', exportSessionPdf);
+  bindSessionToolbar();
+}
+function bindSessionToolbar(){
+  const bar=document.getElementById('sessionToolbar');
+  const ed=document.getElementById('sessionEditor');
+  if(!bar || !ed) return;
+  // mousedown с preventDefault — чтобы не терять выделение в редакторе
+  bar.addEventListener('mousedown', e=>{ if(e.target.closest('button')) e.preventDefault(); });
+  bar.querySelectorAll('[data-cmd]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      ed.focus();
+      try{ document.execCommand(btn.dataset.cmd, false, null); }catch(e){}
+      afterEdit();
+    });
+  });
+  bar.querySelectorAll('[data-block]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      ed.focus();
+      const tag=btn.dataset.block;
+      try{ document.execCommand('formatBlock', false, tag); }catch(e){}
+      afterEdit();
+    });
+  });
+  bar.querySelectorAll('[data-link]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      ed.focus();
+      const url=prompt('Адрес ссылки (URL):','https://'); if(!url) return;
+      try{ document.execCommand('createLink', false, url); }catch(e){}
+      afterEdit();
+    });
+  });
+  // вставка картинки: кнопка → выбор файла
+  const imgBtn=document.getElementById('sessionImgBtn');
+  const imgInput=document.getElementById('sessionImgInput');
+  if(imgBtn && imgInput){
+    imgBtn.addEventListener('click', ()=> imgInput.click());
+    imgInput.addEventListener('change', e=>{
+      const f=e.target.files && e.target.files[0];
+      if(f) insertImageIntoSession(f);
+      e.target.value='';
+      afterEdit();
+    });
+  }
+  // вставка из буфера обмена (Ctrl+V)
+  ed.addEventListener('paste', e=>{
+    const items=e.clipboardData && e.clipboardData.items;
+    if(!items) return;
+    for(const it of items){
+      if(it.type && it.type.indexOf('image')===0){
+        const f=it.getAsFile();
+        if(f){ e.preventDefault(); insertImageIntoSession(f); afterEdit(); }
+        return;
+      }
+    }
+  });
+  // перетаскивание файла в редактор
+  ed.addEventListener('drop', e=>{
+    const dt=e.dataTransfer; if(!dt) return;
+    const f=[...(dt.files||[])].find(x=>/^image\//.test(x.type));
+    if(f){ e.preventDefault(); insertImageIntoSession(f); afterEdit(); }
+  });
+  function afterEdit(){
+    const s=findSession(activeSessionId); if(s){ s.html=ed.innerHTML; s.updated=Date.now(); scheduleSaveSessions(); }
+  }
+}
+
+function insertImageIntoSession(file){
+  if(!file || !/^image\//.test(file.type)) return;
+  const ed=document.getElementById('sessionEditor'); if(!ed) return;
+  const reader=new FileReader();
+  reader.onload=()=>{
+    const data=reader.result;
+    const key='sessimg_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+    mediaCache[key]=data; idbPut(key,data);
+    const img=document.createElement('img');
+    img.setAttribute('src',data);
+    img.setAttribute('data-mkey',key);
+    img.setAttribute('alt','');
+    const sel=window.getSelection();
+    let inserted=false;
+    if(sel && sel.rangeCount){
+      const range=sel.getRangeAt(0);
+      if(ed.contains(range.commonAncestorContainer)){
+        range.deleteContents(); range.insertNode(img);
+        const after=document.createRange(); after.setStartAfter(img); after.collapse(true);
+        sel.removeAllRanges(); sel.addRange(after); inserted=true;
+      }
+    }
+    if(!inserted) ed.appendChild(img);
+    const s=findSession(activeSessionId); if(s){ s.html=ed.innerHTML; s.updated=Date.now(); scheduleSaveSessions(); }
+  };
+  reader.readAsDataURL(file);
+}
+
+/* ════════════ Экспорт сессии в Markdown / PDF ════════════ */
+function htmlToMarkdown(html){
+  const root=document.createElement('div'); root.innerHTML=html||'';
+  function esc(s){ return s; }
+  function walk(node){
+    if(node.nodeType===3) return node.nodeValue;
+    if(node.nodeType!==1) return '';
+    const tag=node.nodeName.toLowerCase();
+    const inner=Array.from(node.childNodes).map(walk).join('');
+    switch(tag){
+      case 'h1': return '\n# '+inner.trim()+'\n';
+      case 'h2': return '\n## '+inner.trim()+'\n';
+      case 'h3': return '\n### '+inner.trim()+'\n';
+      case 'h4': return '\n#### '+inner.trim()+'\n';
+      case 'strong': case 'b': return '**'+inner+'**';
+      case 'em': case 'i': return '_'+inner+'_';
+      case 's': case 'strike': case 'del': return '~~'+inner+'~~';
+      case 'u': return inner;
+      case 'code': return '`'+inner+'`';
+      case 'pre': return '\n```\n'+node.textContent.replace(/\n+$/,'')+'\n```\n';
+      case 'blockquote': return '\n> '+inner.trim().replace(/\n/g,'\n> ')+'\n';
+      case 'a': return '['+inner+']('+(node.getAttribute('href')||'')+')';
+      case 'img': return '!['+(node.getAttribute('alt')||'')+']('+(node.getAttribute('src')||'')+')';
+      case 'ul': return '\n'+Array.from(node.children).map(li=>'- '+li.textContent.trim()).join('\n')+'\n';
+      case 'ol': return '\n'+Array.from(node.children).map((li,i)=>(i+1)+'. '+li.textContent.trim()).join('\n')+'\n';
+      case 'li': return inner;
+      case 'br': return '\n';
+      case 'hr': return '\n---\n';
+      case 'p': case 'div': return '\n'+inner+'\n';
+      default: return inner;
+    }
+  }
+  let md=walk(root);
+  md=md.replace(/[ \t]+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim();
+  return md;
+}
+function downloadFile(name, content, mime){
+  const blob=new Blob([content],{type:mime||'text/plain;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download=name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 1000);
+}
+function safeFileName(name){ return String(name||'session').replace(/[\/\\:*?"<>|]+/g,'_').slice(0,80); }
+function exportSessionMd(){
+  const s=findSession(activeSessionId); if(!s){ alert('Нет активной сессии'); return; }
+  const md='# '+(s.title||'Сессия')+'\n\n'+htmlToMarkdown(hydrateSessionHtml(s.html||''));
+  downloadFile(safeFileName(s.title)+'.md', md, 'text/markdown;charset=utf-8');
+}
+function exportSessionPdf(){
+  const s=findSession(activeSessionId); if(!s){ alert('Нет активной сессии'); return; }
+  const bodyHtml=hydrateSessionHtml(s.html||'');
+  const html = `<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8"><title>${escapeHtml(s.title||'Сессия')}</title>
+    <style>
+      body{font-family:-apple-system,"Segoe UI",Roboto,sans-serif;color:#111;max-width:800px;margin:24px auto;padding:0 20px;line-height:1.6;font-size:14px}
+      h1{font-size:24px;margin:0 0 14px}h2{font-size:19px}h3{font-size:16px}
+      blockquote{border-left:3px solid #999;margin:10px 0;padding:4px 12px;color:#555}
+      pre{background:#f4f4f4;padding:10px;border-radius:6px;white-space:pre-wrap;font-size:12px}
+      code{background:#f4f4f4;padding:1px 4px;border-radius:3px}
+      a{color:#1155cc} img{max-width:100%}
+    </style></head><body><h1>${escapeHtml(s.title||'Сессия')}</h1>${bodyHtml}</body></html>`;
+  const frame=document.createElement('iframe');
+  frame.style.cssText='position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden';
+  document.body.appendChild(frame);
+  const doc=frame.contentWindow.document;
+  doc.open(); doc.write(html); doc.close();
+  setTimeout(()=>{
+    try{ frame.contentWindow.focus(); frame.contentWindow.print(); }
+    catch(e){ alert('Не удалось открыть печать: '+e.message); }
+    setTimeout(()=>frame.remove(), 1500);
+  }, 400);
+}
 
 /* ════════════ Init ════════════ */
 (function init(){

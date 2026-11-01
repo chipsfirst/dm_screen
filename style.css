@@ -262,6 +262,42 @@
   .map-tok-ctl{display:none; gap:6px; align-items:center}
   .map-tok-name{color:var(--text); font-weight:600}
   .hidden{display:none !important}
+
+  /* ── Сессии (редактор) ── */
+  .sessions-wrap{flex:1; display:flex; min-height:0; overflow:hidden}
+  .sessions-list{width:220px; min-width:180px; border-right:1px solid var(--line); background:var(--panel); display:flex; flex-direction:column; min-height:0}
+  .sessions-list-head{padding:8px; border-bottom:1px solid var(--line)}
+  .sessions-list-head button{width:100%}
+  .sessions-list-items{flex:1; overflow-y:auto; padding:6px; min-height:0}
+  .session-item{padding:8px 10px; border-radius:6px; cursor:pointer; margin-bottom:2px; border:1px solid transparent}
+  .session-item:hover{background:var(--panel2)}
+  .session-item.active{background:var(--panel2); border-color:var(--accent)}
+  .session-item .si-title{font-weight:600; font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .session-item .si-date{color:var(--muted); font-size:11px}
+  .sessions-editor{flex:1; display:flex; flex-direction:column; min-width:0; min-height:0}
+  .editor-toolbar{display:flex; gap:4px; flex-wrap:wrap; align-items:center; padding:6px 12px; border-bottom:1px solid var(--line); background:var(--panel)}
+  .editor-toolbar button{min-width:30px; padding:4px 7px; font-size:12px}
+  .editor-toolbar button.active{background:var(--accent); color:#1b1e22; border-color:var(--accent)}
+  .editor-title-row{display:flex; gap:8px; align-items:center; padding:8px 12px; border-bottom:1px solid var(--line)}
+  .session-title-input{flex:1; min-width:0; background:var(--panel2); border:1px solid var(--line); border-radius:6px; color:var(--text); padding:7px 10px; font-size:15px; font-weight:600; outline:none}
+  .session-title-input:focus{border-color:var(--accent)}
+  .session-editor{
+    flex:1; overflow-y:auto; min-height:0; padding:20px 26px; outline:none; line-height:1.6; font-size:15px;
+    max-width:none;
+  }
+  .session-editor:empty:before{content:attr(data-ph); color:var(--muted)}
+  .session-editor h1{font-size:26px; margin:16px 0 10px; color:var(--accent2)}
+  .session-editor h2{font-size:21px; margin:14px 0 8px; color:var(--accent2)}
+  .session-editor h3{font-size:17px; margin:12px 0 6px; color:var(--accent2)}
+  .session-editor p{margin:8px 0}
+  .session-editor ul,.session-editor ol{margin:8px 0 8px 22px}
+  .session-editor blockquote{border-left:3px solid var(--accent); margin:10px 0; padding:4px 12px; color:var(--muted); background:var(--panel2)}
+  .session-editor pre{background:var(--panel2); border:1px solid var(--line); border-radius:8px; padding:10px 12px; overflow-x:auto; font-family:ui-monospace,Menlo,monospace; font-size:13px; white-space:pre-wrap}
+  .session-editor code{background:var(--panel2); border-radius:4px; padding:1px 5px; font-family:ui-monospace,Menlo,monospace; font-size:13px}
+  .session-editor a{color:var(--accent2); text-decoration:underline}
+  .session-editor img{max-width:100%; height:auto; border-radius:6px; margin:8px 0; display:block; border:1px solid var(--line)}
+  .session-editor hr{border:none; border-top:1px solid var(--line); margin:14px 0}
+  .session-editor:focus{outline:none}
   ::-webkit-scrollbar{width:10px; height:10px}
   ::-webkit-scrollbar-thumb{background:var(--line); border-radius:5px}
   ::-webkit-scrollbar-track{background:transparent}
