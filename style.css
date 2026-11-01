@@ -91,6 +91,8 @@
     min-height:0;
   }
   .map-canvas.has-bg{background:#0f1114; background-image:none}
+  .map-canvas.locked{overflow:hidden}
+  #mapLock.locked{background:var(--accent); color:#1b1e22; border-color:var(--accent)}
   .map-zoom{position:absolute; top:0; left:0; transform-origin:0 0}
   .map-bg{position:absolute; top:0; left:0; width:800px; height:600px; object-fit:contain; pointer-events:none; display:block}
   .map-canvas.has-bg .map-bg{z-index:1}
@@ -251,7 +253,7 @@
   .prop:focus-within{outline:1px solid var(--accent)}
 
   /* free layout (drag) */
-  .canvas.free{position:relative; overflow:auto; min-height:2000px}
+  .canvas.free{position:relative; overflow:auto; min-height:0}
   .canvas.free .block{width:100%; position:relative; margin:0; box-shadow:0 6px 20px rgba(0,0,0,.35)}
   .canvas.free .block-head{cursor:grab}
   .canvas.free .block-head:active{cursor:grabbing}

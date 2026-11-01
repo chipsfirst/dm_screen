@@ -974,11 +974,12 @@ document.getElementById('notesClear').addEventListener('click', ()=>{ if(confirm
 const STORE_MAP = 'shirma_map_v1';
 let mapState = { bg:null, tokens:[], zoom:1 };
 function loadMap(){
-  try{ const raw=localStorage.getItem(STORE_MAP); if(raw){ mapState=JSON.parse(raw); if(!mapState.zoom) mapState.zoom=1; return true; } }catch(e){}
+  try{ const raw=localStorage.getItem(STORE_MAP); if(raw){ mapState=JSON.parse(raw); if(!mapState.zoom) mapState.zoom=1; if(mapState.locked==null) mapState.locked=false; if(mapState.scrollX==null) mapState.scrollX=0; if(mapState.scrollY==null) mapState.scrollY=0; return true; } }catch(e){}
   return false;
 }
 function saveMap(){ try{ localStorage.setItem(STORE_MAP, JSON.stringify(mapState)); }catch(e){} }
 function mapZoom(delta){
+  if(mapState.locked) return;
   const z = Math.min(4, Math.max(0.25, mapState.zoom + delta));
   mapState.zoom = z;
   saveMap(); renderMap();
@@ -986,6 +987,7 @@ function mapZoom(delta){
 function renderMap(){
   const mc = document.getElementById('mapCanvas');
   mc.innerHTML='';
+  mc.classList.toggle('locked', !!mapState.locked);
   const z = mapState.zoom;
   const wrapper=document.createElement('div');
   wrapper.className='map-zoom';
@@ -1016,6 +1018,14 @@ function renderMap(){
     empty.textContent='Загрузите карту или добавьте токен.';
     mc.appendChild(empty);
   }
+  updateMapLockBtn();
+  requestAnimationFrame(()=>{ mc.scrollLeft=mapState.scrollX||0; mc.scrollTop=mapState.scrollY||0; });
+}
+function updateMapLockBtn(){
+  const btn=document.getElementById('mapLock'); if(!btn) return;
+  btn.textContent = mapState.locked ? '🔒 Закреплено' : '🔓 Закрепить';
+  btn.classList.toggle('locked', !!mapState.locked);
+  btn.title = mapState.locked ? 'Карта закреплена: масштаб и прокрутка заблокированы' : 'Закрепить карту в текущем положении';
 }
 let selectedTokenId = null;
 function tokenEl(t){
@@ -1125,9 +1135,23 @@ document.getElementById('mapTokDel').addEventListener('click', ()=>{
 });
 document.getElementById('mapZoomIn').addEventListener('click', ()=> mapZoom(0.25));
 document.getElementById('mapZoomOut').addEventListener('click', ()=> mapZoom(-0.25));
-document.getElementById('mapZoomReset').addEventListener('click', ()=>{ mapState.zoom=1; saveMap(); renderMap(); });
+document.getElementById('mapZoomReset').addEventListener('click', ()=>{ if(mapState.locked) return; mapState.zoom=1; saveMap(); renderMap(); });
+document.getElementById('mapLock').addEventListener('click', ()=>{
+  mapState.locked=!mapState.locked;
+  const mc=document.getElementById('mapCanvas');
+  if(mc){ mapState.scrollX=mc.scrollLeft; mapState.scrollY=mc.scrollTop; }
+  saveMap(); renderMap();
+});
+const saveMapScroll = debounce(()=>{ saveMap(); }, 250);
+document.getElementById('mapCanvas').addEventListener('scroll', e=>{
+  if(mapState.locked) return;
+  const mc=e.currentTarget;
+  mapState.scrollX=mc.scrollLeft; mapState.scrollY=mc.scrollTop;
+  saveMapScroll();
+});
 document.getElementById('mapCanvas').addEventListener('wheel', e=>{
   e.preventDefault();
+  if(mapState.locked) return;
   mapZoom(e.deltaY<0 ? 0.1 : -0.1);
 }, { passive:false });
 
