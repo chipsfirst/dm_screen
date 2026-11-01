@@ -1,0 +1,17 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Собрано для macOS (артефакты)
+*.app/
+*.app
+
+# Временные файлы
+*.bak
+*.tmp
