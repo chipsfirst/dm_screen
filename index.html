@@ -59,6 +59,7 @@
         <span class="acts-sep"></span>
         <span class="acts-group">
           <button id="btnLayout" title="Переключить: лента / свободный холст">Раскладка</button>
+          <button id="btnUndo" title="Отменить последнее действие (Ctrl+Z)">↩ Отменить</button>
           <button id="btnExport">Экспорт JSON</button>
           <button id="btnImport">Импорт</button>
           <input type="file" id="fileInput" accept=".json" class="hidden" aria-label="Импорт резервной копии">
@@ -137,6 +138,8 @@
         <button id="mapAddToken" title="Добавить токен персонажа">⬤ Добавить токен</button>
         <input type="file" id="mapFileInput" accept="image/*" class="hidden" aria-label="Загрузка карты">
         <span class="acts-sep"></span>
+        <button id="mapCombat" title="Бросить инициативу для всех токенов и начать бой">⚔ Начать бой</button>
+        <button id="mapCombatEnd" title="Завершить бой" hidden>■ Конец боя</button>
         <button id="mapZoomIn" title="Приблизить">＋</button>
         <button id="mapZoomOut" title="Отдалить">－</button>
         <button id="mapZoomReset" title="Сбросить масштаб">100%</button>
@@ -149,12 +152,22 @@
         <span id="mapTokCtl" class="map-tok-ctl">
           <span class="hint map-tok-name" id="mapTokName"></span>
           <button id="mapTokType" title="Переключить ПК/враг">ПК</button>
+          <span class="tok-hp-ctl">
+            <button id="mapTokHpDmg" title="Урон: −5 ХП">−5</button>
+            <input id="mapTokHp" class="tok-hp-in" type="number" aria-label="Текущие ХП" placeholder="ХП">
+            <span class="hint">/</span>
+            <input id="mapTokHpMax" class="tok-hp-in" type="number" aria-label="Максимум ХП" placeholder="макс">
+            <button id="mapTokHpHeal" title="Лечение: +5 ХП">+5</button>
+          </span>
+          <button id="mapTokStat" title="Открыть статблок монстра" hidden>📜</button>
+          <button id="mapTokDown" title="Выбыл / вернуть в бой">☠</button>
           <button id="mapTokImg" title="Загрузить картинку на токен" aria-label="Загрузить картинку на токен">🖼</button>
           <input type="file" id="mapTokImgInput" accept="image/*" class="hidden">
           <button id="mapTokImgClear" title="Убрать картинку" aria-label="Убрать картинку с токена">✂</button>
           <button id="mapTokDel" title="Удалить токен" aria-label="Удалить токен">🗑</button>
         </span>
       </div>
+      <div class="combat-tracker" id="combatTracker" hidden></div>
       <div class="map-canvas" id="mapCanvas"></div>
     </div>
   </main>
@@ -230,7 +243,6 @@
   </div>
 </div>
 
-<script src="library-data.js"></script>
 <script src="shop-data.js"></script>
 <script src="app-data.js"></script>
 <script src="app.js"></script>

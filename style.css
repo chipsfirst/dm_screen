@@ -356,3 +356,84 @@
   .lib-row .lib-add{flex-shrink:0; font-size:18px; line-height:1; align-self:center; color:var(--accent2); opacity:0}
   .lib-row:hover .lib-add{opacity:1}
   .lib-row .lib-p{font-size:12px; color:var(--muted); margin-top:3px}
+
+  /* ХП и урон на листе ПК */
+  .hp-row{display:flex; gap:6px; align-items:center; margin-bottom:10px; flex-wrap:wrap}
+  .hp-row .hp-big{font-size:26px; font-weight:800; line-height:1; color:var(--accent2); min-width:38px; text-align:center}
+  .hp-row .hp-big.knocked{color:var(--danger)}
+  .hp-row .hp-btn{width:26px; height:22px; border-radius:6px; font-size:11px}
+  .hp-row .hp-dmg-in{width:70px; text-align:center}
+  .hp-row .hp-dead{font-weight:700}
+
+  /* Ресурсы (счётчики) на блоках ПК */
+  .res-row{display:flex; gap:8px; align-items:flex-start; margin-bottom:10px; flex-wrap:wrap}
+  .res-row .res-lbl{flex-shrink:0; margin-top:5px}
+  .res-list{display:flex; gap:6px; flex-wrap:wrap}
+  .res-chip{
+    display:inline-flex; gap:5px; align-items:center;
+    background:var(--panel2); border:1px solid var(--line); border-radius:16px;
+    padding:2px 8px 2px 4px; font-size:12px;
+  }
+  .res-chip .res-name{min-width:26px; max-width:130px; outline:none; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding:1px 3px; border-radius:4px}
+  .res-chip .res-name:focus{background:var(--panel); box-shadow:0 0 0 1px var(--accent)}
+  .res-chip .res-val{font-weight:700; color:var(--accent2); min-width:34px; text-align:center}
+  .res-chip.empty{opacity:.55}
+  .res-chip.empty .res-val{color:var(--danger)}
+  .res-btn{
+    background:none; border:1px solid var(--line); border-radius:50%;
+    width:20px; height:20px; line-height:1; font-size:13px; cursor:pointer;
+    color:var(--muted); display:inline-flex; align-items:center; justify-content:center; padding:0;
+  }
+  .res-btn:hover{color:var(--accent2); border-color:var(--accent2)}
+  .res-x{
+    background:none; border:none; color:var(--muted); font-size:10px; cursor:pointer;
+    padding:0 1px; opacity:0; transition:opacity .15s;
+  }
+  .res-chip:hover .res-x{opacity:1}
+  .res-x:hover{color:var(--danger)}
+  .res-add{
+    background:none; border:1px dashed var(--line); border-radius:16px;
+    color:var(--muted); font-size:11.5px; padding:3px 10px; cursor:pointer;
+  }
+  .res-add:hover{color:var(--accent2); border-color:var(--accent2)}
+
+  /* Combat tracker */
+  .combat-tracker{
+    display:flex; gap:6px; align-items:center; overflow-x:auto;
+    padding:6px 10px; border-bottom:1px solid var(--line); background:var(--panel);
+    min-height:34px; white-space:nowrap;
+  }
+  .combat-tracker .ct-round{font-weight:700; font-size:12px; color:var(--accent); flex-shrink:0}
+  .combat-tracker .ct-item{
+    display:inline-flex; gap:5px; align-items:center; padding:4px 9px; border-radius:6px;
+    border:1px solid var(--line); font-size:12.5px; cursor:pointer; flex-shrink:0; color:var(--text);
+  }
+  .combat-tracker .ct-item:hover{background:var(--panel2)}
+  .combat-tracker .ct-item.active{border-color:var(--accent); box-shadow:0 0 6px var(--accent)}
+  .combat-tracker .ct-item.npc{color:#e8a5a0}
+  .combat-tracker .ct-item.down{opacity:.45; text-decoration:line-through}
+  .combat-tracker #ctNext{flex-shrink:0; font-weight:700}
+  /* HP on tokens */
+  .map-token.active-turn{ box-shadow:0 0 0 3px var(--accent), 0 0 12px var(--accent); z-index:5 }
+  .map-token.down{ opacity:.35; filter:grayscale(1) }
+  .tok-hp{
+    position:absolute; bottom:-16px; left:50%; transform:translateX(-50%);
+    background:rgba(15,17,20,.9); border:1px solid var(--line); border-radius:4px;
+    font-size:10px; padding:0 5px; line-height:15px; white-space:nowrap; color:var(--text);
+  }
+  .tok-hp.low{color:#e6a53c; border-color:#e6a53c}
+  .tok-hp.zero{color:#e0574f; border-color:#e0574f}
+  .tok-hp-ctl{display:inline-flex; gap:4px; align-items:center}
+  .tok-hp-in{width:52px; padding:3px 5px; font-size:12px; text-align:center}
+  .map-tok-ctl .tok-hp-ctl button{padding:3px 7px; font-size:12px}
+
+  /* Toast-уведомления */
+  .toast{
+    position:fixed; left:50%; bottom:26px; transform:translate(-50%,12px);
+    background:var(--panel2); color:var(--text); border:1px solid var(--line);
+    padding:10px 18px; border-radius:8px; font-size:13px;
+    box-shadow:0 8px 28px rgba(0,0,0,.4); opacity:0;
+    transition:opacity .25s ease, transform .25s ease;
+    z-index:300; pointer-events:none; max-width:80vw;
+  }
+  .toast.show{opacity:1; transform:translate(-50%,0)}

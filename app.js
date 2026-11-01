@@ -11,7 +11,14 @@ let freeLayout = false;      // свободный холст (drag-n-drop) ил
 
 const ITEMS_FOR_9 = ['Сила','Ловк','Телосл','Интел','Мудр','Хар'];
 
-const STORE_KEY = 'shirma_blocks_v1';
+const KEYS = {
+  blocks: 'shirma_blocks_v1',
+  side: 'shirma_side_collapsed',
+  notes: 'shirma_notes_v1',
+  map: 'shirma_map_v1',
+  sessions: 'shirma_sessions_v1',
+};
+const STORE_KEY = KEYS.blocks;
 
 /* ═══ IndexedDB для медиа (картинки/документы/фоны) ═══ */
 const MEDIA_DB = 'shirma_media_v1';
@@ -49,18 +56,32 @@ function loadAllMedia(){
   }));
 }
 function mediaFor(b){ return (b.dataKey && mediaCache[b.dataKey]) || b.data || ''; }
+/* Защита от подставляемых извне значений: пропускаем только валидные URL/dataURL */
+function safeMediaSrc(s){
+  s=String(s||'');
+  return (/^data:(image|application|text)\//.test(s) || /^(blob:|https?:)/.test(s)) ? s : '';
+}
 
-/* Общий механизм перетаскивания: onMove(clientEvent), onEnd() */
+/* Общий механизм перетаскивания: onMove(clientEvent), onEnd()
+   Работает и с мышью, и с тачскрином (touch-события поверх). */
 function pointerDrag(e, onMove, onEnd){
-  if(e) e.preventDefault();
-  function move(ev){ onMove(ev); }
-  function up(){
+  if(e && e.cancelable) e.preventDefault();
+  const getXY = ev => (ev.touches && ev.touches[0]) ? ev.touches[0] : ev;
+  function move(ev){
+    if(ev.type==='touchmove' && ev.cancelable) ev.preventDefault(); // не скроллить страницу пальцем
+    onMove(getXY(ev));
+  }
+  function done(){
     window.removeEventListener('mousemove', move);
-    window.removeEventListener('mouseup', up);
+    window.removeEventListener('mouseup', done);
+    window.removeEventListener('touchmove', move);
+    window.removeEventListener('touchend', done);
     if(typeof onEnd==='function') onEnd();
   }
   window.addEventListener('mousemove', move);
-  window.addEventListener('mouseup', up);
+  window.addEventListener('mouseup', done);
+  window.addEventListener('touchmove', move, { passive:false });
+  window.addEventListener('touchend', done);
 }
 
 function load(){
@@ -71,9 +92,26 @@ function load(){
   return false;
 }
 function makeBlock(type,title,extra){
-  return Object.assign({ id:uniq(), type, title, collapse:false, links:[], stats:[10,10,10,10,10,10], props:{}, text:'', x:null, y:null, w:360, uid:Date.now().toString(36)+Math.random().toString(36).slice(2,7) }, extra||{});
+  return Object.assign({ id:uniq(), type, title, collapse:false, links:[], stats:[10,10,10,10,10,10], props:{}, res:[], dmg:0, text:'', x:null, y:null, w:360, uid:Date.now().toString(36)+Math.random().toString(36).slice(2,7) }, extra||{});
+}
+function sanitizeRes(list){
+  const out=[];
+  (Array.isArray(list)?list:[]).slice(0,20).forEach(r=>{
+    if(!r || typeof r!=='object') return;
+    const max = Math.max(0, Math.min(9999, Math.round(+r.max)||0));
+    const cur = Math.max(0, Math.min(max||9999, Math.round(+r.cur)||0));
+    out.push({ name:String(r.name||'').slice(0,40), cur, max });
+  });
+  return out;
 }
 function uniq(){ return 'b'+Math.random().toString(36).slice(2,9); }
+function toast(msg){
+  const t=document.createElement('div');
+  t.className='toast'; t.textContent=msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.classList.add('show'), 10);
+  setTimeout(()=>{ t.classList.remove('show'); setTimeout(()=>t.remove(), 300); }, 2600);
+}
 function debounce(fn, ms){
   let t;
   return function(...args){
@@ -91,10 +129,107 @@ function save(){
 }
 window.addEventListener('beforeunload', persistBlocks);
 window.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden') persistBlocks(); });
+
+/* ═══ Undo: кольцо снапшотов последнего состояния (до 30 шагов) ═══ */
+const UNDO_KEY = 'shirma_undo_v1';
+const UNDO_MAX = 30;
+function undoStack(){
+  let stack=[];
+  try{ stack=JSON.parse(localStorage.getItem(UNDO_KEY)); }catch(e){}
+  return Array.isArray(stack)? stack : [];
+}
+function pushUndo(label){
+  try{
+    const stack=undoStack();
+    stack.push({
+      t:Date.now(), label:String(label||''),
+      blocks: JSON.stringify(blocks),
+      notes: JSON.stringify(noteBlocks),
+      sessions: JSON.stringify(sessions),
+    });
+    while(stack.length>UNDO_MAX) stack.shift();
+    localStorage.setItem(UNDO_KEY, JSON.stringify(stack));
+  }catch(e){ console.warn('Не удалось записать undo:', e); }
+}
+function undoLast(){
+  const stack=undoStack();
+  const snap=stack.pop();
+  if(!snap){ toast('Нечего отменять'); return; }
+  try{
+    const b=JSON.parse(snap.blocks);  if(Array.isArray(b)) blocks=b;
+    const n=JSON.parse(snap.notes);   if(Array.isArray(n)) noteBlocks=n;
+    const s=JSON.parse(snap.sessions);if(Array.isArray(s)) sessions=s;
+  }catch(e){}
+  try{ localStorage.setItem(UNDO_KEY, JSON.stringify(stack)); }catch(e){}
+  collapsed=new Set(blocks.map(b=>b.id));
+  activeParentId=null;
+  // переоткрыть сессии из восстановленного состояния
+  sessionsInited=true; activeSessionId=(sessions.length? sessions[0].id : null);
+  if(currentTab==='sessions'){ renderSessionsList(); if(activeSessionId) selectSession(activeSessionId); }
+  if(blocksTab==='monsters') showTab('monsters'); else showTab('chars');
+  save(); render(); renderNotes();
+  toast('Отменено: '+(snap.label||'последнее изменение'));
+}
+document.getElementById('btnUndo').addEventListener('click', undoLast);
+document.addEventListener('keydown', e=>{
+  if(!((e.ctrlKey||e.metaKey) && !e.shiftKey && e.key.toLowerCase()==='z')) return;
+  const t=e.target;
+  if(t && (t.closest('input,textarea') || t.isContentEditable)) return; // не мешаем undo в редакторе
+  e.preventDefault(); undoLast();
+});
 function findBlock(id){ return blocks.find(b=>b.id===id); }
+/* Очистка блоков из внешнего JSON: только нужные поля, только допустимые типы/значения.
+   id генерируются заново — исключены коллизии и впрыскивание служебных полей. */
+function sanitizeBlocks(arr){
+  const okTypes=['pc','rule','note','mob','img'];
+  const out=[];
+  const clampStat=v=>{ const n=Math.round(+v); return isFinite(n)?Math.max(1,Math.min(30,n)):10; };
+  (Array.isArray(arr)?arr:[]).forEach(raw=>{
+    if(!raw || typeof raw!=='object') return;
+    if(!okTypes.includes(raw.type)) return;
+    const b=makeBlock(raw.type, String(raw.title||TYPE_LABEL[raw.type]));
+    b.collapse=!!raw.collapse;
+    b.w=Math.max(200, Math.min(1600, Math.round(+raw.w)||820));
+    b.x=(raw.x!=null && isFinite(+raw.x) && +raw.x>=0)? +raw.x : null;
+    b.y=(raw.y!=null && isFinite(+raw.y) && +raw.y>=0)? +raw.y : null;
+    b.text=String(raw.text!=null?raw.text:'').slice(0,50000);
+    if(Array.isArray(raw.stats) && raw.stats.length===6) b.stats=raw.stats.map(clampStat);
+    if(raw.props && typeof raw.props==='object' && !Array.isArray(raw.props)){
+      const p={};
+      Object.entries(raw.props).slice(0,30).forEach(([k,v])=>{ p[String(k).slice(0,60)]=String(v!=null?v:'').slice(0,200); });
+      b.props=p;
+    }
+    if(raw.attack!=null) b.attack=String(raw.attack).slice(0,20);
+    b.dmg = Math.max(0, Math.round(+raw.dmg)||0);
+    if(raw.res) b.res=sanitizeRes(raw.res);
+    if(raw.fileName) b.fileName=String(raw.fileName).slice(0,120);
+    if(raw.kind==='image'||raw.kind==='doc') b.kind=raw.kind;
+    if(raw.sizeLabel) b.sizeLabel=String(raw.sizeLabel).slice(0,20);
+    if(typeof raw.dataKey==='string' && raw.dataKey) b.dataKey=raw.dataKey.slice(0,80);
+    if(typeof raw.data==='string' && /^data:/.test(raw.data)) b.data=raw.data;
+    if(raw.mdata && typeof raw.mdata==='object'){
+      const d=raw.mdata;
+      b.mdata={
+        type:String(d.type||''), cr:String(d.cr||''), ac:String(d.ac||''), hp:String(d.hp||''),
+        sp:String(d.sp||''), init:String(d.init||''), sk:String(d.sk||'').slice(0,300),
+        sen:String(d.sen||'').slice(0,200), lang:String(d.lang||'').slice(0,200),
+        ab_list: safeArr(d.ab_list).slice(0,6).map(a=>({
+          k:String(a&&a.k||'').slice(0,4),
+          v:clampStat(a&&a.v), m:Math.round(+(a&&a.m))||0, s:String(a&&a.s||'').slice(0,6)
+        })),
+        acts: safeArr(d.acts).slice(0,60).map(a=>({
+          tag:String((a&&typeof a==='object')?a.tag:'').slice(0,30),
+          text:String(typeof a==='string'?a:((a&&a.text)||'')).slice(0,3000)
+        }))
+      };
+    }
+    out.push(b);
+  });
+  return out;
+}
 
 function seed(){
-  blocks = SAMPLES.map(s=>makeBlock(s.type,s.title,{title:s.title, links:s.links, stats:s.stats||[10,10,10,10,10,10], props:s.props||{}, text:s.text||''}));
+  blocks = SAMPLES.map(s=>makeBlock(s.type,s.title,{title:s.title, links:s.links, stats:s.stats||[10,10,10,10,10,10], props:s.props||{}, res:sanitizeRes(s.res), text:s.text||''}));
   collapsed = new Set(); blocks.forEach(b=>collapsed.add(b.id));
   save(); render();
 }
@@ -153,13 +288,12 @@ function render(){
       canvas.innerHTML = list.map(b=>{
         const card = safeCard(b);
         const x = b.x!=null?b.x:20, y=b.y!=null?b.y:20;
-        return `<div style="position:absolute;left:${x}px;top:${y}px;width:${b.w||360}px;z-index:${b._z||0}">${card}</div>`;
+        return `<div class="canvas-free-wrap" style="position:absolute;left:${x}px;top:${y}px;width:${b.w||360}px;z-index:${b._z||0}">${card}</div>`;
       }).join('');
     } else {
       canvas.innerHTML = `<div style="max-width:820px">` + list.map(safeCard).join('') + `</div>`;
     }
   }
-  bindCanvas();
   renderTree();
   save();
 }
@@ -196,6 +330,8 @@ function bodyHtml(b){
   if(b.type==='mob' && b.mdata){ inner = mobStatBlockHtml(b); }
   else if(b.type==='pc' || b.type==='mob'){
     inner += `<div class="props">`+Object.entries(b.props).map(([k,v])=>`<div class="prop"><span class="lbl">${escapeHtml(k)}</span><input class="v" data-prop-key="${escapeHtml(k)}" data-prop-id="${b.id}" value="${escapeHtml(String(v))}"></div>`).join('')+`</div>`;
+    if(b.type==='pc') inner += hpRowHtml(b);
+    if(b.type==='pc') inner += resourcesHtml(b);
     inner += statsInput(b);
     inner += `<div class="attack-row">
       <span class="lbl">Атака:</span>
@@ -205,19 +341,18 @@ function bodyHtml(b){
     </div>`;
   }
   if(b.type==='img'){
-    const src = mediaFor(b);
+    const src = safeMediaSrc(mediaFor(b));
     if(src && b.kind==='image'){
-      inner += `<div class="block-img-prev"><img src="${src}" alt="${escapeHtml(b.fileName||'')}"></div>`;
+      inner += `<div class="block-img-prev"><img src="${escapeHtml(src)}" alt="${escapeHtml(b.fileName||'')}"></div>`;
     } else if(src && b.kind==='doc'){
       inner += `<div class="block-doc"><span class="doc-ico">${docIcon(b.fileName)}</span>
         <span class="doc-name">${escapeHtml(b.fileName||'документ')}</span>
-        <span class="doc-size">${b.sizeLabel||''}</span>
-        <a class="doc-open" href="${src}" download="${escapeHtml(b.fileName||'doc')}">Скачать</a>
-        <a class="doc-open" href="${src}" target="_blank" rel="noopener">Открыть</a>
+        <span class="doc-size">${escapeHtml(b.sizeLabel||'')}</span>
+        <a class="doc-open" href="${escapeHtml(src)}" download="${escapeHtml(b.fileName||'doc')}">Скачать</a>
+        <a class="doc-open" href="${escapeHtml(src)}" target="_blank" rel="noopener">Открыть</a>
       </div>`;
     }
   }
-  inner += ''; /* связи убраны из интерфейса */
   if(b.type==='mob' && b.mdata){ inner += `<div class="hint" style="margin-top:6px">Текстовая заметка к статблоку:</div><textarea data-field="text" data-id="${b.id}" style="min-height:60px">${escapeHtml(b.text)}</textarea>`; }
   else if(b.type==='img'){ /* no textarea for media blocks */ }
   else inner += `<textarea data-field="text" data-id="${b.id}">${escapeHtml(b.text)}</textarea>`;
@@ -231,6 +366,82 @@ function bodyHtml(b){
       <button class="del" data-action="delete">Удалить блок</button>
     </div>`;
 }
+/* ═══ Ресурсы (ячейки, патроны, вдохновение и т.п.) ═══ */
+function resourcesHtml(b){
+  const list = b.res || [];
+  return `<div class="res-row">
+    <span class="lbl res-lbl">Ресурсы:</span>
+    <span class="res-list">
+      ${list.map((r,i)=>`
+        <span class="res-chip ${r.cur<=0?'empty':''}" data-res-chip="${b.id}" data-res-i="${i}">
+          <button class="res-btn" data-res-op="dec" data-res-id="${b.id}" data-res-i="${i}" title="Минус один">−</button>
+          <span class="res-name" contenteditable="true" spellcheck="false" data-res-name="${b.id}" data-res-i="${i}" title="Клик — переименовать">${escapeHtml(r.name||'Ресурс')}</span>
+          <span class="res-val" data-res-val="${b.id}" data-res-i="${i}">${r.cur}/${r.max}</span>
+          <button class="res-btn" data-res-op="inc" data-res-id="${b.id}" data-res-i="${i}" title="Плюс один">+</button>
+          <button class="res-x" data-res-del="${b.id}" data-res-i="${i}" title="Удалить ресурс">✕</button>
+        </span>`).join('')}
+      <button class="res-add" data-res-add="${b.id}" title="Добавить ресурс">＋ Ресурс</button>
+    </span>
+  </div>`;
+}
+function findBlockRes(id, i){ const b=findBlock(id); if(!b) return null; return (b.res||[])[i]; }
+/* ═══ ХП и урон на листе ПК ═══ */
+function hpMaxOf(b){ return Math.max(0, parseInt(b.props && b.props['ХП'] || b.props && b.props['HP']) || 0); }
+function hpCurOf(b){
+  const max=hpMaxOf(b);
+  return Math.max(0, Math.min(max, max - Math.max(0, Math.round(+b.dmg)||0)));
+}
+function hpRowHtml(b){
+  const hpMax=hpMaxOf(b), cur=hpCurOf(b);
+  const knocked = cur<=0 && hpMax>0;
+  return `<div class="hp-row">
+    <span class="lbl">ХП:</span>
+    <span class="hp-big ${knocked?'knocked':''}" data-hp-val="${b.id}">${cur}</span>
+    <span class="hint">/ ${hpMax}</span>
+    <button class="res-btn hp-btn" data-hp-op="d5" data-hp-id="${b.id}" title="Урон 5">−5</button>
+    <button class="res-btn hp-btn" data-hp-op="d1" data-hp-id="${b.id}" title="Урон 1">−1</button>
+    <button class="res-btn hp-btn" data-hp-op="h1" data-hp-id="${b.id}" title="Лечение 1">+1</button>
+    <button class="res-btn hp-btn" data-hp-op="h5" data-hp-id="${b.id}" title="Лечение 5">+5</button>
+    <input class="hp-dmg-in" type="number" min="0" data-hp-in="${b.id}" placeholder="урон ⏎" title="Введите урон и нажмите Enter">
+    ${knocked?'<span class="hint" style="color:var(--danger)">☠ выбыл</span>':''}
+  </div>`;
+}
+function hpApply(bid, op){
+  const b=findBlock(bid); if(!b) return;
+  const hpMax=hpMaxOf(b);
+  let cur=hpCurOf(b);
+  if(op==='d5') cur-=5;
+  else if(op==='d1') cur-=1;
+  else if(op==='h1') cur+=1;
+  else if(op==='h5') cur+=5;
+  else if(op==='healFull'){ cur=hpMax; }
+  cur=Math.max(0, Math.min(hpMax, cur));
+  b.dmg = hpMax - cur;
+  const el=document.querySelector('[data-hp-val="'+b.id+'"]');
+  if(el){
+    el.textContent = cur;
+    el.classList.toggle('knocked', cur<=0 && hpMax>0);
+    const row=el.closest('.hp-row');
+    const tag=row && row.querySelector('.hp-dead');
+    if(tag) tag.remove();
+    if(cur<=0 && hpMax>0 && row){
+      const s=document.createElement('span'); s.className='hint hp-dead'; s.style.color='var(--danger)'; s.textContent='☠ выбыл';
+      row.appendChild(s);
+    }
+  }
+  save();
+}
+function hpInputDamage(inEl){
+  const b=findBlock(inEl.dataset.hpIn); if(!b) return;
+  const n=Math.round(+inEl.value)||0;
+  if(n>0){
+    const hpMax=hpMaxOf(b);
+    b.dmg = Math.min(hpMax, Math.max(0, Math.round(+b.dmg||0) + n));
+    save();
+  }
+  inEl.value='';
+  hpApply(inEl.dataset.hpIn, 'refresh'); // перерисовать значение/метку
+}
 function mobStatBlockHtml(b){
   const d=b.mdata||{};
   const AB_RU={Str:'СИЛ',Dex:'ЛОВ',Con:'ТЕЛ',Int:'ИНТ',Wis:'МУД',Cha:'ХАР'};
@@ -239,23 +450,7 @@ function mobStatBlockHtml(b){
       <div class="mob-ab-v">${a.v}</div>
       <div class="mob-ab-m">${a.m>=0?'+'+a.m:a.m}${a.s&&a.s!==(a.m>=0?'+'+a.m:a.m)?' ('+a.s+')':''}</div>
     </div>`).join('');
-  // group acts by tag, preserve order
-  const tagOrder=['Черты','Действия','Бонус','Реакция','Легендарные'];
-  const groups={};
-  (d.acts||[]).forEach(a=>{ (groups[a.tag]=groups[a.tag]||[]).push(a.text); });
-  let actsHtml='';
-  tagOrder.forEach(tag=>{
-    if(groups[tag] && groups[tag].length){
-      actsHtml += `<div class="mob-section"><div class="mob-sec-title">${escapeHtml(tag)}</div>`;
-      groups[tag].forEach(txt=>{
-        const ci=txt.indexOf('. ');
-        const name=ci>0?txt.slice(0,ci):'';
-        const body=ci>0?txt.slice(ci+2):txt;
-        actsHtml += `<div class="mob-act"><b>${escapeHtml(name)}</b> ${escapeHtml(body)}</div>`;
-      });
-      actsHtml += `</div>`;
-    }
-  });
+  const actsHtml = actsGroupsHtml(d);
   return `<div class="mob-block">
     <div class="mob-meta">
       <div class="mob-type">${escapeHtml(d.type||'')}</div>
@@ -274,6 +469,29 @@ function mobStatBlockHtml(b){
     ${actsHtml}
   </div>`;
 }
+/* Общий разбор действия монстра: «Название. Текст» */
+function splitAct(txt){
+  const s=String(txt||''); const ci=s.indexOf('. ');
+  return ci>0 ? { name:s.slice(0,ci), body:s.slice(ci+2) } : { name:'', body:s };
+}
+/* Группировка действий по тегам, порядок фиксированный */
+const ACT_TAG_ORDER=['Черты','Действия','Бонус','Реакция','Легендарные'];
+function actsGroupsHtml(d){
+  const groups={};
+  (d.acts||[]).forEach(a=>{ (groups[a.tag]=groups[a.tag]||[]).push(a.text); });
+  let html='';
+  ACT_TAG_ORDER.forEach(tag=>{
+    if(groups[tag] && groups[tag].length){
+      html += `<div class="mob-section"><div class="mob-sec-title">${escapeHtml(tag)}</div>`;
+      groups[tag].forEach(txt=>{
+        const {name, body}=splitAct(txt);
+        html += `<div class="mob-act"><b>${escapeHtml(name)}</b> ${escapeHtml(body)}</div>`;
+      });
+      html += `</div>`;
+    }
+  });
+  return html;
+}
 function docIcon(name){
   const n=(name||'').toLowerCase();
   if(n.endsWith('.pdf')) return '📕';
@@ -290,54 +508,31 @@ function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt
 function matches(b){
   if(!searchFilter) return true;
   const q = searchFilter.toLowerCase();
-  return (b.title||'').toLowerCase().includes(q) || (b.text||'').toLowerCase().includes(q);
+  const props = Object.values(b.props||{}).join(' ').toLowerCase();
+  return (b.title||'').toLowerCase().includes(q) || (b.text||'').toLowerCase().includes(q) || props.includes(q);
 }
 
-function bindCanvas(){
+/* ═══ Делегирование событий канваса ═══
+   Один набор слушателей на #canvas вместо повторного биндинга после каждого рендера;
+   карточки обновляются точечно через renderBlockOnly(). */
+let canvasEventsInited = false;
+function initCanvasEvents(){
+  if(canvasEventsInited) return;
+  canvasEventsInited = true;
   const canvas = document.getElementById('canvas');
-  canvas.querySelectorAll('[data-toggle]').forEach(el=>{
-    el.addEventListener('click', ()=>{ const id=el.closest('.block').dataset.id; toggleBlock(id); });
-  });
-  canvas.querySelectorAll('[data-field="text"]').forEach(t=>{
-    t.addEventListener('input', e=>{ const b=findBlock(e.target.dataset.id); b.text=e.target.value; save(); });
-  });
-  canvas.querySelectorAll('[data-action="delete"]').forEach(bn=>{
-    bn.addEventListener('click', e=>{
-      const id=bn.closest('.block').dataset.id;
-      if(confirm('Удалить блок?')){ removeBlock(id); }
-    });
-  });
-  canvas.querySelectorAll('[data-action="collapse"]').forEach(bn=>{
-    bn.addEventListener('click', e=>{ collapsed.add(bn.closest('.block').dataset.id); render(); });
-  });
-  canvas.querySelectorAll('[data-action="expand"]').forEach(bn=>{
-    bn.addEventListener('click', e=>{ collapsed.delete(bn.closest('.block').dataset.id); render(); });
-  });
-  // link remove
-  canvas.querySelectorAll('.link-tag').forEach(tag=>{
-    tag.addEventListener('click', e=>{
-      e.stopPropagation();
-      const b=findBlock(tag.dataset.id); b.links = b.links.filter(x=>x!==tag.dataset.link); save(); render();
-    });
-  });
-  canvas.querySelectorAll('[data-field="link-add"]').forEach(sel=>{
-    sel.addEventListener('change', e=>{
-      const v=e.target.value; if(!v) return;
-      const b=findBlock(e.target.dataset.id);
-      if(!b.links.includes(v)) b.links.push(v);
-      sel.value=''; save(); render();
-    });
-  });
-  bindStatInputs(canvas);
-  bindStatRolls(canvas);
-  bindResize(canvas);
-  if(freeLayout) bindDrag(canvas);
-  canvas.querySelectorAll('[data-attack]').forEach(inp=>{
-    inp.addEventListener('input', ()=>{ const b=findBlock(inp.dataset.attack); if(b){ b.attack=inp.value; save(); } });
-  });
-  canvas.querySelectorAll('[data-rollatt]').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      const id=btn.dataset.rollatt, b=findBlock(id); if(!b) return;
+
+  canvas.addEventListener('click', e=>{
+    const t = e.target;
+    // клик по заголовку блока — свернуть/развернуть
+    if(t.closest('[data-toggle]') && !t.closest('.block-title')){
+      const blockEl=t.closest('.block');
+      if(blockEl) toggleBlock(blockEl.dataset.id);
+      return;
+    }
+    if(t.closest('.block-title')) return; // contenteditable: сама обрабатывает
+    const rollAtt = t.closest('[data-rollatt]');
+    if(rollAtt){
+      const id=rollAtt.dataset.rollatt, b=findBlock(id); if(!b) return;
       const bonus = parseFloat(b.attack||'0')||0;
       const roll = 1+Math.floor(Math.random()*20);
       const total = roll+bonus;
@@ -346,71 +541,206 @@ function bindCanvas(){
       if(resEl) resEl.textContent = `d20 ${roll} + ${bonus} = ${total}${crit}`;
       const rr=document.getElementById('rollResult');
       if(rr) rr.textContent = `Атака: ${total}`;
-    });
+      return;
+    }
+    const statMod = t.closest('.stat .mod');
+    if(statMod){
+      const b=findBlock(statMod.dataset.rollId); if(!b) return;
+      const idx=ITEMS_FOR_9.indexOf(statMod.dataset.rollStat);
+      const m=idx>=0?modf(b.stats[idx]):0;
+      doRoll('d20',1, (m>=0?`+${m}`:m));
+      return;
+    }
+    const rollAll = t.closest('[data-action="rollAll"]');
+    if(rollAll){
+      const b=findBlock(rollAll.dataset.rollId); if(!b) return;
+      let out='';
+      b.stats.forEach((s,i)=>{ out+=`${ITEMS_FOR_9[i]}: ${doOneD20()+modf(s)}  `; });
+      document.getElementById('rollResult').textContent = 'Бросок всех: '+out;
+      rollHistory.push('Бросок всех ПК: '+out);
+      return;
+    }
+    const hpBtn = t.closest('[data-hp-op]');
+    if(hpBtn){ hpApply(hpBtn.dataset.hpId, hpBtn.dataset.hpOp); return; }
+    const hpIn = t.closest('[data-hp-in]') || t.closest('.hp-dmg-in');
+    // кнопки действий блока: delete / collapse / expand
+    const act = t.closest('[data-action]');
+    if(act){
+      const blockEl=act.closest('.block'); if(!blockEl) return;
+      const id = act.dataset.id || blockEl.dataset.id;
+      if(act.dataset.action==='delete'){ if(confirm('Удалить блок?')) removeBlock(id); }
+      else if(act.dataset.action==='collapse'){ collapsed.add(id); renderBlockOnly(id); save(); }
+      else if(act.dataset.action==='expand'){ collapsed.delete(id); renderBlockOnly(id); save(); }
+      return;
+    }
+    const resBtn = t.closest('[data-res-op]');
+    if(resBtn){
+      const r=findBlockRes(resBtn.dataset.resId, +resBtn.dataset.resI); if(!r) return;
+      r.cur = resBtn.dataset.resOp==='inc'
+        ? Math.min(r.max, r.cur+1)
+        : Math.max(0, r.cur-1);
+      const chip=resBtn.closest('.res-chip');
+      const valEl=chip && chip.querySelector('.res-val');
+      if(valEl) valEl.textContent = `${r.cur}/${r.max}`;
+      if(chip) chip.classList.toggle('empty', r.cur<=0);
+      save();
+      return;
+    }
+    const resAdd = t.closest('[data-res-add]');
+    if(resAdd){
+      const b=findBlock(resAdd.dataset.resAdd); if(!b) return;
+      if(!Array.isArray(b.res)) b.res=[];
+      b.res.push({ name:'Ресурс', cur:3, max:3 });
+      if(b.res.length>20) b.res.shift();
+      save(); renderBlockOnly(b.id);
+      return;
+    }
+    const resDel = t.closest('[data-res-del]');
+    if(resDel){
+      const b=findBlock(resDel.dataset.resDel); if(!b) return;
+      b.res.splice(+resDel.dataset.resI, 1);
+      save(); renderBlockOnly(b.id);
+      return;
+    }
   });
-  canvas.querySelectorAll('.block-title').forEach(t=>{
-    t.addEventListener('mousedown', e=> e.stopPropagation());
-    t.addEventListener('click', e=> e.stopPropagation());
-    t.addEventListener('blur', ()=>{
+
+  canvas.addEventListener('input', e=>{
+    const t = e.target;
+    if(t.matches('[data-field="text"]')){
+      const b=findBlock(t.dataset.id); if(b){ b.text=t.value; save(); }
+      return;
+    }
+    if(t.matches('[data-attack]')){
+      const b=findBlock(t.dataset.attack); if(b){ b.attack=t.value; save(); }
+      return;
+    }
+    if(t.matches('.stat input.val')){
+      const b=findBlock(t.dataset.statsId); if(!b) return;
+      const idx=+t.dataset.statIndex;
+      b.stats[idx]=Math.max(1,Math.min(30,parseInt(t.value)||10));
+      const modEl=t.parentElement.querySelector('.mod');
+      if(modEl) modEl.textContent = signed(Math.floor((b.stats[idx]-10)/2));
+      save();
+      return;
+    }
+    if(t.matches('.prop input.v')){
+      const b=findBlock(t.dataset.propId); if(!b) return;
+      b.props[t.dataset.propKey]=t.value; save();
+      return;
+    }
+  });
+
+  canvas.addEventListener('change', e=>{
+    const t = e.target;
+    if(t.matches('.stat input.val')){
+      const b=findBlock(t.dataset.statsId); if(!b) return;
+      const idx=+t.dataset.statIndex;
+      const v=Math.max(1,Math.min(30,parseInt(t.value)||10));
+      b.stats[idx]=v; t.value=v; save();
+      return;
+    }
+    if(t.matches('[data-width]')){
+      const b=findBlock(t.dataset.width); if(!b) return;
+      const v=Math.max(180,Math.min(1600,parseInt(t.value)||820));
+      t.value=v; b.w=v; save();
+      const el=document.querySelector('.block[data-id="'+t.dataset.width+'"]');
+      if(el) el.style.width=v+'px';
+      return;
+    }
+    if(t.matches('.hp-dmg-in')){
+      hpInputDamage(t);
+      return;
+    }
+  });
+
+  canvas.addEventListener('focusout', e=>{
+    const t = e.target;
+    if(t.matches('.block-title')){
       const b=findBlock(t.dataset.title); if(!b) return;
       const val=t.textContent.trim();
       if(!val){ t.textContent=b.title||''; return; }
       b.title=val; save(); renderTree();
-    });
-    t.addEventListener('keydown', e=>{
-      if(e.key==='Enter'){ e.preventDefault(); t.blur(); }
-    });
+      return;
+    }
+    if(t.matches('[data-res-name]')){
+      const b=findBlock(t.dataset.resName); if(!b) return;
+      const r=(b.res||[])[+t.dataset.resI]; if(!r) return;
+      r.name = t.textContent.trim().slice(0,40) || 'Ресурс';
+      save();
+      return;
+    }
+  });
+
+  canvas.addEventListener('keydown', e=>{
+    const t = e.target;
+    if((t.matches('.block-title') || t.matches('[data-res-name]')) && e.key==='Enter'){ e.preventDefault(); t.blur(); }
+    if(t.matches('.hp-dmg-in') && e.key==='Enter'){ e.preventDefault(); t.blur(); }
+  });
+
+  canvas.addEventListener('mousedown', e=>{
+    const t = e.target;
+    // переименование не должно начинать drag
+    if(t.closest('.block-title') || t.closest('[data-res-name]')){ e.stopPropagation(); return; }
+    if(t.closest('select,input,textarea,a,button')) return;
+    const handle = t.closest('[data-resize]');
+    if(handle){ startBlockResize(e, handle); return; }
+    if(freeLayout){
+      const head = t.closest('.block-head');
+      if(head) startBlockDrag(e, head);
+    }
   });
 }
-function bindResize(canvas){
-  canvas.querySelectorAll('[data-width]').forEach(inp=>{
-    inp.addEventListener('change', e=>{
-      const b=findBlock(e.target.dataset.width); if(!b) return;
-      let v=parseInt(e.target.value)||820; v=Math.max(180,Math.min(1600,v));
-      b.w=v; e.target.value=v; save(); render();
-    });
+
+/* Точечная перерисовка одной карточки (и внешнего wrapper в свободном холсте) */
+function renderBlockOnly(id){
+  const b=findBlock(id); if(!b) return;
+  const el=document.querySelector('#canvas .block[data-id="'+id+'"]');
+  if(!el){ render(); return; }
+  const freeWrap = freeLayout ? el.parentElement : null;
+  if(freeWrap && freeWrap.classList.contains('canvas-free-wrap')){
+    freeWrap.innerHTML = blockCard(b);
+    freeWrap.style.width = (b.w||360)+'px';
+  } else {
+    el.outerHTML = blockCard(b);
+  }
+}
+function startBlockResize(e, handle){
+  e.stopPropagation();
+  const block=handle.closest('.block'), id=block.dataset.id, b=findBlock(id); if(!b) return;
+  const startX=e.clientX, startW=b.w||block.offsetWidth||820;
+  block.classList.add('dragging');
+  pointerDrag(e, ev=>{
+    const nw=Math.max(180,Math.min(1600, startW + (ev.clientX-startX)));
+    block.style.width=nw+'px'; b.w=nw;
+  }, ()=>{
+    block.classList.remove('dragging'); save();
+    const inp=block.querySelector('.resize-input'); if(inp) inp.value=b.w;
   });
-  canvas.querySelectorAll('[data-resize]').forEach(handle=>{
-    handle.addEventListener('mousedown', e=>{
-      e.stopPropagation();
-      const block=handle.closest('.block'), id=block.dataset.id, b=findBlock(id); if(!b) return;
-      const startX=e.clientX, startW=b.w||block.offsetWidth||820;
-      block.classList.add('dragging');
-      pointerDrag(e, ev=>{
-        const nw=Math.max(180,Math.min(1600, startW + (ev.clientX-startX)));
-        block.style.width=nw+'px'; b.w=nw;
-      }, ()=>{ block.classList.remove('dragging'); save(); render(); });
-    });
-  });
+}
+function startBlockDrag(e, head){
+  const block=head.closest('.block');
+  const id=block.dataset.id, wrap=block.parentElement, b=findBlock(id); if(!b) return;
+  const startX=e.clientX, startY=e.clientY;
+  const ox=b.x!=null?b.x:wrap.offsetLeft, oy=b.y!=null?b.y:wrap.offsetTop;
+  block.classList.add('dragging');
+  b._z = Math.max(1,(b._z||0)+1); wrap.style.zIndex=b._z;
+  pointerDrag(e, ev=>{
+    b.x = Math.max(0, ox+(ev.clientX-startX)); b.y = Math.max(0, oy+(ev.clientY-startY));
+    wrap.style.left=b.x+'px'; wrap.style.top=b.y+'px';
+  }, ()=>{ block.classList.remove('dragging'); save(); });
 }
 function toggleBlock(id){
   if(collapsed.has(id)) collapsed.delete(id); else collapsed.add(id);
-  render();
+  renderBlockOnly(id);
+  save();
 }
 function removeBlock(id){
+  const victim=blocks.find(b=>b.id===id);
+  pushUndo('удаление блока «'+((victim&&victim.title)||'')+'»');
   blocks = blocks.filter(b=>b.id!==id);
   blocks.forEach(b=>{ b.links = b.links.filter(x=>x!==id); });
   if(activeParentId===id) activeParentId=null;
   save(); render();
-}
-
-function bindDrag(canvas){
-  canvas.querySelectorAll('.block').forEach(block=>{
-    const head = block.querySelector('.block-head');
-    if(!head) return;
-    head.addEventListener('mousedown', e=>{
-      if(e.target.closest('select,input,textarea,a,button')) return;
-      const id=block.dataset.id, wrap=block.parentElement, b=findBlock(id); if(!b) return;
-      const startX=e.clientX, startY=e.clientY;
-      const ox=b.x!=null?b.x:wrap.offsetLeft, oy=b.y!=null?b.y:wrap.offsetTop;
-      block.classList.add('dragging');
-      b._z = Math.max(1,(b._z||0)+1); wrap.style.zIndex=b._z;
-      pointerDrag(e, ev=>{
-        b.x = Math.max(0, ox+(ev.clientX-startX)); b.y = Math.max(0, oy+(ev.clientY-startY));
-        wrap.style.left=b.x+'px'; wrap.style.top=b.y+'px';
-      }, ()=>{ block.classList.remove('dragging'); save(); render(); });
-    });
-  });
 }
 
 /* ═══ Layout toggle ═══ */
@@ -430,11 +760,11 @@ function applySide(hidden){
 sideToggle.addEventListener('click', ()=>{
   const hidden = !side.classList.contains('collapsed');
   applySide(hidden);
-  try{ localStorage.setItem('shirma_side_collapsed', hidden?'1':'0'); }catch(e){}
+  try{ localStorage.setItem(KEYS.side, hidden?'1':'0'); }catch(e){}
 });
 (function(){
   let h=0;
-  try{ h=localStorage.getItem('shirma_side_collapsed'); }catch(e){}
+  try{ h=localStorage.getItem(KEYS.side); }catch(e){}
   applySide(h==='1');
 })();
 
@@ -475,14 +805,30 @@ function importFile(file){
 function addBlock(type){
   const b=makeBlock(type, TYPE_LABEL[type]+' — новый');
   blocks.push(b);
-  if(type==='pc') Object.assign(b.props,{Класс:'',Раса:'',HP:10,'Броня КК':10,Инициат:'+0'});
+  if(type==='pc'){
+    Object.assign(b.props,{Класс:'',Раса:'',HP:10,'Броня КК':10,Инициат:'+0'});
+    b.res=[{ name:'Вдохновение', cur:1, max:1 }];
+  }
   save(); render();
 }
 const renderSearchDebounced = debounce(render, 180);
 document.getElementById('search').addEventListener('input', e=>{ searchFilter=e.target.value.trim(); renderSearchDebounced(); });
 
-/* ═══ Local library search ═══ */
-const LIB = window.LIBRARY || { spells:[], items:[] };
+/* ═══ Local library search (ленивая загрузка library-data.js) ═══ */
+let LIB = null;
+let libLoadingPromise = null;
+function ensureLibrary(){
+  if(window.LIBRARY){ LIB=window.LIBRARY; return Promise.resolve(); }
+  if(libLoadingPromise) return libLoadingPromise;
+  libLoadingPromise = new Promise((resolve, reject)=>{
+    const s=document.createElement('script');
+    s.src='library-data.js';
+    s.onload=()=>{ LIB=window.LIBRARY || { spells:[], items:[] }; resolve(); };
+    s.onerror=()=>{ libLoadingPromise=null; reject(new Error('не удалось загрузить library-data.js')); };
+    document.head.appendChild(s);
+  });
+  return libLoadingPromise;
+}
 const RULES_FOR_LIB = BASE_RULES || [];
 const libModal = document.getElementById('libModal');
 const libSearch = document.getElementById('libSearch');
@@ -558,7 +904,8 @@ function renderBestMonster(m){
     ${m.img?`<div class="best-img"><img src="${escapeHtml(m.img)}" alt="${escapeHtml(m.n)}" onerror="this.style.display='none'"></div>`:''}
     <div style="margin:8px 0">
       <button data-best-add="${m.id}" title="Добавить монстра как блок на ширму">＋ Добавить на ширму</button>
-      <span class="hint" style="margin-left:8px">Блок появится во вкладке «Монстры»</span>
+      <button data-best-token="${m.id}" title="Добавить токен на карту боя с инициативой и ХП">⬤ На карту боя</button>
+      <span class="hint" style="margin-left:8px">Блок — во вкладке «Монстры», токен — на карте боя</span>
     </div>
     <div class="best-meta">
       <span class="tag"><b>Опасн.</b> ${escapeHtml(shortCr(m.cr))}</span>
@@ -580,10 +927,8 @@ function renderBestMonster(m){
       ${acts.map(a=>{
         const txt = (typeof a==='string') ? a : (a && typeof a==='object' ? (a.text||'') : '');
         const tag = (a && typeof a==='object' && a.tag) ? a.tag : '';
-        const ci=txt.indexOf('. ');
-        const title = ci>0? txt.slice(0,ci) : txt;
-        const body = ci>0? txt.slice(ci+2) : '';
-        return `<div class="act"><span class="an">${tag?escapeHtml(tag)+' — ':''}${escapeHtml(title)}.</span> ${escapeHtml(body)}</div>`;
+        const {name, body}=splitAct(txt);
+        return `<div class="act"><span class="an">${tag?escapeHtml(tag)+' — ':''}${escapeHtml(name)}.</span> ${escapeHtml(body)}</div>`;
       }).join('')}
     </div>`:''}
   </div>`;
@@ -599,9 +944,39 @@ function renderBestMonster(m){
       if(mon) addMonsterBlock(mon);
     });
   });
+  bestResults.querySelectorAll('[data-best-token]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const id=+btn.dataset.bestToken;
+      const mon = bestAll.find(x=>x.id===id);
+      if(mon) addMonsterToken(mon);
+    });
+  });
 }
-function addMonsterBlock(m){
-  const b=makeBlock('mob', '👹 '+m.n);
+/* Монстр из бестиария → токен на карте боя */
+function addMonsterToken(m){
+  if(!m || m.id==null) return;
+  const hpMax = hpNumber(m.hp);
+  const t={
+    id:'tok'+Math.random().toString(36).slice(2,7),
+    title: m.n || 'Монстр',
+    label: '',
+    npc: true,
+    color: '#c0564f',
+    x: Math.random()*400+100, y: Math.random()*250+100,
+    hp: hpMax!=null? hpMax : null,
+    hpMax: hpMax!=null? hpMax : null,
+    initMod: parseBonus(m.init),
+    down: false,
+    mobId: m.id,
+  };
+  mapState.tokens.push(t);
+  saveMap();
+  selectedTokenId = t.id;
+  if(currentTab!=='map') showTab('map'); else renderMap();
+  toast('Токен «'+(m.n||'Монстр')+'» на карте · +5/−5 ХП в панели');
+}
+
+function addMonsterBlock(m){  const b=makeBlock('mob', '👹 '+m.n);
   b.props = {
     'Опасн.': shortCr(m.cr), 'КД': m.ac, 'ХП': m.hp,
     'Скорость': m.sp, 'Иниц.': m.init
@@ -624,7 +999,7 @@ function addMonsterBlock(m){
     const el=document.querySelector('#canvas [data-id="'+b.id+'"]');
     if(el) el.scrollIntoView({behavior:'smooth', block:'start'});
   }, 30);
-  alert('Монстр «'+m.n+'» добавлен во вкладку «Монстры».');
+  toast('Монстр «'+m.n+'» добавлен во вкладку «Монстры»');
 }
 bestResultClose.addEventListener('click', ()=>{ bestState.list=true; bestState.monster=null; renderBestiary(); });
 document.getElementById('btnBestiary').addEventListener('click', ()=>{
@@ -646,11 +1021,16 @@ const bestSearchDebounced = debounce(renderBestiary, 180);
 bestSearch.addEventListener('input', ()=>{ bestState.list=true; bestState.monster=null; bestSearchDebounced(); });
 
 document.getElementById('btnLibrary').addEventListener('click', ()=>{
-  libModal.hidden = false;
-  libSearch.value='';
-  libKind.value='all';
-  libSearch.focus();
-  renderLib();
+  ensureLibrary().then(()=>{
+    libModal.hidden = false;
+    libSearch.value='';
+    libKind.value='all';
+    libSearch.focus();
+    renderLib();
+  }).catch(err=>{
+    libModal.hidden = false;
+    libResults.innerHTML = `<div class="lib-empty">Ошибка загрузки библиотеки: ${escapeHtml(String(err.message||err))}. Проверьте, что файл library-data.js лежит рядом с index.html.</div>`;
+  });
 });
 document.getElementById('libClose').addEventListener('click', ()=> libModal.hidden = true);
 libModal.addEventListener('click', e=>{ if(e.target===libModal) libModal.hidden=true; });
@@ -666,8 +1046,9 @@ function renderLib(){
   const inKind = k => kind==='all'||kind===k;
   const matchQ = t => !q || normalizeLib(t).includes(q);
 
-  if(inKind('spell')) LIB.spells.forEach(sp=>{ if(matchQ(sp.n+' '+sp.sc)) rows.push({kind:'spell', sp}); });
-  if(inKind('item'))  LIB.items.forEach(it=>{ if(matchQ(it.n)) rows.push({kind:'item', it}); });
+  const spells=(LIB&&LIB.spells)||[], items=(LIB&&LIB.items)||[];
+  if(inKind('spell')) spells.forEach(sp=>{ if(matchQ(sp.n+' '+sp.sc)) rows.push({kind:'spell', sp}); });
+  if(inKind('item'))  items.forEach(it=>{ if(matchQ(it.n)) rows.push({kind:'item', it}); });
   if(inKind('rule'))  RULES_FOR_LIB.forEach(r=>{ if(matchQ(r.title+' '+r.text)) rows.push({kind:'rule', rule:r}); });
 
   if(!rows.length){ libResults.innerHTML=`<div class="lib-empty">Ничего не найдено. Попробуйте другое слово.</div>`; return; }
@@ -736,19 +1117,12 @@ function addSpellBlock(s){
   save(); render();
 }
 function addItemBlock(it){
-  let txt = `Тип: ${it.t}\n`;
-  if(it.d1) txt += `Урон: ${it.d1}` + (it.d2?` / ${it.d2}`:'') + (it.dt?' ('+it.dt+')':'') + '\n';
-  if(it.v) txt += `Цена: ${it.v}\n`;
-  if(it.w) txt += `Вес: ${it.w}\n`;
-  if(it.p) txt += `Свойства: ${it.p}\n`;
-  const b=makeBlock('img', '🎒 '+it.n);
-  b.kind='doc'; b.fileName=it.n; b.data='';
-  b.text = txt;
-  // ensure body shows text — img block doesn't render textarea; change type to rule for text
-  b.type='rule';
-  b.text = txt.trim();
-  blocks.push(b);
-  save(); render();
+  let txt = `Тип: ${it.t}`;
+  if(it.d1) txt += `\nУрон: ${it.d1}` + (it.d2?` / ${it.d2}`:'') + (it.dt?' ('+it.dt+')':'');
+  if(it.v) txt += `\nЦена: ${it.v}`;
+  if(it.w) txt += `\nВес: ${it.w}`;
+  if(it.p) txt += `\nСвойства: ${it.p}`;
+  addRuleBlock({ title:'🎒 '+it.n, text:txt.trim() });
 }
 function addRuleBlock(r){
   const b=makeBlock('rule', r.title);
@@ -780,57 +1154,45 @@ function doRoll(die,count,modLabel){
   rollHistory.push(`${die}${cnt>1?`×${cnt}`:''} = ${sum}${label}`);
   if(rollHistory.length>8) rollHistory.shift();
 }
-/* stat rolls for PC blocks */
-function bindStatRolls(canvas){
-  canvas.querySelectorAll('.stat .mod').forEach(el=>{
-    el.addEventListener('click', e=>{
-      const b=findBlock(el.dataset.rollId); if(!b) return;
-      const idx=ITEMS_FOR_9.indexOf(el.dataset.rollStat);
-      const m=idx>=0?modf(b.stats[idx]):0;
-      doRoll('d20',1, (m>=0?`+${m}`:m));
-    });
-  });
-  canvas.querySelectorAll('[data-action="rollAll"]').forEach(el=>{
-    el.addEventListener('click', ()=>{
-      const b=findBlock(el.dataset.rollId); if(!b) return;
-      let out='';
-      b.stats.forEach((s,i)=>{ out+=`${ITEMS_FOR_9[i]}: ${doOneD20()+modf(s)}  `; });
-      document.getElementById('rollResult').textContent = 'Бросок всех: '+out;
-      rollHistory.push('Бросок всех ПК: '+out);
-    });
-  });
-}
 function doOneD20(){ return 1+Math.floor(Math.random()*20); }
-function bindStatInputs(canvas){
-  canvas.querySelectorAll('.stat input.val').forEach(inp=>{
-    inp.addEventListener('input', ()=>{
-      const b=findBlock(inp.dataset.statsId); const idx=+inp.dataset.statIndex;
-      b.stats[idx]=Math.max(1,Math.min(30,parseInt(inp.value)||10));
-      const mod=b.stats[idx]>=0? '+'+(Math.floor((b.stats[idx]-10)/2)) : ''+Math.floor((b.stats[idx]-10)/2);
-      const modEl=inp.parentElement.querySelector('.mod'); if(modEl) modEl.textContent= (function(x){return (x>=0?'+':'')+x})(Math.floor((b.stats[idx]-10)/2));
-      save();
-    });
-    inp.addEventListener('change', ()=>{ const b=findBlock(inp.dataset.statsId); const idx=+inp.dataset.statIndex;
-      const v=Math.max(1,Math.min(30,parseInt(inp.value)||10)); b.stats[idx]=v; inp.value=v; save(); });
-  });
-  canvas.querySelectorAll('.prop input.v').forEach(inp=>{
-    const keyEl=inp.dataset.propKey;
-    inp.addEventListener('input', ()=>{ const b=findBlock(inp.dataset.propId); b.props[keyEl]=inp.value; save(); });
-  });
-}
 document.getElementById('btnExport').addEventListener('click', ()=>{
-  const blob=new Blob([JSON.stringify(blocks,null,2)],{type:'application/json'});
+  // собираем блобы медиа, на которые ссылаются блоки, фон карты и токены
+  const media={};
+  const collect=k=>{ if(k && mediaCache[k]) media[k]=mediaCache[k]; };
+  blocks.forEach(b=> collect(b.dataKey));
+  if(mapState.bgKey) collect(mapState.bgKey);
+  (mapState.tokens||[]).forEach(t=> collect(t.dataKey));
+  const payload={ version:2, exported:Date.now(), blocks, media };
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='shirma-backup.json'; a.click(); URL.revokeObjectURL(a.href);
 });
 document.getElementById('btnImport').addEventListener('click', ()=> document.getElementById('fileInput').click());
 document.getElementById('fileInput').addEventListener('change', e=>{
   const f=e.target.files[0]; if(!f) return;
   const r=new FileReader();
-  r.onload=()=>{ try{ const data=JSON.parse(r.result); if(Array.isArray(data)){ blocks=data; collapsed=new Set(); save(); render(); } else alert('Не JSON-массив'); }catch(err){ alert('Ошибка чтения файла'); } };
+  r.onload=()=>{
+    try{
+      let data=JSON.parse(r.result);
+      let arr, media=null;
+      if(Array.isArray(data)) arr=data;                                  // старый формат: просто массив блоков
+      else if(data && Array.isArray(data.blocks)){ arr=data.blocks; media=data.media; } // v2: блоки + медиа
+      else { alert('Неизвестный формат файла'); return; }
+      arr = sanitizeBlocks(arr);
+      if(!arr.length){ alert('В файле нет корректных блоков'); return; }
+      pushUndo('импорт из файла');
+      if(media && typeof media==='object'){
+        Object.entries(media).forEach(([k,v])=>{
+          if(typeof k==='string' && typeof v==='string' && /^data:/.test(v)){ mediaCache[k]=v; idbPut(k,v); }
+        });
+      }
+      blocks=arr; collapsed=new Set(); activeParentId=null; save(); render();
+      toast('Импортировано блоков: '+arr.length);
+    }catch(err){ alert('Ошибка чтения файла'); }
+  };
   r.readAsText(f); e.target.value='';
 });
 document.getElementById('btnReset').addEventListener('click', ()=>{
-  if(confirm('Перезаписать все данные демо-версией?')){ seed(); }
+  if(confirm('Перезаписать все данные демо-версией?')){ pushUndo('сброс к демо-данным'); seed(); }
 });
 
 /* ═══ Shop ═══ */
@@ -912,13 +1274,13 @@ function showTab(name){
 document.querySelectorAll('.tab').forEach(t=> t.addEventListener('click', ()=> showTab(t.dataset.tab)));
 
 /* ═══ Free notes canvas ═══ */
-const STORE_NOTES = 'shirma_notes_v1';
+const STORE_NOTES = KEYS.notes;
 let noteBlocks = [];
 function loadNotes(){
   try{ const raw=localStorage.getItem(STORE_NOTES); if(raw){ noteBlocks=JSON.parse(raw); return true; } }catch(e){}
   return false;
 }
-function saveNotes(){ try{ localStorage.setItem(STORE_NOTES, JSON.stringify(noteBlocks)); }catch(e){} }
+function saveNotes(){ try{ localStorage.setItem(KEYS.notes, JSON.stringify(noteBlocks)); }catch(e){} }
 function renderNotes(){
   const nc = document.getElementById('notesCanvas');
   if(!nc) return;
@@ -967,14 +1329,18 @@ function renderNotes(){
 function newNote(x,y){ noteBlocks.push({ id:'n'+Math.random().toString(36).slice(2,7), title:'Заметка', text:'', x:x||40, y:y||40, w:280, clr:'' }); saveNotes(); renderNotes(); }
 document.getElementById('notesAdd').addEventListener('click', ()=> newNote(40,40));
 document.getElementById('notesAddRule').addEventListener('click', ()=>{ noteBlocks.push({ id:'n'+Math.random().toString(36).slice(2,7), title:'Правило', text:'Вставьте текст правила…', x:60, y:60, w:280, clr:'#86c48f' }); saveNotes(); renderNotes(); });
-document.getElementById('notesClear').addEventListener('click', ()=>{ if(confirm('Очистить все заметки холста?')){ noteBlocks=[]; saveNotes(); renderNotes(); } });
-{ const nc=document.getElementById('notesCanvas'); if(nc) nc.addEventListener('dblclick', e=>{ newNote(e.offsetX, e.offsetY); }); }
+document.getElementById('notesClear').addEventListener('click', ()=>{ if(confirm('Очистить все заметки холста?')){ pushUndo('очистка холста заметок'); noteBlocks=[]; saveNotes(); renderNotes(); } });
+{ const nc=document.getElementById('notesCanvas'); if(nc) nc.addEventListener('dblclick', e=>{
+    if(e.target.closest('.block')) return; // клик по самой заметке — не создаем новую
+    const rect=nc.getBoundingClientRect();
+    newNote(e.clientX-rect.left+nc.scrollLeft, e.clientY-rect.top+nc.scrollTop);
+  }); }
 
 /* ════════════ Map & tokens ════════════ */
-const STORE_MAP = 'shirma_map_v1';
-let mapState = { bg:null, tokens:[], zoom:1 };
+const STORE_MAP = KEYS.map;
+let mapState = { bg:null, tokens:[], zoom:1, combat:{ active:false, round:1, turn:0, order:[] } };
 function loadMap(){
-  try{ const raw=localStorage.getItem(STORE_MAP); if(raw){ mapState=JSON.parse(raw); if(!mapState.zoom) mapState.zoom=1; if(mapState.locked==null) mapState.locked=false; if(mapState.scrollX==null) mapState.scrollX=0; if(mapState.scrollY==null) mapState.scrollY=0; return true; } }catch(e){}
+  try{ const raw=localStorage.getItem(STORE_MAP); if(raw){ mapState=JSON.parse(raw); if(!mapState.zoom) mapState.zoom=1; if(mapState.locked==null) mapState.locked=false; if(mapState.scrollX==null) mapState.scrollX=0; if(mapState.scrollY==null) mapState.scrollY=0; if(!mapState.combat||!mapState.combat.order) setCombat(mapState.combat); mapState.tokens=(mapState.tokens||[]).map(t=>{ if(t.initMod==null) t.initMod=0; if(t.down==null) t.down=false; if(t.hp===undefined){ t.hp=null; t.hpMax=null; } return t; }); return true; } }catch(e){}
   return false;
 }
 function saveMap(){ try{ localStorage.setItem(STORE_MAP, JSON.stringify(mapState)); }catch(e){} }
@@ -986,6 +1352,9 @@ function mapZoom(delta){
 }
 function renderMap(){
   const mc = document.getElementById('mapCanvas');
+  if(!mc) return;
+  // запоминаем текущую прокрутку, чтобы ререндер не сбрасывал позицию
+  mapState.scrollX=mc.scrollLeft||0; mapState.scrollY=mc.scrollTop||0;
   mc.innerHTML='';
   mc.classList.toggle('locked', !!mapState.locked);
   const z = mapState.zoom;
@@ -1003,11 +1372,19 @@ function renderMap(){
     img.className='map-bg';
     img.src=bgSrc;
     img.draggable=false;
+    // подстраиваем рабочую область под реальные размеры картинки
+    img.onload=()=>{ if(img.naturalWidth && mapState.zoom!=null){ wrapper.style.width=(img.naturalWidth*mapState.zoom)+'px'; wrapper.style.height=(img.naturalHeight*mapState.zoom)+'px'; } };
     wrapper.appendChild(img);
   } else {
     mc.classList.remove('has-bg');
   }
   mapState.tokens.forEach(t=>{
+    // миграция: старые base64-картинки токенов переносим в IndexedDB
+    if(t.img && !t.dataKey){
+      const key='tokimg_'+t.id;
+      mediaCache[key]=t.img; idbPut(key, t.img);
+      t.dataKey=key; t.img=''; saveMap();
+    }
     if(t.x==null) t.x=Math.random()*400+100, t.y=Math.random()*300+100;
     wrapper.appendChild(tokenEl(t));
   });
@@ -1019,6 +1396,7 @@ function renderMap(){
     mc.appendChild(empty);
   }
   updateMapLockBtn();
+  renderCombatTracker();
   requestAnimationFrame(()=>{ mc.scrollLeft=mapState.scrollX||0; mc.scrollTop=mapState.scrollY||0; });
 }
 function updateMapLockBtn(){
@@ -1027,21 +1405,89 @@ function updateMapLockBtn(){
   btn.classList.toggle('locked', !!mapState.locked);
   btn.title = mapState.locked ? 'Карта закреплена: масштаб и прокрутка заблокированы' : 'Закрепить карту в текущем положении';
 }
+
+/* ═══ Комбат: инициатива, ходы, выбывание ═══ */
+function parseBonus(s){ const m=/([+-]?\d+)/.exec(String(s||'')); return m? +m[1] : 0; }
+function hpNumber(s){ const n=parseInt(String(s||''),10); return isFinite(n)? n : null; }
+function setCombat(c){ mapState.combat = Object.assign({ active:false, round:1, turn:0, order:[] }, c||{}); }
+function rollInitiative(){
+  const toks=mapState.tokens||[];
+  if(!toks.length){ toast('Сначала добавьте токены участников'); return; }
+  toks.forEach(t=>{ if(t.init==null) t.init = doOneD20() + (t.initMod||0); });
+  const order = toks.slice().sort((a,b)=> b.init - a.init).map(t=>t.id);
+  setCombat({ active:true, round:1, turn:0, order });
+  saveMap(); renderMap();
+  toast('Бой начался · раунд 1');
+}
+function combatTurn(delta){
+  const c=mapState.combat; if(!c || !c.active || !c.order.length) return;
+  let turn=c.turn+delta;
+  let round=c.round;
+  if(turn>=c.order.length){ turn=0; round++; }
+  if(turn<0){ round--; if(round<1){ round=1; turn=0; } else turn=c.order.length-1; }
+  setCombat({ active:true, round, turn, order:c.order });
+  saveMap(); renderMap();
+}
+function combatEnd(){
+  mapState.tokens.forEach(t=>{ t.init=null; });
+  setCombat({ active:false, round:1, turn:0, order:[] });
+  saveMap(); renderMap();
+  toast('Бой завершён');
+}
+function renderCombatTracker(){
+  const tr=document.getElementById('combatTracker');
+  const btnStart=document.getElementById('mapCombat');
+  const btnEnd=document.getElementById('mapCombatEnd');
+  if(!tr) return;
+  const c=mapState.combat;
+  const active = !!(c && c.active && c.order.length);
+  tr.hidden = !active;
+  if(btnStart) btnStart.hidden = active;
+  if(btnEnd) btnEnd.hidden = !active;
+  if(!active) return;
+  const curId = c.order[c.turn];
+  tr.innerHTML = `<span class="ct-round">Раунд ${c.round}</span>` + c.order.map((id,i)=>{
+    const t=mapState.tokens.find(x=>x.id===id);
+    if(!t) return '';
+    const hpTxt = t.hp!=null ? ` · ХП ${t.hp}${t.hpMax!=null?'/'+t.hpMax:''}` : '';
+    const down = t.hp!=null && t.hp<=0;
+    return `<span class="ct-item ${i===c.turn?'active':''} ${down?'down':''} ${t.npc?'npc':''}" data-ctid="${t.id}" title="Клик — выбрать токен">
+      <b>${t.init!=null?('d20 '+t.init):''}</b> ${escapeHtml(t.title||'Токен')}${hpTxt}${down?' · ☠':''}</span>`;
+  }).join('') + `<button id="ctNext" title="Следующий ход (R)">▸ Ход</button>`;
+  tr.querySelectorAll('[data-ctid]').forEach(el=>{
+    el.addEventListener('click', ()=>{ selectedTokenId=el.dataset.ctid; saveMap(); renderMap(); });
+  });
+  const nx=tr.querySelector('#ctNext'); if(nx) nx.addEventListener('click', ()=> combatTurn(1));
+}
 let selectedTokenId = null;
 function tokenEl(t){
   const el=document.createElement('div');
-  el.className='map-token'+(t.npc?' npc':'')+(t.id===selectedTokenId?' selected':'');
+  const c=mapState.combat||{};
+  const isTurn = c.active && c.order && c.order[c.turn]===t.id;
+  const down = t.hp!=null && t.hp<=0;
+  el.className='map-token'
+    +(t.npc?' npc':'')
+    +(t.id===selectedTokenId?' selected':'')
+    +(isTurn?' active-turn':'')
+    +(down||t.down?' down':'');
   el.dataset.tid=t.id;
   el.style.left=t.x+'px'; el.style.top=t.y+'px';
-  if(t.img){
+  const tsrc = safeMediaSrc((t.dataKey && mediaCache[t.dataKey]) || t.img || '');
+  if(tsrc){
     el.style.background='transparent';
     const im=document.createElement('img');
-    im.src=t.img; im.style.width='100%'; im.style.height='100%';
+    im.src=tsrc; im.style.width='100%'; im.style.height='100%';
     im.style.borderRadius='50%'; im.style.objectFit='cover';
     el.appendChild(im);
   } else {
     el.style.background=t.color||'var(--accent2)';
     el.textContent=t.label||'П';
+  }
+  if(t.hp!=null){
+    const hp=document.createElement('div');
+    hp.className='tok-hp'+(t.hp<=0?' zero':(t.hpMax!=null&&t.hp<=t.hpMax/2?' low':''));
+    hp.textContent = t.hpMax!=null ? `${t.hp}/${t.hpMax}` : `${t.hp}`;
+    el.appendChild(hp);
   }
   const name=document.createElement('div');
   name.className='tok-name'; name.textContent=t.title||'';
@@ -1076,6 +1522,13 @@ function bindTokens(){
     docGet('mapTokName').textContent = sel.title||'Токен';
     docGet('mapTokType').textContent = sel.npc ? 'Враг' : 'ПК';
     docGet('mapTokType').style.color = sel.npc ? 'var(--danger)' : 'var(--accent2)';
+    const hpIn=docGet('mapTokHp'), hpMaxIn=docGet('mapTokHpMax');
+    if(hpIn){ hpIn.value = sel.hp!=null? sel.hp : ''; }
+    if(hpMaxIn){ hpMaxIn.value = sel.hpMax!=null? sel.hpMax : ''; }
+    const stBtn=docGet('mapTokStat');
+    if(stBtn) stBtn.hidden = (sel.mobId==null);
+    const dnBtn=docGet('mapTokDown');
+    if(dnBtn){ dnBtn.textContent = (sel.down || (sel.hp!=null&&sel.hp<=0)) ? '☠ Выбыл' : '☠'; dnBtn.classList.toggle('active', !!(sel.down || (sel.hp!=null&&sel.hp<=0))); }
   }
 }
 function docGet(id){ return document.getElementById(id); }
@@ -1116,17 +1569,81 @@ document.getElementById('mapTokType').addEventListener('click', ()=>{
   t.npc=!t.npc; if(!t.img){ t.color = t.npc? '#c0564f':'var(--accent2)'; }
   saveMap(); renderMap();
 });
+/* HP, выбывание, статблок */
+function findSelToken(){ return mapState.tokens.find(x=>x.id===selectedTokenId); }
+function applyHp(tok, val){
+  if(!tok) return;
+  tok.hp = Math.max(-10, Math.round(val));
+  tok.down = tok.hp<=0;
+  saveMap(); renderMap();
+}
+document.getElementById('mapTokHp').addEventListener('change', e=>{
+  const t=findSelToken(); if(!t) return;
+  const v=parseInt(e.target.value,10); if(!isFinite(v)) return;
+  applyHp(t, v);
+});
+document.getElementById('mapTokHpMax').addEventListener('change', e=>{
+  const t=findSelToken(); if(!t) return;
+  const v=parseInt(e.target.value,10); if(!isFinite(v)||v<0) return;
+  t.hpMax=v; if(t.hp==null) t.hp=v;
+  saveMap(); renderMap();
+});
+document.getElementById('mapTokHpDmg').addEventListener('click', ()=>{
+  const t=findSelToken(); if(!t) return;
+  applyHp(t, (t.hp!=null?t.hp:(t.hpMax!=null?t.hpMax:0)) - 5);
+});
+document.getElementById('mapTokHpHeal').addEventListener('click', ()=>{
+  const t=findSelToken(); if(!t) return;
+  const base = t.hp!=null? t.hp : 0;
+  const max = t.hpMax!=null? t.hpMax : null;
+  applyHp(t, max!=null? Math.min(max, base+5) : base+5);
+});
+document.getElementById('mapTokDown').addEventListener('click', ()=>{
+  const t=findSelToken(); if(!t) return;
+  t.down=!t.down;
+  if(t.hp==null) t.hp=0; /* у токена без ХП выбывание чисто визуальное */
+  saveMap(); renderMap();
+});
+document.getElementById('mapTokStat').addEventListener('click', ()=>{
+  const t=findSelToken(); if(!t || t.mobId==null) return;
+  ensureBestiary().then(()=>{
+    bestAll=(window.BESTIARY||[]).slice();
+    const m=bestAll.find(x=>x.id===t.mobId);
+    if(!m){ toast('Монстр не найден в бестиарии'); return; }
+    bestState={ list:false, monster:m };
+    bestModal.hidden=false;
+    renderBestMonster(m);
+  }).catch(err=> toast('Не удалось загрузить бестиарий'));
+});
+/* бой / ходы */
+document.getElementById('mapCombat').addEventListener('click', rollInitiative);
+document.getElementById('mapCombatEnd').addEventListener('click', combatEnd);
+document.addEventListener('keydown', e=>{
+  if(currentTab!=='map') return;
+  const c=mapState.combat;
+  if(!c || !c.active) return;
+  if(e.target.closest('input,textarea,[contenteditable]')) return;
+  if(e.key==='r' || e.key==='R' || e.key==='к' || e.key==='К'){ e.preventDefault(); combatTurn(1); }
+  if(e.key==='q' || e.key==='Q' || e.key==='й' || e.key==='Й'){ e.preventDefault(); combatTurn(-1); }
+});
 document.getElementById('mapTokImg').addEventListener('click', ()=> document.getElementById('mapTokImgInput').click());
 document.getElementById('mapTokImgInput').addEventListener('change', e=>{
   const f=e.target.files[0]; if(!f) return;
   const t=mapState.tokens.find(x=>x.id===selectedTokenId); if(!t) return;
   const r=new FileReader();
-  r.onload=()=>{ t.img=r.result; t.label=''; saveMap(); renderMap(); };
+  r.onload=()=>{
+    // картинка токена — в IndexedDB, в localStorage лежит только ключ
+    const key = t.dataKey || 'tokimg_'+t.id;
+    mediaCache[key]=r.result; idbPut(key, r.result);
+    t.dataKey=key; t.img=''; t.label='';
+    saveMap(); renderMap();
+  };
   r.readAsDataURL(f); e.target.value='';
 });
 document.getElementById('mapTokImgClear').addEventListener('click', ()=>{
   const t=mapState.tokens.find(x=>x.id===selectedTokenId); if(!t) return;
-  delete t.img; t.color = t.npc? '#c0564f':'var(--accent2)'; saveMap(); renderMap();
+  if(t.dataKey){ idbDel(t.dataKey); delete mediaCache[t.dataKey]; }
+  delete t.dataKey; t.color = t.npc? '#c0564f':'var(--accent2)'; saveMap(); renderMap();
 });
 document.getElementById('mapTokDel').addEventListener('click', ()=>{
   if(!selectedTokenId) return;
@@ -1170,6 +1687,11 @@ document.getElementById('btnTables').addEventListener('click', ()=>{
 });
 document.getElementById('tablesClose').addEventListener('click', ()=> tablesModal.hidden=true);
 tablesModal.addEventListener('click', e=>{ if(e.target===tablesModal) tablesModal.hidden=true; });
+/* Esc закрывает любое открытое окно */
+window.addEventListener('keydown', e=>{
+  if(e.key!=='Escape') return;
+  [libModal, bestModal, shopModal, tablesModal].forEach(m=>{ if(!m.hidden) m.hidden=true; });
+});
 document.getElementById('tablesRoll').addEventListener('click', ()=>{
   const key = Object.keys(RANDOM_TABLES)[+tablesSelect.value];
   const list = RANDOM_TABLES[key];
@@ -1183,7 +1705,7 @@ document.getElementById('tablesRoll').addEventListener('click', ()=>{
 });
 
 /* ════════════ Сессии (редактор в стиле Obsidian) ════════════ */
-const STORE_SESSIONS = 'shirma_sessions_v1';
+const STORE_SESSIONS = KEYS.sessions;
 let sessions = [];
 let activeSessionId = null;
 let sessionsInited = false;
@@ -1281,6 +1803,7 @@ function bindSessionControls(){
   if(delBtn) delBtn.addEventListener('click', ()=>{
     if(!activeSessionId) return;
     if(!confirm('Удалить эту сессию?')) return;
+    pushUndo('удаление сессии');
     sessions = sessions.filter(s=>s.id!==activeSessionId);
     persistSessions();
     if(sessions.length){ selectSession(sessions[0].id); } else { activeSessionId=null; const t=document.getElementById('sessionTitle'); const e=document.getElementById('sessionEditor'); if(t)t.value=''; if(e)e.innerHTML=''; renderSessionsList(); }
@@ -1459,8 +1982,9 @@ function exportSessionPdf(){
 
 /* ════════════ Init ════════════ */
 (function init(){
+  initCanvasEvents();
   collapsed = new Set();
-  if(!load()){ blocks = SAMPLES.map(s=>makeBlock(s.type,s.title,{title:s.title, links:s.links, stats:s.stats||[10,10,10,10,10,10], props:s.props||{}, text:s.text||''})); }
+  if(!load()){ blocks = SAMPLES.map(s=>makeBlock(s.type,s.title,{title:s.title, links:s.links, stats:s.stats||[10,10,10,10,10,10], props:s.props||{}, res:sanitizeRes(s.res), text:s.text||''})); }
   blocks.forEach(b=>{ collapsed.add(b.id); });
   loadMap();
   loadNotes();
