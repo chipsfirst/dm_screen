@@ -148,7 +148,6 @@ function persistBlocks(){
 }
 const persistBlocksDebounced = debounce(persistBlocks, 250);
 function save(){
-  document.getElementById('blockCount').textContent = blocks.length;
   const fc=document.getElementById('footerCount'); if(fc) fc.textContent=blocks.length;
   persistBlocksDebounced();
 }
@@ -766,7 +765,7 @@ function applyTheme(t){
   if(t==='light'){ document.documentElement.setAttribute('data-theme','light'); }
   else { document.documentElement.removeAttribute('data-theme'); }
   const b=document.getElementById('btnTheme');
-  if(b){ b.textContent = t==='light' ? '🌙 Тёмная' : '☀️ Светлая'; }
+  if(b){ b.textContent = t==='light' ? '🌙' : '☀️'; }
 }
 function currentTheme(){
   try{ return localStorage.getItem(THEME_KEY)==='light' ? 'light' : 'dark'; }catch(e){ return 'dark'; }
@@ -786,7 +785,7 @@ function currentTheme(){
   const btn=document.getElementById('btnFullscreen');
   if(!btn) return;
   function ref(){
-    btn.textContent = document.fullscreenElement ? '⛶ Выйти' : '⛶';
+    btn.textContent = document.fullscreenElement ? '⛶' : '⛶';
     btn.title = document.fullscreenElement? 'Выйти из полноэкранного режима' : 'Полноэкранный режим';
   }
   btn.addEventListener('click', ()=>{
@@ -795,6 +794,16 @@ function currentTheme(){
   });
   document.addEventListener('fullscreenchange', ref);
   document.addEventListener('webkitfullscreenchange', ref);
+})();
+
+/* ═══ Меню команд (☰) ═══ */
+(function(){
+  const btn=document.getElementById('btnMenu');
+  const panel=document.getElementById('menuPanel');
+  if(!btn||!panel) return;
+  btn.addEventListener('click', e=>{ e.stopPropagation(); panel.classList.toggle('open'); });
+  document.addEventListener('click', e=>{ if(!e.target.closest('.menu-wrap')) panel.classList.remove('open'); });
+  panel.addEventListener('click', ()=> panel.classList.remove('open'));
 })();
 
 /* ═══ Сворачивание верхней панели ═══ */
@@ -941,7 +950,8 @@ function addBlock(type){
   save(); render();
 }
 const renderSearchDebounced = debounce(render, 180);
-document.getElementById('search').addEventListener('input', e=>{ searchFilter=e.target.value.trim(); renderSearchDebounced(); });
+const searchEl=document.getElementById('search');
+if(searchEl) searchEl.addEventListener('input', e=>{ searchFilter=e.target.value.trim(); renderSearchDebounced(); });
 
 /* ═══ Local library search (ленивая загрузка library-data.js) ═══ */
 let LIB = null;
@@ -1269,16 +1279,35 @@ function addRuleBlock(r){
 /* ═══ Dice ═══ */
 let currentDie='d20';
 let rollHistory=[];
-document.querySelectorAll('.die-btn').forEach(b=>{
-  b.addEventListener('click', ()=>{
-    currentDie=b.dataset.die;
-    document.querySelectorAll('.die-btn').forEach(x=>x.classList.toggle('active',x===b));
-  });
-});
-document.querySelectorAll('.die-btn').forEach((b,i)=>i===5&&b.classList.add('active'));
+const dieSel=document.getElementById('dieSel');
+const dieCustom=document.getElementById('dieCustom');
+function resolveDie(){
+  if(dieSel && dieSel.value==='custom'){
+    const n=parseInt(dieCustom && dieCustom.value)||0;
+    return n>=2 ? `d${n}` : null;
+  }
+  return dieSel ? `d${dieSel.value}` : currentDie;
+}
+function applyDieUI(){
+  if(!dieSel) return;
+  const custom = dieSel.value==='custom';
+  if(dieCustom) dieCustom.style.display = custom ? '' : 'none';
+  const d=resolveDie();
+  currentDie = d || currentDie;
+}
+if(dieSel){
+  dieSel.addEventListener('change', applyDieUI);
+}
+if(dieCustom){
+  dieCustom.addEventListener('input', ()=>{ currentDie=resolveDie()||currentDie; });
+}
 document.getElementById('btnRoll').addEventListener('click', ()=>{
-  doRoll(currentDie, parseInt(document.getElementById('dieCount').value)||1, null);
-});
+   doRoll(currentDie, parseInt(document.getElementById('dieCount').value)||1, null);
+ });
+ const btnRollShort=document.getElementById('btnRollShort');
+ if(btnRollShort) btnRollShort.addEventListener('click', ()=>{
+   doRoll(currentDie, parseInt(document.getElementById('dieCount').value)||1, null);
+ });
 function doRoll(die,count,modLabel){
   const n=parseInt(die.slice(1)); const cnt=count||1;
   const rolls=Array.from({length:cnt},()=>1+Math.floor(Math.random()*n));
@@ -1418,6 +1447,11 @@ let activeMapId = null;
 let mapLocked = false;
 let mapPenOn = false;
 let mapGridOn = true;   // сетка карты включена по умолчанию
+let mapGridStep = 18;   // шаг сетки, px
+let mapPlaceOn = false; // режим расстановки маркеров кликом
+let selectedMarkerId = null;
+let mapRulerOn = false;
+let rulerPt = null;     // {x,y} точка начала измерения (в координатах карты)
 
 function curMap(){ return maps.find(m=>m.id===activeMapId) || null; }
 function loadMap(){
@@ -1489,6 +1523,7 @@ function renderMap(){
   if(!m){ return; }
   mc.classList.toggle('locked', !!mapLocked);
   mc.classList.toggle('no-grid', !mapGridOn);
+  mc.style.setProperty('--grid-step', mapGridStep+'px');
   mc.scrollLeft = m.scrollX||0; mc.scrollTop = m.scrollY||0;
   const z = m.zoom;
   const wrapper=document.createElement('div');
@@ -1502,6 +1537,16 @@ function renderMap(){
     const grid=document.createElement('div');
     grid.className='map-grid';
     wrapper.appendChild(grid);
+  }
+  // название карты
+  const titleEl=document.createElement('div');
+  titleEl.className='map-title';
+  titleEl.textContent=m.name;
+  titleEl.addEventListener('click', e=>{ e.stopPropagation(); renameMap(m.id); });
+  wrapper.appendChild(titleEl);
+  // линейка (визуал)
+  if(mapRulerOn && rulerPt){
+    const li=document.createElement('div'); li.className='map-ruler'; wrapper.appendChild(li);
   }
   const lbl=document.getElementById('mapZoomLabel'); if(lbl) lbl.textContent=Math.round(z*100)+'%';
 
@@ -1520,7 +1565,8 @@ function renderMap(){
   // маркеры
   (m.markers||[]).forEach(k=>{
     const el=document.createElement('div');
-    el.className='map-marker';
+    const sel = k.id===selectedMarkerId;
+    el.className='map-marker'+(sel?' selected':'');
     el.style.left=percent(k.x,m.baseW)+'%'; el.style.top=percent(k.y,m.baseH)+'%';
     el.style.background=k.color||'#7fb3e6';
     el.dataset.id=k.id;
@@ -1528,17 +1574,22 @@ function renderMap(){
     const lbl2=document.createElement('div'); lbl2.className='map-marker-label'; lbl2.textContent=k.label;
     el.appendChild(lbl2);
     wrapper.appendChild(el);
+    // клик — выбрать маркер (не перетаскивание)
+    el.addEventListener('click', e=>{
+      e.stopPropagation();
+      selectedMarkerId = (selectedMarkerId===k.id)? null : k.id;
+      renderMap();
+    });
     // drag маркера
     el.addEventListener('mousedown', e=>{
       e.preventDefault(); e.stopPropagation();
       if(mapPenOn) return;
-      const w=wrapper.getBoundingClientRect();
       const sx=e.clientX, sy=e.clientY, ox=k.x, oy=k.y;
       pointerDrag(e, ev=>{
         k.x=Math.max(0,Math.min(m.baseW, ox + (ev.clientX-sx)/z));
         k.y=Math.max(0,Math.min(m.baseH, oy + (ev.clientY-sy)/z));
         el.style.left=percent(k.x,m.baseW)+'%'; el.style.top=percent(k.y,m.baseH)+'%';
-      }, ()=> saveMap());
+      }, ()=>{ saveMap(); renderMap(); });
     });
   });
   // слой рисования
@@ -1654,20 +1705,51 @@ function mapAddFromFile(file){
   reader.readAsDataURL(file);
 }
 function addMapMarker(){
+  // включить/выключить режим расстановки маркеров кликом
+  mapPlaceOn = !mapPlaceOn;
+  const hint=document.getElementById('mapPlaceHint'); if(hint) hint.hidden = !mapPlaceOn;
+  const btn=document.getElementById('mapAddMarker'); if(btn) btn.classList.toggle('active', !!mapPlaceOn);
+  if(mapPlaceOn) toast('Кликните по карте, чтобы поставить маркер');
+}
+function placeMarkerAt(x,y){
   const m=curMap(); if(!m) return;
-  const label=prompt('Подпись маркера:','Маркер'); if(label===null || !label.trim()) return;
-  const k={ id:'k'+Math.random().toString(36).slice(2,7), x:m.baseW/2, y:m.baseH/2, label:label.trim().slice(0,40), color:'#7fb3e6' };
-  m.markers.push(k);
+  const label=prompt('Подпись маркера:','Маркер'); if(label===null) return;
+  m.markers.push({ id:'k'+Math.random().toString(36).slice(2,7), x:x, y:y,
+    label:(label.trim()||'Маркер').slice(0,40), color:'#7fb3e6' });
   saveMap(); renderMap();
-  // центрируем карту на добавленный маркер, чтобы он точно был виден
-  const mc=document.getElementById('mapCanvas');
-  if(mc){
-    const z=m.zoom||1;
-    m.scrollX=Math.max(0, k.x - mc.clientWidth/(2*z));
-    m.scrollY=Math.max(0, k.y - mc.clientHeight/(2*z));
-    mc.scrollLeft=m.scrollX; mc.scrollTop=m.scrollY;
+}
+function renameMap(id){
+  const m=maps.find(x=>x.id===id); if(!m) return;
+  const t=prompt('Название карты:',m.name); if(t===null) return;
+  m.name=(t.trim()||'Карта').slice(0,40); saveMap(); renderMap();
+}
+function mapRulerToggle(){
+  mapRulerOn=!mapRulerOn; rulerPt=null;
+  const b=document.getElementById('mapRuler'); if(b) b.classList.toggle('active', !!mapRulerOn);
+  const l=document.getElementById('mapRulerLabel'); if(l){ l.hidden=!mapRulerOn; l.textContent=mapRulerOn?'Клик №1…':''; }
+}
+function mapDuplicate(){
+  const m=curMap(); if(!m) return;
+  const cp=normMap({ id:'m'+Math.random().toString(36).slice(2,8), name:(m.name||'Карта')+' (копия)',
+    bgKey:m.bgKey, bg:m.bg, baseW:m.baseW, baseH:m.baseH, zoom:m.zoom, scrollX:m.scrollX, scrollY:m.scrollY,
+    markers:m.markers.map(k=>({...k,id:'k'+Math.random().toString(36).slice(2,7)})),
+    draw:m.draw.map(s=>({color:s.color,width:s.width,pts:s.pts.map(p=>[p[0],p[1]])})) });
+  maps.push(cp); activeMapId=cp.id; saveMap(); renderMap(); toast('Карта дублирована');
+}
+function mapSnapPNG(){
+  const m=curMap(); if(!m) return;
+  const cv=document.createElement('canvas'); cv.width=m.baseW; cv.height=m.baseH;
+  const ctx=cv.getContext('2d');
+  if(m.bgKey&&mediaCache[m.bgKey]){ const im=new Image(); im.onload=()=>{ drawSnap(im); }; im.src=mediaCache[m.bgKey]; }
+  else drawSnap(null);
+  function drawSnap(bg){
+    if(bg) ctx.drawImage(bg,0,0,cv.width,cv.height);
+    (m.draw||[]).forEach(s=>{ if(!s.pts||s.pts.length<2) return; ctx.strokeStyle=s.color; ctx.lineWidth=s.width; ctx.lineCap='round';
+      ctx.beginPath(); s.pts.forEach((p,i)=> i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.stroke(); });
+    (m.markers||[]).forEach(k=>{ ctx.beginPath(); ctx.fillStyle=k.color; ctx.arc(k.x,k.y,10,0,Math.PI*2); ctx.fill(); ctx.strokeStyle='#111'; ctx.lineWidth=1; ctx.stroke(); });
+    const a=document.createElement('a'); a.href=cv.toDataURL('image/png'); a.download=(m.name||'карта')+'.png';
+    document.body.appendChild(a); a.click(); a.remove(); toast('Карта сохранена в PNG');
   }
-  toast('Маркер «'+k.label+'» добавлен в центр карты');
 }
 function mapClearDraw(){
   const m=curMap(); if(!m) return;
@@ -1695,7 +1777,15 @@ function mapClearDraw(){
     gridBtn.addEventListener('click', ()=>{ mapGridOn=!mapGridOn; saveMap(); renderMap(); updateGrid(); });
     updateGrid();
   }
+  const stepSel=document.getElementById('mapGridStep');
+  if(stepSel){
+    stepSel.value = String(mapGridStep);
+    stepSel.addEventListener('change', ()=>{ mapGridStep=parseInt(stepSel.value,10)||18; saveMap(); renderMap(); });
+  }
   const pen=document.getElementById('mapPen'); if(pen) pen.addEventListener('click', ()=>{ mapPenOn=!mapPenOn; updateMapPenBtn(); });
+  document.getElementById('mapRuler')&&document.getElementById('mapRuler').addEventListener('click', mapRulerToggle);
+  document.getElementById('mapDup')&&document.getElementById('mapDup').addEventListener('click', mapDuplicate);
+  document.getElementById('mapSnap')&&document.getElementById('mapSnap').addEventListener('click', mapSnapPNG);
   document.getElementById('mapPenClear')&&document.getElementById('mapPenClear').addEventListener('click', mapClearDraw);
   const mc=document.getElementById('mapCanvas');
   if(mc){
@@ -1703,6 +1793,72 @@ function mapClearDraw(){
       const m=curMap(); if(!m||mapLocked) return; m.scrollX=mc.scrollLeft; m.scrollY=mc.scrollTop; saveMap();
     });
     mc.addEventListener('wheel', e=>{ e.preventDefault(); if(!mapLocked) mapZoom(e.deltaY<0?0.1:-0.1); }, { passive:false });
+    // панорама: тащим пустое место карты мышью
+    mc.addEventListener('mousedown', e=>{
+      if(mapLocked||mapPenOn) return;
+      if(e.target.closest('.map-marker')||e.target.closest('.map-draw')) return;
+      e.preventDefault();
+      const sx=e.clientX, sy=e.clientY, sl=mc.scrollLeft, st=mc.scrollTop;
+      let moved=false;
+      pointerDrag(e, ev=>{
+        const dx=ev.clientX-sx, dy=ev.clientY-sy;
+        if(dx||dy) moved=true;
+        mc.scrollLeft=sl-dx; mc.scrollTop=st-dy;
+      }, ()=>{
+        if(moved){ const m=curMap(); if(m){ m.scrollX=mc.scrollLeft; m.scrollY=mc.scrollTop; saveMap(); } }
+      });
+    });
+  }
+  // клик по карте: расстановка маркера (режим placement)
+  { const MC=document.getElementById('mapCanvas');
+    if(MC){
+      MC.addEventListener('click', e=>{
+        if(e.target.closest('.map-marker')) return; // выбор маркера — в самом маркере
+        const m=curMap(); if(!m) return;
+        const w=MC.querySelector('.map-zoom'); if(!w) return;
+        const r=w.getBoundingClientRect();
+        const z=m.zoom||1;
+        const x=(e.clientX-r.left)/z, y=(e.clientY-r.top)/z;
+        if(x<0||y<0||x>m.baseW||y>m.baseH) return;
+        if(mapRulerOn){
+          if(!rulerPt){ rulerPt={x:x,y:y}; const l=document.getElementById('mapRulerLabel'); if(l) l.textContent='Клик №2 — конец измерения'; }
+          else{
+            const dist=Math.round(Math.hypot(x-rulerPt.x, y-rulerPt.y) / (mapGridStep||18) * 10)/10;
+            const l=document.getElementById('mapRulerLabel'); if(l){ l.hidden=true; l.textContent=''; }
+            toast('Расстояние: '+dist+' клеток');
+            rulerPt=null; renderMap();
+          }
+          return;
+        }
+        if(mapPlaceOn){ placeMarkerAt(x,y); return; }
+        if(selectedMarkerId){ selectedMarkerId=null; renderMap(); }
+      });
+    }
+    // панель управления выбранным маркером
+    const ctl=document.getElementById('markerCtl');
+    function updateMarkerCtl(){
+      if(!ctl) return;
+      const m=curMap();
+      const k = m && selectedMarkerId ? m.markers.find(x=>x.id===selectedMarkerId) : null;
+      ctl.classList.toggle('hidden', !k);
+      const nm=document.getElementById('markerName'); if(nm) nm.textContent=k?k.label:'';
+    }
+    function deselect(){ selectedMarkerId=null; renderMap(); updateMarkerCtl(); }
+    document.getElementById('markerRename')&&document.getElementById('markerRename').addEventListener('click', ()=>{
+      const m=curMap(); const k=m&&selectedMarkerId?m.markers.find(x=>x.id===selectedMarkerId):null; if(!k) return;
+      const t=prompt('Имя маркера:',k.label); if(t===null) return; k.label=(t.trim()||'Маркер').slice(0,40); saveMap(); renderMap(); updateMarkerCtl();
+    });
+    document.getElementById('markerColor')&&document.getElementById('markerColor').addEventListener('click', ()=>{
+      const palette=['#7fb3e6','#c0564f','#86c48f','#c9a227','#c9a2e6','#e68a4a','#6ac4c9'];
+      const m=curMap(); const k=m&&selectedMarkerId?m.markers.find(x=>x.id===selectedMarkerId):null; if(!k) return;
+      const i=palette.indexOf(k.color); k.color=palette[(i+1)%palette.length]; saveMap(); renderMap(); updateMarkerCtl();
+    });
+    document.getElementById('markerDel')&&document.getElementById('markerDel').addEventListener('click', ()=>{
+      const m=curMap(); if(!m||!selectedMarkerId) return; if(!confirm('Удалить маркер?')) return;
+      m.markers=m.markers.filter(x=>x.id!==selectedMarkerId); selectedMarkerId=null; saveMap(); renderMap(); updateMarkerCtl();
+    });
+    document.getElementById('markerDone')&&document.getElementById('markerDone').addEventListener('click', deselect);
+    window.updateMapMarkerCtl=updateMarkerCtl;
   }
 }
 

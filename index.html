@@ -17,63 +17,69 @@
   <!-- Main -->
   <main class="main">
     <button id="topHandle" class="top-handle" hidden title="Развернуть верхнюю панель" aria-label="Развернуть верхнюю панель">▾</button>
-    <div class="dicebar">
-      <span class="db-label">Кости:</span>
-      <button class="die-btn" data-die="d4">d4</button>
-      <button class="die-btn" data-die="d6">d6</button>
-      <button class="die-btn" data-die="d8">d8</button>
-      <button class="die-btn" data-die="d10">d10</button>
-      <button class="die-btn" data-die="d12">d12</button>
-      <button class="die-btn" data-die="d20">d20</button>
-      <button class="die-btn" data-die="d100">d100</button>
-      <span class="toolbar-sep"></span>
-      <span class="db-label">Кол-во:</span>
-      <input id="dieCount" class="die-count" type="number" min="1" max="10" value="1" aria-label="Количество костей">
-      <span class="toolbar-sep"></span>
-      <button id="btnRoll">Бросить</button>
-      <span id="rollResult"></span>
-      <span id="rollLog"></span>
-      <span class="toolbar-sep"></span>
-      <button id="btnTimer" title="Секундомер боя: отсчёт раундов по 6 секунд (проверка длительностей)">⏱ 6с</button>
-      <button id="btnSound" title="Звуки: ходы боя, криты, секунды раунда (синтез Web Audio)">🔔</button>
-      <span class="dicebar-spacer"></span>
-      <input id="search" class="top-search" type="search" placeholder="Поиск по всем блокам… (Ctrl+K)" aria-label="Поиск по всем блокам">
-    </div>
-    <div class="main-head">
-      <div class="crumbs">
-        <span class="crumb-text">Блоки: <b id="crumbsRoot">корень</b><span id="crumbsPath"></span></span>
-        <span class="crumb-count" title="Блоков в ширме"><span id="blockCount">0</span> блоков</span>
+    <div class="topbar">
+      <div class="dicebar">
+        <span class="db-label">Кости:</span>
+        <select id="dieSel" class="die-sel" aria-label="Кость: число граней">
+          <option value="4">d4</option>
+          <option value="6">d6</option>
+          <option value="8">d8</option>
+          <option value="10">d10</option>
+          <option value="12">d12</option>
+          <option value="20" selected>d20</option>
+          <option value="100">d100</option>
+          <option value="custom">d? свои грани…</option>
+        </select>
+        <input id="dieCustom" class="die-custom" type="number" min="2" max="10000" placeholder="6" title="Число граней своей кости" aria-label="Число граней своей кости">
+        <span class="toolbar-sep"></span>
+        <span class="db-label">Кол-во:</span>
+        <input id="dieCount" class="die-count" type="number" min="1" max="100" value="1" aria-label="Количество костей">
+        <span class="toolbar-sep"></span>
+        <button id="btnRoll" title="Бросить выбранные кости" aria-label="Бросить кости">🎲</button>
+        <span id="rollResult"></span>
+        <span id="rollLog"></span>
       </div>
-      <div class="actions">
-        <span class="acts-group">
-          <button id="addPc" title="Лист персонажа">+Персонаж</button>
-          <button id="btnLibrary" title="Поиск по локальной библиотеке (заклинания, предметы, правила)">🔍 База</button>
-          <button id="btnBestiary" title="Бестиарий: монстры D&D 5e (поиск)">👹 Бестиарий</button>
-          <button id="btnShop" title="Магазин: снаряжение и цены">🛒 Магазин</button>
-          <button id="btnMonEffects" title="Таблицы эффектов по типам монстров">🐾 Эффекты</button>
-          <button id="btnTables" title="Броски по случайным таблицам (d100)">🎲 Таблицы</button>
+      <div class="main-head">
+        <div class="crumbs">
+          <span class="crumb-text">Блоки: <b id="crumbsRoot">корень</b><span id="crumbsPath"></span></span>
+        </div>
+        <div class="tabbar">
+          <button class="tab active" data-tab="chars">👤 Персонажи</button>
+          <button class="tab" data-tab="monsters">👹 Монстры</button>
+          <button class="tab" data-tab="sessions">📓 Сессии</button>
+          <button class="tab" data-tab="map">🗺 Карта</button>
+          <button class="tab" data-tab="battle">⚔ Бой</button>
+        </div>
+        <div class="actions">
+          <span class="acts-group">
+            <button id="btnTheme" title="Переключить светлую/тёмную тему" aria-label="Переключить тему">☀️</button>
+            <button id="btnFullscreen" title="Полноэкранный режим (F11)" aria-label="Полноэкранный режим">⛶</button>
+          </span>
+          <span class="acts-sep"></span>
+          <span class="menu-wrap">
+            <button id="btnMenu" title="Действия, справочники и команды" aria-label="Меню: действия и команды">☰</button>
+            <div class="menu-panel" id="menuPanel">
+              <span class="menu-caption">Действия</span>
+              <button id="addPc" title="Лист персонажа">+ Персонаж</button>
+              <button id="btnBestiary" title="Бестиарий: монстры D&D 5e (поиск)">👹 Бестиарий</button>
+              <button id="btnUndo" title="Отменить последнее действие (Ctrl+Z)">↩ Отменить</button>
+              <span class="menu-caption">Справочники</span>
+              <button id="btnLibrary" title="Поиск по библиотеке">🔍 База</button>
+              <button id="btnShop" title="Магазин: снаряжение и цены">🛒 Магазин</button>
+              <button id="btnMonEffects" title="Таблицы эффектов по типам монстров">🐾 Эффекты</button>
+              <button id="btnTables" title="Броски по случайным таблицам (d100)">🎲 Таблицы</button>
+              <span class="menu-caption">Система</span>
+              <button id="btnLayout" title="Лента / свободный холст">Раскладка</button>
+              <button id="topCollapse" title="Свернуть верхнюю панель">╲╱ Свернуть панель</button>
+              <button id="btnExport">⬇ Экспорт JSON</button>
+              <button id="btnImport">⬆ Импорт</button>
+              <button id="btnReset" title="Сбросить к демо-данным">♻ Сброс</button>
+            </div>
+          </span>
           <input type="file" id="mediaInput" multiple accept="image/*,.pdf,.txt,.md,.rtf" class="hidden" aria-label="Импорт файлов">
-        </span>
-        <span class="acts-sep"></span>
-        <span class="acts-group">
-          <button id="btnLayout" title="Переключить: лента / свободный холст">Раскладка</button>
-          <button id="btnUndo" title="Отменить последнее действие (Ctrl+Z)">↩ Отменить</button>
-          <button id="btnTheme" title="Переключить светлую/тёмную тему">☀️ Светлая</button>
-          <button id="btnFullscreen" title="Полноэкранный режим (F11)" aria-label="Полноэкранный режим">⛶</button>
-          <button id="topCollapse" title="Свернуть/развернуть верхнюю панель">╲╱</button>
-          <button id="btnExport">Экспорт JSON</button>
-          <button id="btnImport">Импорт</button>
           <input type="file" id="fileInput" accept=".json" class="hidden" aria-label="Импорт резервной копии">
-          <button id="btnReset" title="Сбросить к демо-данным">Сброс</button>
-        </span>
+        </div>
       </div>
-    </div>
-    <div class="tabbar">
-      <button class="tab active" data-tab="chars">👤 Персонажи</button>
-      <button class="tab" data-tab="monsters">👹 Монстры</button>
-      <button class="tab" data-tab="sessions">📓 Сессии</button>
-      <button class="tab" data-tab="map">🗺 Карта боя</button>
-      <button class="tab" data-tab="battle">⚔ Бой</button>
     </div>
     <div class="tabview" id="view-chars">
       <div class="canvas" id="canvas"></div>
@@ -133,11 +139,29 @@
         <button id="mapZoomReset" title="Сбросить масштаб">100%</button>
         <span class="hint" id="mapZoomLabel"></span>
         <button id="mapLock" title="Закрепить карту в текущем положении">🔓 Закрепить</button>
-        <button id="mapGrid" title="Показать/скрыть сетку (клетка = размер маркера)" aria-label="Показать или скрыть сетку">▦ Сетка</button>
+        <button id="mapGrid" title="Показать/скрыть сетку" aria-label="Показать или скрыть сетку">▦ Сетка</button>
+        <select id="mapGridStep" title="Шаг сетки (клетка)" aria-label="Шаг сетки">
+          <option value="18">18 px</option>
+          <option value="36">36 px</option>
+          <option value="72">72 px</option>
+        </select>
         <span class="acts-sep"></span>
-        <button id="mapAddMarker" title="Добавить маркер-точку">⬤ Маркер</button>
+        <button id="mapAddMarker" title="Добавить маркер: включить расстановку и кликнуть по карте">⬤ Маркер</button>
+        <button id="mapDup" title="Дублировать текущую карту" aria-label="Дублировать карту">⧉ Дубль</button>
+        <button id="mapSnap" title="Сохранить карту с маркерами как PNG" aria-label="Скрин карты">🖼 PNG</button>
         <button id="mapPen" title="Рисовать поверх карты">✏ Перо</button>
         <button id="mapPenClear" title="Стереть нарисованное" hidden>✕ Стереть</button>
+        <button id="mapRuler" title="Измерить расстояние (2 клика по карте)" aria-label="Измерение расстояния">📏 Линейка</button>
+        <span class="hint" id="mapRulerLabel" hidden></span>
+        <span class="acts-sep"></span>
+        <span id="markerCtl" class="marker-ctl hidden">
+          <span class="hint mark-name" id="markerName"></span>
+          <button id="markerRename" title="Переименовать маркер" aria-label="Переименовать маркер">✏ Имя</button>
+          <button id="markerColor" title="Сменить цвет маркера" aria-label="Сменить цвет">🎨</button>
+          <button id="markerDel" title="Удалить маркер" aria-label="Удалить маркер">🗑</button>
+          <button id="markerDone" title="Снять выделение" aria-label="Снять выделение">✕</button>
+        </span>
+        <span class="hint" id="mapPlaceHint" hidden>Кликните по карте, чтобы поставить маркер</span>
       </div>
       <div id="mapTabs" class="map-tabs"></div>
       <div class="map-canvas" id="mapCanvas"></div>

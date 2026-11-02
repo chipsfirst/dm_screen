@@ -14,10 +14,10 @@
   *{box-sizing:border-box}
   html,body{height:100%}
   body{
-    margin:0; font-family:var(--font-body); background:var(--bg); color:var(--text); font-size:16px; line-height:1.45;
+    margin:0; font-family:var(--font-body); background:var(--bg); color:var(--text); font-size:18px; line-height:1.5;
   }
   .app{display:flex; height:100vh}
-  h1,h2,h3,h4,.block-head .title,.tabbar .tab,.main-head,.editor-toolbar,.session-title-input{font-family:var(--font-head)}
+  h1,h2,h3,h4,.block-head .title,.menu-panel .tab,.main-head,.editor-toolbar,.session-title-input{font-family:var(--font-head)}
   button,input,select,textarea{font-family:inherit}
 
   /* ── Main ───────────────────────────────── */
@@ -27,20 +27,37 @@
     padding:12px 18px; border-bottom:1px solid var(--line);
     display:flex; align-items:center; justify-content:space-between; gap:12px;
   }
+  /* Одна верхняя линия: кости + кнопки + поиск */
+  .topbar{display:flex; flex-wrap:wrap; align-items:center; gap:4px 10px; padding:6px 12px;
+    border-bottom:1px solid var(--line); background:var(--panel)}
+  .topbar .dicebar{display:flex; align-items:center; gap:5px; flex-wrap:wrap; padding:0; border-bottom:none; background:transparent}
+  .topbar .main-head{flex:1; min-width:360px; padding:0; border-bottom:none}
+  .topbar .tabbar{display:flex; gap:4px; align-items:center; flex-wrap:wrap}
+  .topbar .tabbar .tab{
+    background:transparent; border:1px solid transparent; border-radius:8px;
+    padding:6px 12px; cursor:pointer; color:var(--muted); font-size:15px;
+  }
+  .topbar .tabbar .tab:hover{color:var(--text); background:var(--panel2)}
+  .topbar .tabbar .tab.active{background:var(--accent); color:#1b1e22; border-color:var(--accent)}
   .crumbs{color:var(--muted); font-size:12px; display:flex; align-items:center; gap:10px; min-width:0}
   .crumbs b{color:var(--text); font-weight:600}
   .crumbs .crumb-text{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
   .crumbs .crumb-count{color:var(--muted); font-size:11px; background:var(--panel2); border:1px solid var(--line); padding:2px 8px; border-radius:20px; white-space:nowrap}
-  .top-search{width:220px; max-width:32vw; padding:7px 12px; border-radius:8px; border:1px solid var(--line); background:var(--panel2); color:var(--text); outline:none; font-size:13px}
-  .top-search:focus{border-color:var(--accent)}
   .main-head .actions{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
   .actions .acts-group{display:flex; gap:6px; align-items:center}
   .actions .acts-sep{width:1px; height:22px; background:var(--line); margin:0 4px}
   .actions button{white-space:nowrap}
 
+  .menu-wrap{position:relative}
+  .menu-panel{position:absolute; right:0; top:calc(100% + 4px); min-width:220px; z-index:120;
+    background:var(--panel2); border:1px solid var(--line); border-radius:10px; padding:6px;
+    box-shadow:0 10px 30px rgba(0,0,0,.4); display:none}
+  .menu-panel.open{display:flex; flex-direction:column; gap:2px}
+  .menu-panel .menu-caption{padding:4px 8px; font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.4px}
+  .menu-panel button{text-align:left; width:100%; padding:7px 10px; font-size:14px}
+
   /* Сворачиваемая верхняя панель */
-  body.top-collapsed .dicebar,
-  body.top-collapsed .main-head{display:none}
+  body.top-collapsed .topbar{display:none}
   .top-handle{
     position:fixed; top:6px; right:18px; z-index:120;
     width:34px; height:24px; border-radius:6px; font-size:12px; line-height:1;
@@ -50,14 +67,9 @@
   #topCollapse:hover{color:var(--text)}
   .dicebar, .main-head{transition:opacity .15s ease}
 
-  /* Tabs */
-  .tabbar{display:flex; gap:4px; padding:8px 18px 0; border-bottom:1px solid var(--line); background:var(--panel)}
-  .tabbar .tab{
-    background:transparent; border:1px solid transparent; border-bottom:none; border-radius:8px 8px 0 0;
-    padding:8px 14px; cursor:pointer; color:var(--muted); font-size:13px;
-  }
-  .tabbar .tab:hover{color:var(--text)}
-  .tabbar .tab.active{background:var(--bg); color:var(--accent2); border-color:var(--line); font-weight:600}
+  /* Вкладки внутри меню */
+  .menu-panel .tab{text-align:left; width:100%; padding:7px 10px; font-size:14px; font-weight:600; border-radius:6px}
+  .menu-panel .tab.active{background:var(--accent); color:#1b1e22; border-color:var(--accent)}
   .tabview{flex:1; display:flex; flex-direction:column; min-height:0; overflow:hidden}
   .tabview[hidden]{display:none}
 
@@ -88,9 +100,15 @@
     background-image:
       linear-gradient(rgba(200,210,220,.28) 1px, transparent 1px),
       linear-gradient(90deg, rgba(200,210,220,.28) 1px, transparent 1px);
-    background-size:18px 18px;
+    background-size:var(--grid-step,18px) var(--grid-step,18px);
   }
   .map-canvas.no-grid .map-grid{display:none}
+  .map-title{position:absolute; top:6px; left:6px; z-index:3; pointer-events:auto; cursor:pointer;
+    background:rgba(15,17,20,.72); color:var(--text); padding:4px 10px; border-radius:6px; font-size:15px; font-weight:600;
+    font-family:var(--font-head)}
+  .map-title:hover{background:rgba(15,17,20,.92)}
+  .map-ruler{position:absolute; top:0; left:0; width:100%; height:100%; z-index:6; pointer-events:none}
+  #mapRuler.active{background:var(--accent); color:#1b1e22; border-color:var(--accent)}
   .map-bg{position:absolute; top:0; left:0; width:800px; height:600px; object-fit:contain; pointer-events:none; display:block}
   .map-canvas.has-bg .map-bg{z-index:1}
   .map-empty{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:var(--muted); text-align:center; padding:20px}
@@ -222,23 +240,50 @@
   .link-tag:hover{border-color:var(--accent); color:var(--accent2)}
   .add-link{display:inline-flex; gap:6px; align-items:center}
 
-  select{background:var(--panel2); color:var(--text); border:1px solid var(--line); border-radius:6px; padding:5px 7px; font-size:12px; outline:none}
+select{background:var(--panel2); color:var(--text); border:1px solid var(--line); border-radius:6px; padding:5px 7px; font-size:14px; outline:none}
+  select option{background:var(--panel2); color:var(--text)}
   button{
-    background:var(--panel2); color:var(--text); border:1px solid var(--line);
-    border-radius:6px; padding:4px 9px; cursor:pointer; font-size:12px; line-height:1.4;
+    border-radius:8px; padding:4px 10px; cursor:pointer; font-size:14px; line-height:1.4;
+    color:#20242a; border:1px solid rgba(0,0,0,.16);
+    transition:filter .12s ease, transform .04s ease, box-shadow .12s ease;
+    background:linear-gradient(180deg, #ffffff 0%, #e4e8ef 55%, #d6dbe4 100%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 2px 6px rgba(0,0,0,.25);
   }
-  button:hover{border-color:var(--accent); color:var(--accent2)}
-  button.primary{background:var(--accent); color:#1b1e22; border-color:var(--accent); font-weight:600}
-  button.primary:hover{background:var(--accent2)}
-  .hint{color:var(--muted); font-size:12px}
-  .empty{margin-top:20px; color:var(--muted); text-align:center; font-size:13px}
+  html[data-theme="light"] button{
+    color:#eef2f6; border:1px solid rgba(0,0,0,.45);
+    background:linear-gradient(180deg, #2d333d 0%, #242a33 55%, #1f242c 100%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 2px 6px rgba(0,0,0,.35);
+  }
+  button:hover{filter:brightness(1.06); box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 3px 10px rgba(0,0,0,.28)}
+  html[data-theme="light"] button:hover{box-shadow: inset 0 1px 0 rgba(255,255,255,.1), 0 3px 10px rgba(0,0,0,.4)}
+  button:active{filter:brightness(.96); transform:translateY(1px)}
+  button:disabled{opacity:.45; cursor:default; filter:none}
+
+  /* акцентные кнопки (главные действия) */
+  .actions button, .menu-panel .tab, .die-btn, #btnRoll, #btnMenu, .map-toolbar button, .editor-toolbar button,
+  .sessions-list-head button, .sessions-wrap button, .block-actions button{font-weight:600}
+  #btnRoll, .die-btn.active, .tab.active, .actions .acts-group button:first-child{color:#1b1e22}
+  #btnRoll, .die-btn.active, .tab.active{
+    border-color:transparent;
+    background:linear-gradient(180deg, #ffe066 0%, var(--accent) 50%, var(--accent3) 100%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.5), 0 1px 2px rgba(0,0,0,.3);
+  }
+  #btnRoll:hover, .die-btn:hover, .tab:hover{filter:brightness(1.08)}
+  html[data-theme="light"] #btnRoll, html[data-theme="light"] .die-btn.active, html[data-theme="light"] .tab.active{
+    color:#3a2c00;
+    background:linear-gradient(180deg,#ffd66b, var(--accent) 55%, var(--accent2));
+  }
+  .hint{color:var(--muted); font-size:13px}
+  .empty{margin-top:20px; color:var(--muted); text-align:center; font-size:14px}
 
   /* dice bar */
   .dicebar{display:flex; align-items:center; gap:6px; padding:8px 18px; border-bottom:1px solid var(--line); background:var(--panel); flex-wrap:wrap}
   .dicebar .dicebar-spacer{flex:1}
   .dicebar .db-label{color:var(--muted); font-size:12px; margin-right:4px}
   .die-btn{min-width:40px; text-align:center}
-  .die-btn.active{background:var(--accent); color:#1b1e22; border-color:var(--accent)}
+  .die-sel{min-width:96px}
+  .die-custom{width:64px; display:none}
+  .die-btn.active{background:linear-gradient(180deg,#ffe066,var(--accent) 55%,var(--accent3)); color:#1b1e22; border-color:transparent; box-shadow:inset 0 1px 0 rgba(255,255,255,.5), 0 1px 2px rgba(0,0,0,.3)}
   #rollResult{font-weight:700; color:var(--accent2); font-size:15px; margin-left:8px}
   #rollLog{color:var(--muted); font-size:12px; max-width:40%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
   .toolbar-sep{width:1px; height:22px; background:var(--line); margin:0 8px}
