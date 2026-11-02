@@ -99,8 +99,6 @@ def translate_batch(items):
 
 
 def main():
-    if not is_eng(open(OUT, encoding='utf-8').read()):
-        print('Переводить нечего — текст уже русский?')
     data = json.loads(open(OUT, encoding='utf-8').read().split('window.BESTIARY = ', 1)[1].rstrip().rstrip(';'))
     cache = load_cache()
 
@@ -137,9 +135,6 @@ def main():
         print('переведено/обновлено:', len(translated))
 
     # применяем кэш к данным
-    def apply_save(src):
-        return cache.get(src, src) if not is_eng(cache.get(src, src)) else cache.get(src, src)
-
     changed = 0
     for m in data:
         if m.get('n') == m.get('en'):

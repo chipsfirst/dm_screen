@@ -117,6 +117,17 @@ function sanitizeRes(list){
   });
   return out;
 }
+function freeCascadePos(){
+  const n = blocks.length % 12;
+  return { x: 24 + n*32, y: 24 + n*26 };
+}
+function prepareCanvasForAdd(){
+  activeParentId = null;
+  if(searchFilter){
+    searchFilter='';
+    const s=document.getElementById('search'); if(s) s.value='';
+  }
+}
 function uniq(){ return 'b'+Math.random().toString(36).slice(2,9); }
 function toast(msg){
   const t=document.createElement('div');
@@ -264,9 +275,9 @@ function render(){
       return `<div class="block" data-id="${b.id}"><div class="block-head"><div class="ttl-note"><span>${escapeHtml(b.title||'Блок')}</span></div></div><div class="block-body"><div class="hint">Ошибка отображения блока: ${escapeHtml(String((e&&e.message)||e))}</div></div></div>`;
     } };
     if(freeLayout){
-      canvas.innerHTML = list.map(b=>{
+      canvas.innerHTML = list.map((b,idx)=>{
         const card = safeCard(b);
-        const x = b.x!=null?b.x:20, y=b.y!=null?b.y:20;
+        const x = b.x!=null?b.x:(24 + (idx%12)*32), y = b.y!=null?b.y:(24 + (idx%12)*26);
         return `<div class="canvas-free-wrap" style="position:absolute;left:${x}px;top:${y}px;width:${b.w||360}px;z-index:${b._z||0}">${card}</div>`;
       }).join('');
     } else {
@@ -483,7 +494,7 @@ function docIcon(name){
 /* ════════════ Helpers ════════════ */
 function modf(s){ return Math.floor((s-10)/2); }
 function signed(n){ return (n>=0?'+':'')+n; }
-function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 function matches(b){
   if(!searchFilter) return true;
   const q = searchFilter.toLowerCase();
@@ -500,6 +511,20 @@ let canvasEventsInited = false;
 function initCanvasEvents(){
   if(canvasEventsInited) return;
   canvasEventsInited = true;
+  // Импорт файлов перетаскиванием на холст
+  const canvasEl = document.getElementById('canvas');
+  if(canvasEl){
+    ['dragover','dragenter'].forEach(ev => canvasEl.addEventListener(ev, e=>{
+      if(e.dataTransfer && Array.from(e.dataTransfer.types||[]).includes('Files')) e.preventDefault();
+    }));
+    canvasEl.addEventListener('drop', e=>{
+      const dt = e.dataTransfer; if(!dt) return;
+      const files = Array.from(dt.files||[]);
+      if(!files.length) return;
+      e.preventDefault();
+      files.forEach(f=> importFile(f));
+    });
+  }
   const canvas = document.getElementById('canvas');
 
   canvas.addEventListener('click', e=>{
@@ -869,7 +894,9 @@ function importFile(file){
   const isImg=/^image\//i.test(file.type);
   reader.onload=()=>{
     const data=reader.result; // dataURL
+    prepareCanvasForAdd();
     const b=makeBlock('img', file.name.replace(/\.[^.]+$/,'') || 'Файл');
+    Object.assign(b, freeCascadePos());
     b.kind = isImg?'image':'doc';
     const key = 'media_'+b.id;
     mediaCache[key] = data;   // держим в памяти
@@ -886,7 +913,9 @@ function importFile(file){
   reader.readAsDataURL(file);
 }
 function addBlock(type){
+  prepareCanvasForAdd();
   const b=makeBlock(type, TYPE_LABEL[type]+' — новый');
+  Object.assign(b, freeCascadePos());
   blocks.push(b);
   if(type==='pc'){
     Object.assign(b.props,{Класс:'',Раса:'',HP:10,'Броня КК':10,Инициат:'+0'});
@@ -1069,7 +1098,10 @@ function addMonsterToken(m){
   toast('Токен «'+(m.n||'Монстр')+'» на карте · +5/−5 ХП в панели');
 }
 
-function addMonsterBlock(m){  const b=makeBlock('mob', '👹 '+m.n);
+function addMonsterBlock(m){
+  prepareCanvasForAdd();
+  const b=makeBlock('mob', '👹 '+m.n);
+  Object.assign(b, freeCascadePos());
   b.props = {
     'Опасн.': shortCr(m.cr), 'КД': m.ac, 'ХП': m.hp,
     'Скорость': m.sp, 'Иниц.': m.init
@@ -2226,8 +2258,11 @@ function numField(v){
 function saveBattle(){ try{ localStorage.setItem(STORE_BATTLE, JSON.stringify(battleParts)); }catch(e){} }
 function battleSorted(){
   return battleParts.slice().sort((a,b)=>{
-    const ai = a.init==='' ? -Infinity : a.init, bi = b.init==='' ? -Infinity : b.init;
-    return bi - ai;
+    const ae = a.init==='' || a.init==null, be = b.init==='' || b.init==null;
+    if(ae && be) return 0;
+    if(ae) return 1;   // пустая инициатива — в конец
+    if(be) return -1;
+    return b.init - a.init;
   });
 }
 function renderBattle(){
@@ -2265,87 +2300,6 @@ function renderBattle(){
       ${(p.applied && p.applied.length) ? `<div class="bt-applied">${p.applied.map((t,i)=>`
         <span class="bt-chip">${escapeHtml(t)}<button class="bt-chip-del" data-achip="${p.id}" data-ai="${i}" title="Убрать">✕</button></span>`).join('')}</div>` : ''}
     </div>`).join('');
-  // редактирование полей + быстрые операции
-  list.addEventListener('input', e=>{
-    const inp = e.target.closest('[data-field]');
-    if(!inp) return;
-    const p = battleParts.find(x=>x.id===inp.dataset.bid);
-    if(!p) return;
-    const f = inp.dataset.field;
-    if(f==='name'){ p.name = inp.value.slice(0,60); }
-    else { p[f] = numField(inp.value); }
-    saveBattle();
-    if(f==='init'){
-      const next = battleSorted();
-      const order = next.map(x=>x.id);
-      const els = [...list.querySelectorAll('.battle-card')];
-      els.sort((x,y)=> order.indexOf(x.dataset.bid) - order.indexOf(y.dataset.bid));
-      els.forEach(el=> list.appendChild(el));
-    }
-  });
-  list.addEventListener('click', e=>{
-    const chip = e.target.closest('[data-achip]');
-    if(chip){
-      const p = battleParts.find(x=>x.id===chip.dataset.achip);
-      if(p && Array.isArray(p.applied)){ p.applied.splice(+chip.dataset.ai,1); saveBattle(); renderBattle(); }
-      return;
-    }
-    const hpBtn = e.target.closest('[data-hp-op]');
-    if(hpBtn){
-      const p = battleParts.find(x=>x.id===hpBtn.dataset.bid);
-      if(!p) return;
-      const cur = p.hp==='' ? 0 : (p.hp||0);
-      const nv = hpBtn.dataset.hpOp==='dec' ? Math.max(0, cur-1) : cur+1;
-      p.hp = nv; saveBattle();
-      const hpInput = list.querySelector(`[data-bid="${p.id}"][data-field="hp"]`);
-      if(hpInput) hpInput.value = nv;
-      return;
-    }
-    const atkBtn = e.target.closest('[data-attack]');
-    if(atkBtn){
-      const p = battleParts.find(x=>x.id===atkBtn.dataset.bid);
-      if(!p) return;
-      const bonus = p.atk==='' ? 0 : (p.atk||0);
-      const roll = 1+Math.floor(Math.random()*20);
-      const total = roll+bonus;
-      let note='';
-      if(roll===20) note=' — КРИТ!';
-      else if(roll===1) note=' — промах';
-      else if(p.ac!=='' && p.ac!=null) note = total >= p.ac ? ' — попадание' : ' — промах';
-      toast(`Атака «${p.name}»: d20 ${roll} + ${bonus} = ${total}${note}`);
-      return;
-    }
-  });
-  list.addEventListener('keydown', e=>{
-    const dmg = e.target.closest('[data-dmg]');
-    if(!dmg) return;
-    if(e.key==='Enter'){ applyBattleDamage(dmg); e.preventDefault(); }
-  });
-  list.addEventListener('change', e=>{
-    const dmg = e.target.closest('[data-dmg]');
-    if(dmg){ applyBattleDamage(dmg); return; }
-    const actSel = e.target.closest('[data-act-select]');
-    if(actSel){
-      const idx = +actSel.value;
-      actSel.value = '';
-      if(!idx && idx!==0) return;
-      const p = battleParts.find(x=>x.id===actSel.dataset.actSelect);
-      if(!p) return;
-      const act = (p.acts||[])[idx];
-      if(!act) return;
-      const txt = (act.tag? act.tag+': ' : '') + act.text;
-      if(!Array.isArray(p.applied)) p.applied=[];
-      if(!p.applied.includes(txt)) p.applied.push(txt);
-      saveBattle(); renderBattle();
-      return;
-    }
-  });
-  list.querySelectorAll('[data-del]').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      battleParts = battleParts.filter(x=>x.id!==btn.dataset.del);
-      saveBattle(); renderBattle();
-    });
-  });
 }
 function applyBattleDamage(inp){
   const p = battleParts.find(x=>x.id===inp.dataset.bid);
@@ -2400,6 +2354,84 @@ function bindBattle(){
       battleParts=[]; saveBattle(); renderBattle();
     }
   });
+  const list = document.getElementById('battleList');
+  if(list){
+    list.addEventListener('input', e=>{
+      const inp = e.target.closest('[data-field]');
+      if(!inp) return;
+      const p = battleParts.find(x=>x.id===inp.dataset.bid);
+      if(!p) return;
+      const f = inp.dataset.field;
+      if(f==='name'){ p.name = inp.value.slice(0,60); }
+      else { p[f] = numField(inp.value); }
+      saveBattle();
+      if(f==='init'){
+        const order = battleSorted().map(x=>x.id);
+        const els = [...list.querySelectorAll('.battle-card')];
+        els.sort((x,y)=> order.indexOf(x.dataset.bid) - order.indexOf(y.dataset.bid));
+        els.forEach(el=> list.appendChild(el));
+      }
+    });
+    list.addEventListener('click', e=>{
+      const del = e.target.closest('[data-del]');
+      if(del){ battleParts = battleParts.filter(x=>x.id!==del.dataset.del); saveBattle(); renderBattle(); return; }
+      const chip = e.target.closest('[data-achip]');
+      if(chip){
+        const p = battleParts.find(x=>x.id===chip.dataset.achip);
+        if(p && Array.isArray(p.applied)){ p.applied.splice(+chip.dataset.ai,1); saveBattle(); renderBattle(); }
+        return;
+      }
+      const hpBtn = e.target.closest('[data-hp-op]');
+      if(hpBtn){
+        const p = battleParts.find(x=>x.id===hpBtn.dataset.bid);
+        if(!p) return;
+        const cur = p.hp==='' ? 0 : (p.hp||0);
+        const nv = hpBtn.dataset.hpOp==='dec' ? Math.max(0, cur-1) : cur+1;
+        p.hp = nv; saveBattle();
+        const hpInput = list.querySelector(`[data-bid="${p.id}"][data-field="hp"]`);
+        if(hpInput) hpInput.value = nv;
+        return;
+      }
+      const atkBtn = e.target.closest('[data-attack]');
+      if(atkBtn){
+        const p = battleParts.find(x=>x.id===atkBtn.dataset.bid);
+        if(!p) return;
+        const bonus = p.atk==='' ? 0 : (p.atk||0);
+        const roll = 1+Math.floor(Math.random()*20);
+        const total = roll+bonus;
+        let note='';
+        if(roll===20) note=' — КРИТ!';
+        else if(roll===1) note=' — промах';
+        else if(p.ac!=='' && p.ac!=null) note = total >= p.ac ? ' — попадание' : ' — промах';
+        toast(`Атака «${p.name}»: d20 ${roll} + ${bonus} = ${total}${note}`);
+        return;
+      }
+    });
+    list.addEventListener('keydown', e=>{
+      const dmg = e.target.closest('[data-dmg]');
+      if(!dmg) return;
+      if(e.key==='Enter'){ applyBattleDamage(dmg); e.preventDefault(); }
+    });
+    list.addEventListener('change', e=>{
+      const dmg = e.target.closest('[data-dmg]');
+      if(dmg){ applyBattleDamage(dmg); return; }
+      const actSel = e.target.closest('[data-act-select]');
+      if(actSel){
+        const idx = +actSel.value;
+        actSel.value = '';
+        if(!idx && idx!==0) return;
+        const p = battleParts.find(x=>x.id===actSel.dataset.actSelect);
+        if(!p) return;
+        const act = (p.acts||[])[idx];
+        if(!act) return;
+        const txt = (act.tag? act.tag+': ' : '') + act.text;
+        if(!Array.isArray(p.applied)) p.applied=[];
+        if(!p.applied.includes(txt)) p.applied.push(txt);
+        saveBattle(); renderBattle();
+        return;
+      }
+    });
+  }
   loadBattle();
 }
 /* ════════════ Эффекты монстров по типам ════════════ */
