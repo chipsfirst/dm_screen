@@ -46,7 +46,7 @@
       </div>
       <div class="actions">
         <span class="acts-group">
-          <button id="addPc" title="Лист персонажа">+ ПК</button>
+          <button id="addPc" title="Лист персонажа">+Персонаж</button>
           <button id="btnLibrary" title="Поиск по локальной библиотеке (заклинания, предметы, правила)">🔍 База</button>
           <button id="btnBestiary" title="Бестиарий: монстры D&D 5e (поиск)">👹 Бестиарий</button>
           <button id="btnShop" title="Магазин: снаряжение и цены">🛒 Магазин</button>
@@ -59,6 +59,7 @@
           <button id="btnLayout" title="Переключить: лента / свободный холст">Раскладка</button>
           <button id="btnUndo" title="Отменить последнее действие (Ctrl+Z)">↩ Отменить</button>
           <button id="btnTheme" title="Переключить светлую/тёмную тему">☀️ Светлая</button>
+          <button id="btnFullscreen" title="Полноэкранный режим (F11)" aria-label="Полноэкранный режим">⛶</button>
           <button id="topCollapse" title="Свернуть/развернуть верхнюю панель">╲╱</button>
           <button id="btnExport">Экспорт JSON</button>
           <button id="btnImport">Импорт</button>
@@ -132,6 +133,7 @@
         <button id="mapZoomReset" title="Сбросить масштаб">100%</button>
         <span class="hint" id="mapZoomLabel"></span>
         <button id="mapLock" title="Закрепить карту в текущем положении">🔓 Закрепить</button>
+        <button id="mapGrid" title="Показать/скрыть сетку (клетка = размер маркера)" aria-label="Показать или скрыть сетку">▦ Сетка</button>
         <span class="acts-sep"></span>
         <button id="mapAddMarker" title="Добавить маркер-точку">⬤ Маркер</button>
         <button id="mapPen" title="Рисовать поверх карты">✏ Перо</button>
@@ -154,8 +156,8 @@
 </div>
       </div>
         <footer class="app-footer">
-          <span class="af-title">Ширма мастера</span>
-          <span class="af-hint">конец ширмы · блоки ниже можно добавить кнопками вверху</span>
+          <span class="af-title">Ширма мастера для D&D 5.5</span>
+          <span class="af-hint">Ролевки от Вовки · блоки ниже можно добавить кнопками вверху</span>
           <span class="af-count"><span id="footerCount">0</span> блоков</span>
         </footer>
     </main>

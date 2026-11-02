@@ -781,6 +781,22 @@ function currentTheme(){
   });
 })();
 
+/* ═══ Полноэкранный режим ═══ */
+(function(){
+  const btn=document.getElementById('btnFullscreen');
+  if(!btn) return;
+  function ref(){
+    btn.textContent = document.fullscreenElement ? '⛶ Выйти' : '⛶';
+    btn.title = document.fullscreenElement? 'Выйти из полноэкранного режима' : 'Полноэкранный режим';
+  }
+  btn.addEventListener('click', ()=>{
+    if(document.fullscreenElement){ document.exitFullscreen&&document.exitFullscreen().catch(()=>{}); }
+    else { const el=document.documentElement; (el.requestFullscreen||el.webkitRequestFullscreen||function(){}).call(el); }
+  });
+  document.addEventListener('fullscreenchange', ref);
+  document.addEventListener('webkitfullscreenchange', ref);
+})();
+
 /* ═══ Сворачивание верхней панели ═══ */
 (function(){
   const KEY='shirma_topcollapsed_v1';
@@ -1401,6 +1417,7 @@ let maps = [];                 // {id,name,bgKey,bg,baseW,baseH,zoom,scrollX,scr
 let activeMapId = null;
 let mapLocked = false;
 let mapPenOn = false;
+let mapGridOn = true;   // сетка карты включена по умолчанию
 
 function curMap(){ return maps.find(m=>m.id===activeMapId) || null; }
 function loadMap(){
@@ -1471,6 +1488,7 @@ function renderMap(){
   mc.innerHTML='';
   if(!m){ return; }
   mc.classList.toggle('locked', !!mapLocked);
+  mc.classList.toggle('no-grid', !mapGridOn);
   mc.scrollLeft = m.scrollX||0; mc.scrollTop = m.scrollY||0;
   const z = m.zoom;
   const wrapper=document.createElement('div');
@@ -1480,6 +1498,11 @@ function renderMap(){
   wrapper.style.width=m.baseW+'px';
   wrapper.style.height=m.baseH+'px';
   mc.appendChild(wrapper);
+  if(mapGridOn){
+    const grid=document.createElement('div');
+    grid.className='map-grid';
+    wrapper.appendChild(grid);
+  }
   const lbl=document.getElementById('mapZoomLabel'); if(lbl) lbl.textContent=Math.round(z*100)+'%';
 
   const bgSrc = (m.bgKey && mediaCache[m.bgKey]) || m.bg;
@@ -1666,6 +1689,12 @@ function mapClearDraw(){
     renderMap();
   });
   document.getElementById('mapAddMarker')&&document.getElementById('mapAddMarker').addEventListener('click', addMapMarker);
+  const gridBtn=document.getElementById('mapGrid');
+  if(gridBtn){
+    function updateGrid(){ gridBtn.classList.toggle('active', !!mapGridOn); }
+    gridBtn.addEventListener('click', ()=>{ mapGridOn=!mapGridOn; saveMap(); renderMap(); updateGrid(); });
+    updateGrid();
+  }
   const pen=document.getElementById('mapPen'); if(pen) pen.addEventListener('click', ()=>{ mapPenOn=!mapPenOn; updateMapPenBtn(); });
   document.getElementById('mapPenClear')&&document.getElementById('mapPenClear').addEventListener('click', mapClearDraw);
   const mc=document.getElementById('mapCanvas');
