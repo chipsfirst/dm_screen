@@ -41,6 +41,17 @@ function idbPut(key, val){
 function idbDel(key){
   openMediaDB().then(db=>{ if(!db) return; try{ const tx=db.transaction(MEDIA_STORE,'readwrite'); tx.objectStore(MEDIA_STORE).delete(key); }catch(e){} });
 }
+function idbGet(key){
+  return openMediaDB().then(db=> new Promise(resolve=>{
+    if(!db){ resolve(null); return; }
+    try{
+      const tx=db.transaction(MEDIA_STORE,'readonly');
+      const req=tx.objectStore(MEDIA_STORE).get(key);
+      req.onsuccess=()=>resolve(req.result||null);
+      req.onerror=()=>resolve(null);
+    }catch(e){ resolve(null); }
+  }));
+}
 function loadAllMedia(){
   return openMediaDB().then(db=> new Promise(resolve=>{
     if(!db){ resolve(); return; }
@@ -150,9 +161,89 @@ const persistBlocksDebounced = debounce(persistBlocks, 250);
 function save(){
   const fc=document.getElementById('footerCount'); if(fc) fc.textContent=blocks.length;
   persistBlocksDebounced();
+  scheduleDirSave();
 }
-window.addEventListener('beforeunload', persistBlocks);
+window.addEventListener('beforeunload', ()=>{ persistBlocks(); if(saveDirHandle) { try{ writeBackupToDir(); }catch(e){} } });
 window.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden') persistBlocks(); });
+
+/* ═══ Сохранение в папку на диске (File System Access API) ═══ */
+const SAVE_DIR_KEY = '__shirma_dir';
+let saveDirHandle = null;
+let dirSaveTimer = null;
+const supportsDirPick = typeof window!=='undefined' && typeof window.showDirectoryPicker==='function';
+
+function buildBackupPayload(){
+  const media={};
+  const collect=k=>{ if(k && mediaCache[k]) media[k]=mediaCache[k]; };
+  (typeof blocks!=='undefined'?blocks:[]).forEach(b=> collect(b.dataKey));
+  (typeof maps!=='undefined'?maps:[]).forEach(m=>{ collect(m.bgKey); (m.markers||[]).forEach(k=> collect(k.imgKey)); });
+  let sessions=null, map=null, battle=null;
+  try{ sessions = JSON.parse(localStorage.getItem('shirma_sessions_v1')||'null'); }catch(e){}
+  try{ map = JSON.parse(localStorage.getItem('shirma_map_v1')||'null'); }catch(e){}
+  try{ battle = JSON.parse(localStorage.getItem('shirma_battle_v1')||'null'); }catch(e){}
+  return { version:3, exported:Date.now(), blocks, media, sessions, map, battle };
+}
+function scheduleDirSave(){
+  if(!saveDirHandle) return;
+  if(dirSaveTimer) clearTimeout(dirSaveTimer);
+  dirSaveTimer = setTimeout(()=>{ dirSaveTimer=null; writeBackupToDir(); }, 1500);
+}
+async function writeBackupToDir(){
+  if(!saveDirHandle) return false;
+  try{
+    if(saveDirHandle.queryPermission){
+      let perm = await saveDirHandle.queryPermission({mode:'readwrite'});
+      if(perm!=='granted' && saveDirHandle.requestPermission){
+        perm = await saveDirHandle.requestPermission({mode:'readwrite'});
+      }
+      if(perm!=='granted') return false;
+    }
+    const fh = await saveDirHandle.getFileHandle('shirma-backup.json', {create:true});
+    const w = await fh.createWritable();
+    await w.write(JSON.stringify(buildBackupPayload(), null, 2));
+    await w.close();
+    updateSaveDirStatus();
+    return true;
+  }catch(e){ return false; }
+}
+function updateSaveDirStatus(){
+  const el = document.getElementById('homeSaveDirStatus');
+  if(!el) return;
+  if(!supportsDirPick){ el.textContent = 'Браузер не поддерживает запись в папку — используйте «Экспорт JSON».'; el.dataset.state='unsupported'; return; }
+  if(saveDirHandle){ el.textContent = 'Папка подключена: файл shirma-backup.json обновляется автоматически.'; el.dataset.state='on'; }
+  else { el.textContent = 'Папка не подключена. Выберите её, чтобы хранить резервную копию на диске.'; el.dataset.state='off'; }
+}
+async function chooseSaveDir(){
+  if(!supportsDirPick){ toast('Браузер не поддерживает сохранение в папку. Используйте «Экспорт JSON».'); return; }
+  try{
+    const dir = await window.showDirectoryPicker({ mode:'readwrite' });
+    saveDirHandle = dir;
+    idbPut(SAVE_DIR_KEY, dir);
+    const ok = await writeBackupToDir();
+    updateSaveDirStatus();
+    toast(ok ? 'Папка сохранений подключена' : 'Папка выбрана, но запись не удалась');
+  }catch(e){
+    if(e && e.name==='AbortError') return;
+    toast('Не удалось выбрать папку');
+  }
+}
+async function initSaveDir(){
+  if(!supportsDirPick) { updateSaveDirStatus(); return; }
+  try{
+    const h = await idbGet(SAVE_DIR_KEY);
+    if(!h) { updateSaveDirStatus(); return; }
+    let perm = 'prompt';
+    if(h.queryPermission){ try{ perm = await h.queryPermission({mode:'readwrite'}); }catch(e){ perm='prompt'; } }
+    if(perm==='granted'){ saveDirHandle = h; scheduleDirSave(); }
+    else { /* нужно повторное разрешение — подключим по кнопке */ }
+    updateSaveDirStatus();
+  }catch(e){ updateSaveDirStatus(); }
+}
+(function(){
+  const pick = ()=> chooseSaveDir();
+  ['btnSaveDir','homeSaveDir'].forEach(id=>{ const b=document.getElementById(id); if(b) b.addEventListener('click', pick); });
+  initSaveDir();
+})();
 
 /* ═══ Undo: кольцо снапшотов последнего состояния (до 30 шагов) ═══ */
 const UNDO_KEY = 'shirma_undo_v1';
@@ -796,12 +887,7 @@ function removeBlock(id){
   save(); render();
 }
 
-/* ═══ Layout toggle ═══ */
-document.getElementById('btnLayout').addEventListener('click', ()=>{
-  freeLayout=!freeLayout;
-  document.getElementById('btnLayout').textContent = freeLayout?'Лента':'Свободный холст';
-  render();
-});
+/* ═══ Layout toggle (кнопка убрана, режим всегда «лента») ═══ */
 
 /* ═══ Темы (светлая/тёмная) ═══ */
 const THEME_KEY = 'shirma_theme_v1';
@@ -812,7 +898,11 @@ function applyTheme(t){
   if(b){ b.textContent = t==='light' ? '🌙' : '☀️'; }
 }
 function currentTheme(){
-  try{ return localStorage.getItem(THEME_KEY)==='light' ? 'light' : 'dark'; }catch(e){ return 'dark'; }
+  try{
+    const t = localStorage.getItem(THEME_KEY);
+    if(t==='dark') return 'dark';
+    return 'light';            // по умолчанию — светлая «пергаментная» тема
+  }catch(e){ return 'light'; }
 }
 (function(){
   applyTheme(currentTheme());
@@ -938,6 +1028,8 @@ document.getElementById('addPc').addEventListener('click', ()=> addBlock('pc'));
 (function(){
   const pc = document.getElementById('addPcTop');
   if(pc) pc.addEventListener('click', ()=> addBlock('pc'));
+  const note = document.getElementById('addNoteTop');
+  if(note) note.addEventListener('click', ()=> addBlock('note'));
   const cm = document.getElementById('createMobTop');
   if(cm) cm.addEventListener('click', ()=> addBlock('mob'));
   const am = document.getElementById('addMobTop');
@@ -1525,6 +1617,13 @@ document.getElementById('fileInput').addEventListener('change', e=>{
       }
       blocks=arr; collapsed=new Set(); activeParentId=null; save(); render();
       toast('Импортировано блоков: '+arr.length);
+      if(data && !Array.isArray(data)){
+        let extra=false;
+        if(data.sessions!==undefined){ try{ localStorage.setItem('shirma_sessions_v1', JSON.stringify(data.sessions)); extra=true; }catch(e){} }
+        if(data.map!==undefined){ try{ localStorage.setItem('shirma_map_v1', JSON.stringify(data.map)); extra=true; }catch(e){} }
+        if(data.battle!==undefined){ try{ localStorage.setItem('shirma_battle_v1', JSON.stringify(data.battle)); extra=true; }catch(e){} }
+        if(extra){ toast('Восстановлены сессии/карта/бой — применяю…'); setTimeout(()=>location.reload(), 700); }
+      }
     }catch(err){ alert('Ошибка чтения файла'); }
   };
   r.readAsText(f); e.target.value='';
@@ -2293,6 +2392,24 @@ function bindSessionToolbar(){
       afterEdit();
     });
   });
+  // размер шрифта (с сохранением выделения при клике по селекту)
+  const fsSel = document.getElementById('sessionFontSize');
+  if(fsSel){
+    let savedRange=null;
+    fsSel.addEventListener('mousedown', ()=>{
+      const sel=window.getSelection();
+      if(sel && sel.rangeCount){ savedRange = sel.getRangeAt(0).cloneRange(); }
+    });
+    fsSel.addEventListener('change', ()=>{
+      const v=fsSel.value; if(!v) return;
+      ed.focus();
+      if(savedRange){ const sel=window.getSelection(); sel.removeAllRanges(); sel.addRange(savedRange); }
+      try{ document.execCommand('styleWithCSS', false, true); }catch(e){}
+      try{ document.execCommand('fontSize', false, v); }catch(e){}
+      afterEdit();
+      fsSel.value='';
+    });
+  }
   // вставка картинки: кнопка → выбор файла
   const imgBtn=document.getElementById('sessionImgBtn');
   const imgInput=document.getElementById('sessionImgInput');
@@ -2432,7 +2549,27 @@ function exportSessionPdf(){
 
 /* ════════════ Вкладка «Бой» ════════════ */
 const STORE_BATTLE = 'shirma_battle_v1';
+const STORE_BATTLE_LOG = 'shirma_battle_log_v1';
 let battleParts = [];   // {id,name,side:'opp'|'char',ac,hp,init}
+let battleLog = [];     // {t:ms, text}
+function saveBattleLog(){ try{ localStorage.setItem(STORE_BATTLE_LOG, JSON.stringify(battleLog.slice(0,200))); }catch(e){} }
+function loadBattleLog(){ try{ const d=JSON.parse(localStorage.getItem(STORE_BATTLE_LOG)||'[]'); battleLog=Array.isArray(d)?d.slice(0,200):[]; }catch(e){ battleLog=[]; } }
+function battleLogPush(text){
+  battleLog.unshift({ t:Date.now(), text:String(text||'') });
+  if(battleLog.length>200) battleLog.length=200;
+  saveBattleLog();
+  renderBattleLog();
+}
+function renderBattleLog(){
+  const box = document.getElementById('battleLogItems');
+  if(!box) return;
+  if(!battleLog.length){ box.innerHTML = '<div class="battle-log-empty">Пока пусто. Здесь будут урон, лечение, действия и порядок ходов.</div>'; return; }
+  box.innerHTML = battleLog.map(e=>{
+    const d = new Date(e.t);
+    const hh = String(d.getHours()).padStart(2,'0'), mm = String(d.getMinutes()).padStart(2,'0');
+    return `<div class="battle-log-item"><span class="lt">${hh}:${mm}</span>${escapeHtml(e.text)}</div>`;
+  }).join('');
+}
 
 function loadBattle(){
   const data = safeParseRaw(localStorage.getItem(STORE_BATTLE), 'shirma_battle');
@@ -2441,7 +2578,8 @@ function loadBattle(){
       side: p.side==='char'?'char':'opp', ac: numField(p.ac), hp: numField(p.hp), init: numField(p.init),
       atk: p.atk===undefined ? '' : numField(p.atk),
       acts: Array.isArray(p.acts) ? p.acts.slice(0,40).map(a=>({tag:String(a.tag||''),text:String(a.text||'')})) : [],
-      applied: Array.isArray(p.applied) ? p.applied.slice(0,40).map(x=>String(x)) : [] }));
+      applied: Array.isArray(p.applied) ? p.applied.slice(0,40).map(x=>String(x)) : [],
+      collapsed: !!p.collapsed }));
     return true;
   }
   battleParts = []; return false;
@@ -2469,29 +2607,42 @@ function renderBattle(){
   }
   const sorted = battleSorted();
   list.innerHTML = sorted.map(p=>`
-    <div class="battle-card ${p.side==='opp'?'opp':''}" data-bid="${p.id}">
+    <div class="battle-card ${p.side==='opp'?'opp':''}${p.collapsed?' collapsed':''}" data-bid="${p.id}">
+      <span class="bt-chev" title="Свернуть/развернуть">▾</span>
       <div class="bt-side">${p.side==='opp'?'⬤':'👤'}</div>
       <input class="bt-name" data-field="name" data-bid="${p.id}" value="${escapeHtml(p.name)}" spellcheck="false" aria-label="Имя">
-      <span class="bt-grp"><span class="bt-lbl">КД</span><input class="bt-in bt-ac" data-field="ac" data-bid="${p.id}" type="number" value="${p.ac}" aria-label="КД"></span>
-      <span class="bt-grp bt-hpgrp">
-        <span class="bt-lbl">ХП</span>
-        <button class="bt-hpbtn" data-hp-op="dec" data-bid="${p.id}" title="−1 ХП" aria-label="−1 ХП">−</button>
-        <input class="bt-in bt-hp" data-field="hp" data-bid="${p.id}" type="number" value="${p.hp}" aria-label="ХП">
-        <button class="bt-hpbtn" data-hp-op="inc" data-bid="${p.id}" title="+1 ХП" aria-label="+1 ХП">+</button>
-        <input class="bt-in bt-dmg" data-dmg data-bid="${p.id}" type="number" placeholder="урон ⏎" title="Введите урон и нажмите Enter" aria-label="Урон">
-      </span>
-      <span class="bt-grp"><span class="bt-lbl">Иниц</span><input class="bt-in bt-init" data-field="init" data-bid="${p.id}" type="number" value="${p.init}" aria-label="Инициатива"></span>
-      <span class="bt-grp bt-atkgrp">
-        <input class="bt-in bt-atkbonus" data-field="atk" data-bid="${p.id}" type="number" value="${p.atk}" placeholder="атк" title="Бонус атаки" aria-label="Бонус атаки">
-        <button class="bt-atk" data-attack data-bid="${p.id}" title="Бросок атаки: d20 + бонус" aria-label="Атака">⚔ Атака</button>
-      </span>
-      <button class="bt-del" data-del="${p.id}" title="Убрать из боя" aria-label="Убрать">🗑</button>
       ${(p.acts && p.acts.length) ? `<div class="bt-acts">
         <select class="bt-acts-select" data-act-select="${p.id}" aria-label="Действия монстра">
-          <option value="">— действие монстра…</option>
+          <option value="">действие…</option>
           ${p.acts.map((a,i)=>`<option value="${i}">${escapeHtml((a.tag? a.tag+': ' : '')+ a.text.slice(0,90))}</option>`).join('')}
         </select>
       </div>` : ''}
+      <span class="bt-grp bt-stat bt-acgrp">
+        <span class="bt-ico" title="КД" aria-hidden="true">🛡️</span>
+        <input class="bt-in bt-ac" data-field="ac" data-bid="${p.id}" type="number" value="${p.ac}" aria-label="КД">
+        <span class="bt-step">
+          <button class="bt-stepbtn" data-ac-op="inc" data-bid="${p.id}" title="+1 КД" aria-label="+1 КД">+</button>
+          <button class="bt-stepbtn" data-ac-op="dec" data-bid="${p.id}" title="−1 КД" aria-label="−1 КД">−</button>
+        </span>
+      </span>
+      <span class="bt-grp bt-stat bt-hpgrp">
+        <span class="bt-ico" title="ХП" aria-hidden="true">❤️</span>
+        <input class="bt-in bt-hp" data-field="hp" data-bid="${p.id}" type="number" value="${p.hp}" aria-label="ХП">
+        <span class="bt-step">
+          <button class="bt-stepbtn" data-hp-op="inc" data-bid="${p.id}" title="+1 ХП" aria-label="+1 ХП">+</button>
+          <button class="bt-stepbtn" data-hp-op="dec" data-bid="${p.id}" title="−1 ХП" aria-label="−1 ХП">−</button>
+        </span>
+      </span>
+      <span class="bt-grp bt-stat bt-dmggrp">
+        <span class="bt-ico" title="Урон" aria-hidden="true">⚔️</span>
+        <input class="bt-in bt-dmg" data-dmg data-bid="${p.id}" type="number" placeholder="⏎" title="Введите урон и нажмите Enter" aria-label="Урон">
+        <span class="bt-step">
+          <button class="bt-stepbtn" data-dmg-op="inc" data-bid="${p.id}" title="Нанести 1 урон" aria-label="Нанести 1 урон">+</button>
+          <button class="bt-stepbtn" data-dmg-op="dec" data-bid="${p.id}" title="Вылечить 1" aria-label="Вылечить 1">−</button>
+        </span>
+      </span>
+      <span class="bt-grp bt-initgrp"><span class="bt-lbl">Иниц</span><input class="bt-in bt-init" data-field="init" data-bid="${p.id}" type="number" value="${p.init}" aria-label="Инициатива"></span>
+      <button class="bt-del" data-del="${p.id}" title="Убрать из боя" aria-label="Убрать">🗑</button>
       ${(p.applied && p.applied.length) ? `<div class="bt-applied">${p.applied.map((t,i)=>`
         <span class="bt-chip">${escapeHtml(t)}<button class="bt-chip-del" data-achip="${p.id}" data-ai="${i}" title="Убрать">✕</button></span>`).join('')}</div>` : ''}
     </div>`).join('');
@@ -2508,6 +2659,7 @@ function applyBattleDamage(inp){
   const hpInput = document.querySelector(`.battle-list [data-bid="${p.id}"][data-field="hp"]`);
   if(hpInput) hpInput.value = p.hp;
   if(dmg>0) toast(`«${p.name}» получил ${dmg} урона → ХП ${p.hp}`);
+  if(dmg>0) battleLogPush(`«${p.name}» получил ${dmg} урона → ХП ${p.hp}`);
 }
 function addBlockToBattle(b){
   if(!b) return;
@@ -2536,6 +2688,7 @@ function battleAdd(side){
   if(name===null || !name.trim()) return;
   battleParts.push({ id:uniq(), name:name.trim().slice(0,60), side, ac:'', hp:'', init:'', atk:'', acts:[], applied:[] });
   saveBattle(); renderBattle();
+  battleLogPush(`«${name.trim().slice(0,60)}» добавлен в бой`);
 }
 function bindBattle(){
   const addOpp = document.getElementById('battleAddOpp');
@@ -2546,7 +2699,7 @@ function bindBattle(){
   if(clr) clr.addEventListener('click', ()=>{
     if(!battleParts.length) return;
     if(confirm('Очистить список участников боя?')){
-      battleParts=[]; saveBattle(); renderBattle();
+      battleParts=[]; saveBattle(); renderBattle(); battleLogPush('Бой очищен');
     }
   });
   const list = document.getElementById('battleList');
@@ -2568,12 +2721,45 @@ function bindBattle(){
       }
     });
     list.addEventListener('click', e=>{
+      const card = e.target.closest('.battle-card');
+      if(card && !e.target.closest('input,button,select,textarea,label,[contenteditable]')){
+        const p = battleParts.find(x=>x.id===card.dataset.bid);
+        if(p){ p.collapsed = !p.collapsed; saveBattle(); renderBattle(); }
+        return;
+      }
       const del = e.target.closest('[data-del]');
-      if(del){ battleParts = battleParts.filter(x=>x.id!==del.dataset.del); saveBattle(); renderBattle(); return; }
+      if(del){ const gone = battleParts.find(x=>x.id===del.dataset.del); battleParts = battleParts.filter(x=>x.id!==del.dataset.del); saveBattle(); renderBattle(); if(gone) battleLogPush(`«${gone.name}» убран из боя`); return; }
       const chip = e.target.closest('[data-achip]');
       if(chip){
         const p = battleParts.find(x=>x.id===chip.dataset.achip);
         if(p && Array.isArray(p.applied)){ p.applied.splice(+chip.dataset.ai,1); saveBattle(); renderBattle(); }
+        return;
+      }
+      const acBtn = e.target.closest('[data-ac-op]');
+      if(acBtn){
+        const p = battleParts.find(x=>x.id===acBtn.dataset.bid);
+        if(!p) return;
+        const cur = p.ac==='' ? 0 : (+p.ac||0);
+        const nv = Math.max(0, acBtn.dataset.acOp==='dec' ? cur-1 : cur+1);
+        p.ac = nv; saveBattle();
+        const inp = list.querySelector(`[data-bid="${p.id}"][data-field="ac"]`);
+        if(inp) inp.value = nv;
+        return;
+      }
+      const dmgBtn = e.target.closest('[data-dmg-op]');
+      if(dmgBtn){
+        const p = battleParts.find(x=>x.id===dmgBtn.dataset.bid);
+        if(!p) return;
+        const cur = p.hp==='' ? 0 : (+p.hp||0);
+        p.hp = dmgBtn.dataset.dmgOp==='inc' ? Math.max(0, cur-1) : cur+1;
+        saveBattle();
+        const hpInp = list.querySelector(`[data-bid="${p.id}"][data-field="hp"]`);
+        if(hpInp) hpInp.value = p.hp;
+        const dmgInp = list.querySelector(`[data-bid="${p.id}"][data-dmg]`);
+        if(dmgInp) dmgInp.value = '';
+        battleLogPush(dmgBtn.dataset.dmgOp==='inc'
+          ? `«${p.name}» получил 1 урон → ХП ${p.hp}`
+          : `«${p.name}» вылечен на 1 → ХП ${p.hp}`);
         return;
       }
       const hpBtn = e.target.closest('[data-hp-op]');
@@ -2585,6 +2771,7 @@ function bindBattle(){
         p.hp = nv; saveBattle();
         const hpInput = list.querySelector(`[data-bid="${p.id}"][data-field="hp"]`);
         if(hpInput) hpInput.value = nv;
+        battleLogPush(`«${p.name}»: ХП ${nv}`);
         return;
       }
       const atkBtn = e.target.closest('[data-attack]');
@@ -2623,11 +2810,16 @@ function bindBattle(){
         if(!Array.isArray(p.applied)) p.applied=[];
         if(!p.applied.includes(txt)) p.applied.push(txt);
         saveBattle(); renderBattle();
+        battleLogPush(`«${p.name}» → ${txt}`);
         return;
       }
     });
   }
   loadBattle();
+  loadBattleLog();
+  renderBattleLog();
+  const logClear = document.getElementById('battleLogClear');
+  if(logClear) logClear.addEventListener('click', ()=>{ battleLog=[]; saveBattleLog(); renderBattleLog(); });
 }
 /* ════════════ Эффекты монстров по типам ════════════ */
 const MON_TYPE_EFFECTS = {

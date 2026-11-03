@@ -10,7 +10,7 @@
 <link rel="stylesheet" href="style.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Alegreya:wght@400;500;700&family=Cinzel:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Alegreya:wght@400;500;700&family=Cinzel:wght@500;700&family=Cinzel+Decorative:wght@400;700;900&family=Uncial+Antiqua&family=Grenze+Gotisch:wght@400;500;700&family=Cormorant+Garamond:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
 <div class="app">
@@ -43,7 +43,7 @@
         <div class="tabbar">
           <button class="tab active" data-tab="home">🏠 Главная</button>
           <button class="tab" data-tab="sessions">📓 Сессии</button>
-          <button class="tab" data-tab="chars">👤 Персонажи</button>
+          <button class="tab" data-tab="chars">🛡️ Ширма</button>
           <button class="tab" data-tab="monsters">👹 Монстры</button>
           <button class="tab" data-tab="map">🗺 Карта</button>
           <button class="tab" data-tab="battle">⚔ Бой</button>
@@ -68,7 +68,7 @@
               <button id="btnMonEffects" title="Таблицы эффектов по типам монстров">🐾 Эффекты</button>
               <button id="btnTables" title="Броски по случайным таблицам (d100)">🎲 Таблицы</button>
               <span class="menu-caption">Система</span>
-              <button id="btnLayout" title="Лента / свободный холст">Раскладка</button>
+              <button id="btnSaveDir" title="Выбрать папку для автосохранения резервной копии">💾 Папка сохранений…</button>
               <button id="btnExport">⬇ Экспорт JSON</button>
               <button id="btnImport">⬆ Импорт</button>
               <button id="btnReset" title="Сбросить к демо-данным">♻ Сброс</button>
@@ -99,28 +99,45 @@
               <p>Меню «☰ → + Персонаж», затем «Бестиарий» для монстров. Создайте сессию во вкладке «Сессии» и добавьте карту во вкладке «Карта». Резервная копия — «Экспорт JSON».</p>
             </section>
           </div>
-          <section class="home-card">
-            <h2>Дополнительные возможности</h2>
-            <ul>
-              <li><b>Бестиарий</b> — 596 монстров D&amp;D 5e с поиском и добавлением на ширму.</li>
-              <li><b>База</b> — заклинания и снаряжение PHB 2024.</li>
-              <li><b>Магазин</b> — предметы и артефакты с ценами.</li>
-              <li><b>Эффекты</b> — таблицы эффектов по типам монстров.</li>
-              <li><b>Таблицы</b> — случайные таблицы для импровизации.</li>
-              <li><b>Кости</b> — d4…d100 и свои грани, несколько бросков сразу.</li>
-              <li><b>Экспорт / Импорт</b> — резервная копия всех данных.</li>
-            </ul>
-          </section>
+          <div class="home-col">
+            <section class="home-card">
+              <h2>Дополнительные возможности</h2>
+              <ul>
+                <li><b>Бестиарий</b> — 596 монстров D&amp;D 5e с поиском и добавлением на ширму.</li>
+                <li><b>База</b> — заклинания и снаряжение PHB 2024.</li>
+                <li><b>Магазин</b> — предметы и артефакты с ценами.</li>
+                <li><b>Эффекты</b> — таблицы эффектов по типам монстров.</li>
+                <li><b>Таблицы</b> — случайные таблицы для импровизации.</li>
+                <li><b>Кости</b> — d4…d100 и свои грани, несколько бросков сразу.</li>
+                <li><b>Экспорт / Импорт</b> — резервная копия всех данных.</li>
+              </ul>
+            </section>
+            <div class="home-actions">
+              <button data-menu-target="btnLibrary">🔍 База</button>
+              <button data-menu-target="btnShop">🛒 Магазин</button>
+              <button data-menu-target="btnMonEffects">🐾 Эффекты</button>
+              <button data-menu-target="btnTables">🎲 Таблицы</button>
+            </div>
+          </div>
         </div>
-        <div class="home-actions">
-          <button data-menu-target="btnLibrary">🔍 База</button>
-          <button data-menu-target="btnShop">🛒 Магазин</button>
-          <button data-menu-target="btnMonEffects">🐾 Эффекты</button>
-          <button data-menu-target="btnTables">🎲 Таблицы</button>
-        </div>
+        <details class="home-card home-save">
+          <summary><h2>Сохранение данных</h2></summary>
+          <p>Данные хранятся в браузере (localStorage и IndexedDB). Чтобы не потерять их при очистке истории, подключите папку на диске — в неё будет автоматически записываться файл <code>shirma-backup.json</code> при каждом изменении.</p>
+          <ol class="home-save-steps">
+            <li>Нажмите «Выбрать папку» и укажите любую папку (например, <code>Документы/Ширма</code>).</li>
+            <li>Разрешите доступ, если браузер спросит.</li>
+            <li>Файл обновляется сам. Для восстановления — «Меню ☰ → Импорт» и выберите этот файл.</li>
+          </ol>
+          <div class="home-save-actions">
+            <button id="homeSaveDir">📁 Выбрать папку сохранений</button>
+            <span class="hint" id="homeSaveDirStatus"></span>
+          </div>
+          <p class="hint">Работает в Chrome и Edge (десктоп). В Safari/Firefox используйте «Экспорт JSON» и храните файл вручную.</p>
+        </details>
         <section class="home-card home-updates">
           <h2>Обновления</h2>
           <ul>
+            <li><span class="upd-date">03.11.2026</span><span>Сохранение в папку на диске (shirma-backup.json), журнал боя, импорт персонажей/монстров из JSON, новые шрифты (Grenze Gotisch, Cormorant Garamond), бежевая тема, крупнее текст карточек и читаемые цифры.</span></li>
             <li><span class="upd-date">03.11.2026</span><span>Вкладка «Главная», гекс-поле на картах, новый логотип, авторство и ссылка в футере.</span></li>
             <li><span class="upd-date">02.11.2026</span><span>Карточки персонажей и монстров в две колонки; компактный интерфейс, меню «☰».</span></li>
             <li><span class="upd-date">01.11.2026</span><span>Раздел «Карта»: добавление карт, карточки боя и бестиарий.</span></li>
@@ -131,6 +148,8 @@
     <div class="tabview" id="view-chars" hidden>
       <div class="view-toolbar">
         <button id="addPcTop" class="only-chars">＋ Добавить персонажа</button>
+        <button id="addNoteTop" class="only-chars">📝 Добавить заметку</button>
+        <span class="toolbar-hint only-chars">Нажми ⌘K / Ctrl+K для поиска и вставки</span>
         <button id="addMobTop" class="only-monsters">＋ Добавить монстра</button>
         <button id="createMobTop" class="only-monsters">✨ Создать монстра</button>
         <button id="btnImportJsonTop" title="Импорт персонажа или монстра из JSON">📥 Из JSON</button>
@@ -161,6 +180,21 @@
             <button data-cmd="insertOrderedList" title="Нумерованный список">1.</button>
             <button data-block="blockquote" title="Цитата">❝</button>
             <button data-block="pre" title="Код">‹/›</button>
+            <span class="acts-sep"></span>
+            <button data-cmd="justifyLeft" title="Выравнивание по левому краю">⇤</button>
+            <button data-cmd="justifyCenter" title="Выравнивание по центру">↔</button>
+            <button data-cmd="justifyRight" title="Выравнивание по правому краю">⇥</button>
+            <button data-cmd="justifyFull" title="Выравнивание по ширине">☰</button>
+            <span class="acts-sep"></span>
+            <select id="sessionFontSize" class="editor-select" title="Размер шрифта" aria-label="Размер шрифта">
+              <option value="">Размер</option>
+              <option value="2">Мелкий</option>
+              <option value="3">Обычный</option>
+              <option value="4">Крупнее</option>
+              <option value="5">Крупный</option>
+              <option value="6">Очень крупный</option>
+              <option value="7">Огромный</option>
+            </select>
             <span class="acts-sep"></span>
             <button data-link="1" title="Ссылка">🔗</button>
             <button id="sessionImgBtn" type="button" title="Вставить картинку" aria-label="Вставить картинку">🖼</button>
@@ -199,7 +233,13 @@
           <span class="acts-sep"></span>
           <button id="battleClear" title="Убрать всех участников">✕ Очистить</button>
         </div>
-        <div id="battleList" class="battle-list"></div>
+        <div class="battle-body">
+          <div id="battleList" class="battle-list"></div>
+          <aside class="battle-log">
+            <div class="battle-log-head"><span>Журнал боя</span><button id="battleLogClear" title="Очистить журнал" aria-label="Очистить журнал">✕</button></div>
+            <div id="battleLogItems" class="battle-log-items"></div>
+          </aside>
+        </div>
 </div>
       </div>
         <footer class="app-footer">
