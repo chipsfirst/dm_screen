@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#1b1e22">
 <title>Ширма мастера — D&D 5.5</title>
-<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="icon" href="logo.svg" type="image/svg+xml">
 <link rel="manifest" href="manifest.json">
 <link rel="stylesheet" href="style.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -18,6 +18,7 @@
   <main class="main">
     <button id="topHandle" class="top-handle" hidden title="Развернуть верхнюю панель" aria-label="Развернуть верхнюю панель">▾</button>
     <div class="topbar">
+      <img class="site-logo" src="logo.svg" alt="Ролёвки от Вовки">
       <div class="dicebar">
         <span class="db-label">Кости:</span>
         <select id="dieSel" class="die-sel" aria-label="Кость: число граней">
@@ -40,13 +41,11 @@
         <span id="rollLog"></span>
       </div>
       <div class="main-head">
-        <div class="crumbs">
-          <span class="crumb-text">Блоки: <b id="crumbsRoot">корень</b><span id="crumbsPath"></span></span>
-        </div>
         <div class="tabbar">
-          <button class="tab active" data-tab="chars">👤 Персонажи</button>
-          <button class="tab" data-tab="monsters">👹 Монстры</button>
+          <button class="tab active" data-tab="home">🏠 Главная</button>
           <button class="tab" data-tab="sessions">📓 Сессии</button>
+          <button class="tab" data-tab="chars">👤 Персонажи</button>
+          <button class="tab" data-tab="monsters">👹 Монстры</button>
           <button class="tab" data-tab="map">🗺 Карта</button>
           <button class="tab" data-tab="battle">⚔ Бой</button>
         </div>
@@ -54,6 +53,7 @@
           <span class="acts-group">
             <button id="btnTheme" title="Переключить светлую/тёмную тему" aria-label="Переключить тему">☀️</button>
             <button id="btnFullscreen" title="Полноэкранный режим (F11)" aria-label="Полноэкранный режим">⛶</button>
+            <button id="topCollapse" title="Свернуть верхнюю панель" aria-label="Свернуть/развернуть верхнюю панель">╲╱</button>
           </span>
           <span class="acts-sep"></span>
           <span class="menu-wrap">
@@ -70,7 +70,6 @@
               <button id="btnTables" title="Броски по случайным таблицам (d100)">🎲 Таблицы</button>
               <span class="menu-caption">Система</span>
               <button id="btnLayout" title="Лента / свободный холст">Раскладка</button>
-              <button id="topCollapse" title="Свернуть верхнюю панель">╲╱ Свернуть панель</button>
               <button id="btnExport">⬇ Экспорт JSON</button>
               <button id="btnImport">⬆ Импорт</button>
               <button id="btnReset" title="Сбросить к демо-данным">♻ Сброс</button>
@@ -81,7 +80,61 @@
         </div>
       </div>
     </div>
-    <div class="tabview" id="view-chars">
+    <div class="tabview" id="view-home">
+      <div class="home-wrap">
+        <div class="home-hero">
+          <img class="home-logo" src="logo.svg" alt="d20">
+          <div>
+            <h1>Ширма мастера</h1>
+            <p class="home-lead">Цифровая ширма для настольных ролевых игр D&amp;D 5.5 (2024). Полностью офлайн: серверов нет, данные хранятся в браузере.</p>
+          </div>
+        </div>
+        <div class="home-grid">
+          <div class="home-col">
+            <section class="home-card">
+              <h2>Что это и зачем</h2>
+              <p>Рабочее место мастера вместо бумажной ширмы: персонажи, монстры, сессии, карта и бой — всё на одном экране, чтобы ничего не искать в книгах за столом. Данные сохраняются в браузере и не покидают ваш компьютер.</p>
+            </section>
+            <section class="home-card home-tip">
+              <h2>С чего начать</h2>
+              <p>Меню «☰ → + Персонаж», затем «Бестиарий» для монстров. Создайте сессию во вкладке «Сессии» и добавьте карту во вкладке «Карта». Резервная копия — «Экспорт JSON».</p>
+            </section>
+          </div>
+          <section class="home-card">
+            <h2>Дополнительные возможности</h2>
+            <ul>
+              <li><b>Бестиарий</b> — 596 монстров D&amp;D 5e с поиском и добавлением на ширму.</li>
+              <li><b>База</b> — заклинания и снаряжение PHB 2024.</li>
+              <li><b>Магазин</b> — предметы и артефакты с ценами.</li>
+              <li><b>Эффекты</b> — таблицы эффектов по типам монстров.</li>
+              <li><b>Таблицы</b> — случайные таблицы для импровизации.</li>
+              <li><b>Кости</b> — d4…d100 и свои грани, несколько бросков сразу.</li>
+              <li><b>Экспорт / Импорт</b> — резервная копия всех данных.</li>
+            </ul>
+          </section>
+        </div>
+        <div class="home-actions">
+          <button data-menu-target="btnLibrary">🔍 База</button>
+          <button data-menu-target="btnShop">🛒 Магазин</button>
+          <button data-menu-target="btnMonEffects">🐾 Эффекты</button>
+          <button data-menu-target="btnTables">🎲 Таблицы</button>
+        </div>
+        <section class="home-card home-updates">
+          <h2>Обновления</h2>
+          <ul>
+            <li><span class="upd-date">03.11.2026</span><span>Вкладка «Главная», гекс-поле на картах, новый логотип, авторство и ссылка в футере.</span></li>
+            <li><span class="upd-date">02.11.2026</span><span>Карточки персонажей и монстров в две колонки; компактный интерфейс, меню «☰».</span></li>
+            <li><span class="upd-date">01.11.2026</span><span>Раздел «Карта»: добавление карт, карточки боя и бестиарий.</span></li>
+          </ul>
+        </section>
+      </div>
+    </div>
+    <div class="tabview" id="view-chars" hidden>
+      <div class="view-toolbar">
+        <button id="addPcTop" class="only-chars">＋ Добавить персонажа</button>
+        <button id="addMobTop" class="only-monsters">＋ Добавить монстра</button>
+        <button id="createMobTop" class="only-monsters">✨ Создать монстра</button>
+      </div>
       <div class="canvas" id="canvas"></div>
     </div>
     <div class="tabview" id="view-sessions" hidden>
@@ -131,37 +184,7 @@
       <div class="map-toolbar">
         <button id="mapAdd" title="Добавить новую карту">📄 + Карта</button>
         <input type="file" id="mapFileInput" accept="image/*" class="hidden" aria-label="Загрузка карты">
-        <span class="acts-sep"></span>
         <span class="hint" id="mapTypeHint">изображение, до 8 МБ · PNG/JPG/WebP</span>
-        <span class="acts-sep"></span>
-        <button id="mapZoomIn" title="Приблизить">＋</button>
-        <button id="mapZoomOut" title="Отдалить">－</button>
-        <button id="mapZoomReset" title="Сбросить масштаб">100%</button>
-        <span class="hint" id="mapZoomLabel"></span>
-        <button id="mapLock" title="Закрепить карту в текущем положении">🔓 Закрепить</button>
-        <button id="mapGrid" title="Показать/скрыть сетку" aria-label="Показать или скрыть сетку">▦ Сетка</button>
-        <select id="mapGridStep" title="Шаг сетки (клетка)" aria-label="Шаг сетки">
-          <option value="18">18 px</option>
-          <option value="36">36 px</option>
-          <option value="72">72 px</option>
-        </select>
-        <span class="acts-sep"></span>
-        <button id="mapAddMarker" title="Добавить маркер: включить расстановку и кликнуть по карте">⬤ Маркер</button>
-        <button id="mapDup" title="Дублировать текущую карту" aria-label="Дублировать карту">⧉ Дубль</button>
-        <button id="mapSnap" title="Сохранить карту с маркерами как PNG" aria-label="Скрин карты">🖼 PNG</button>
-        <button id="mapPen" title="Рисовать поверх карты">✏ Перо</button>
-        <button id="mapPenClear" title="Стереть нарисованное" hidden>✕ Стереть</button>
-        <button id="mapRuler" title="Измерить расстояние (2 клика по карте)" aria-label="Измерение расстояния">📏 Линейка</button>
-        <span class="hint" id="mapRulerLabel" hidden></span>
-        <span class="acts-sep"></span>
-        <span id="markerCtl" class="marker-ctl hidden">
-          <span class="hint mark-name" id="markerName"></span>
-          <button id="markerRename" title="Переименовать маркер" aria-label="Переименовать маркер">✏ Имя</button>
-          <button id="markerColor" title="Сменить цвет маркера" aria-label="Сменить цвет">🎨</button>
-          <button id="markerDel" title="Удалить маркер" aria-label="Удалить маркер">🗑</button>
-          <button id="markerDone" title="Снять выделение" aria-label="Снять выделение">✕</button>
-        </span>
-        <span class="hint" id="mapPlaceHint" hidden>Кликните по карте, чтобы поставить маркер</span>
       </div>
       <div id="mapTabs" class="map-tabs"></div>
       <div class="map-canvas" id="mapCanvas"></div>
@@ -180,9 +203,12 @@
 </div>
       </div>
         <footer class="app-footer">
-          <span class="af-title">Ширма мастера для D&D 5.5</span>
-          <span class="af-hint">Ролевки от Вовки · блоки ниже можно добавить кнопками вверху</span>
+          <span class="af-title">Ширма мастера для D&amp;D 5.5</span>
           <span class="af-count"><span id="footerCount">0</span> блоков</span>
+          <span class="af-right">
+            <span class="af-hint">Автор: Ролёвки от Вовки</span>
+            <a class="af-link" href="https://github.com/chipsfirst/dm_screen" target="_blank" rel="noopener">Репозиторий на GitHub ↗</a>
+          </span>
         </footer>
     </main>
 </div>

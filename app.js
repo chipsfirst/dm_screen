@@ -261,11 +261,14 @@ function seed(){
 function render(){
   const canvas = document.getElementById('canvas');
   canvas.classList.toggle('free', freeLayout);
+  const viewChars = document.getElementById('view-chars');
+  if(viewChars) viewChars.classList.toggle('show-monsters', blocksTab==='monsters');
   let base = blocksTab==='monsters'
     ? blocks.filter(b=> b.type==='mob')
     : blocks.filter(b=> b.type!=='mob');
   const list = searchFilter ? base.filter(matches) : (activeParentId===null ? base : base.filter(b=>b.id===activeParentId));
-  document.getElementById('crumbsRoot').textContent = (blocksTab==='monsters'?'Монстры':'Персонажи')
+  const crumbEl = document.getElementById('crumbsRoot');
+  if(crumbEl) crumbEl.textContent = (blocksTab==='monsters'?'Монстры':'Персонажи')
     + (searchFilter?' · результаты поиска':(activeParentId===null?'':(' / '+(findBlock(activeParentId)?.title||'корень'))));
 
   if(!list.length){
@@ -281,10 +284,18 @@ function render(){
         return `<div class="canvas-free-wrap" style="position:absolute;left:${x}px;top:${y}px;width:${b.w||360}px;z-index:${b._z||0}">${card}</div>`;
       }).join('');
     } else {
-      canvas.innerHTML = `<div style="max-width:820px">` + list.map(safeCard).join('') + `</div>`;
+      canvas.innerHTML = `<div class="canvas-flow">` + list.map(safeCard).join('') + `</div>`;
     }
   }
   save();
+}
+
+function blockIsWide(b){
+  let len = String(b.text||'').length;
+  if(b.type==='mob' && b.mdata && Array.isArray(b.mdata.acts)){
+    b.mdata.acts.forEach(a=>{ len += String((a&&a.text)||'').length; });
+  }
+  return len > 800;
 }
 
 function blockCard(b){
@@ -292,7 +303,8 @@ function blockCard(b){
   const border = 'border-'+b.type;
   const ttype = TYPE_LABEL[b.type];
   const w = b.w || 820;
-  const li = `<div class="block ${border}" data-id="${b.id}" style="width:${w}px">
+  const wide = blockIsWide(b) ? ' block-wide' : '';
+  const li = `<div class="block ${border}${wide}" data-id="${b.id}" style="width:${w}px">
     <div class="block-head" data-toggle>
       <span class="collapse ${open?'':'collapsed'}">▸</span>
       <div class="ttl-note">
@@ -315,20 +327,52 @@ function statsInput(b){
 }
 
 function bodyHtml(b){
-  let inner='';
-  if(b.type==='mob' && b.mdata){ inner = mobStatBlockHtml(b); }
-  else if(b.type==='pc' || b.type==='mob'){
-    inner += `<div class="props">`+Object.entries(b.props).map(([k,v])=>`<div class="prop"><span class="lbl">${escapeHtml(k)}</span><input class="v" data-prop-key="${escapeHtml(k)}" data-prop-id="${b.id}" value="${escapeHtml(String(v))}"></div>`).join('')+`</div>`;
-    if(b.type==='pc') inner += hpRowHtml(b);
-    if(b.type==='pc') inner += resourcesHtml(b);
-    inner += statsInput(b);
-    inner += `<div class="attack-row">
-      <span class="lbl">Атака:</span>
-      <input class="attack-input" type="text" data-attack="${b.id}" value="${escapeHtml(b.attack!==undefined?b.attack:'+0')}" placeholder="+бонус" title="Бонус атаки, напр. +5">
-      <button data-rollatt="${b.id}" title="Бросок атаки: d20 + бонус">⚔️ Бросить атаку</button>
-      <span class="hint" data-attresult="${b.id}"></span>
-    </div>`;
+  if(b.type==='mob' && b.mdata){
+    return `<div class="block-body">${mobStatBlockHtml(b)}
+      <div class="card-notes">
+        <div class="hint">Текстовая заметка к статблоку:</div>
+        <textarea data-field="text" data-id="${b.id}" style="min-height:60px">${escapeHtml(b.text)}</textarea>
+      </div></div>
+      <div class="block-foot">
+        <button data-action="collapse">Свернуть</button>
+        <button data-action="expand">Развернуть</button>
+        ${(b.type==='pc'||b.type==='mob')?`<button data-action="battle" data-battle-id="${b.id}" title="Добавить в вкладку «Бой»">⚔ В бой</button>`:''}
+        <span class="size-info">Ширина: <input class="resize-input" type="number" min="200" max="1600" step="20" value="${b.w||820}" data-width="${b.id}" title="Ширина блока, px"></span>
+        <span class="hint" style="margin-left:auto">редактируйте заголовок и текст прямо здесь</span>
+        <button class="del" data-action="delete">Удалить блок</button>
+      </div>`;
   }
+  if(b.type==='pc' || b.type==='mob'){
+    const props = `<div class="props">`+Object.entries(b.props).map(([k,v])=>`<div class="prop"><span class="lbl">${escapeHtml(k)}</span><input class="v" data-prop-key="${escapeHtml(k)}" data-prop-id="${b.id}" value="${escapeHtml(String(v))}"></div>`).join('')+`</div>`;
+    const left = `<div class="card-col-left">
+      ${props}
+      ${b.type==='pc'?hpRowHtml(b):''}
+      ${b.type==='pc'?`<div class="atts"><div class="atts-title">Характеристики</div>${statsInput(b)}</div>`:statsInput(b)}
+    </div>`;
+    const right = `<div class="card-col-right">
+      ${b.type==='pc'
+        ? `<div class="attack-row">
+            <span class="lbl">Атака:</span>
+            <input class="attack-input" type="text" data-attack="${b.id}" value="${escapeHtml(b.attack!==undefined?b.attack:'+0')}" placeholder="+бонус" title="Бонус атаки, напр. +5">
+            <button data-rollatt="${b.id}" title="Бросок атаки: d20 + бонус">⚔️ Бросить атаку</button>
+            <span class="hint" data-attresult="${b.id}"></span>
+          </div>`
+        : ''}
+      ${b.type==='pc'?resourcesHtml(b):''}
+      <textarea data-field="text" data-id="${b.id}" placeholder="Заметки…">${escapeHtml(b.text)}</textarea>
+    </div>`;
+    return `<div class="block-body"><div class="card-cols">${left}${right}</div></div>
+      <div class="block-foot">
+        <button data-action="collapse">Свернуть</button>
+        <button data-action="expand">Развернуть</button>
+        ${b.type==='pc'?`<button data-action="rollAll" data-roll-id="${b.id}" title="Бросить d20 по всем характеристикам">Бросок всех</button>`:''}
+        ${(b.type==='pc'||b.type==='mob')?`<button data-action="battle" data-battle-id="${b.id}" title="Добавить в вкладку «Бой»">⚔ В бой</button>`:''}
+        <span class="size-info">Ширина: <input class="resize-input" type="number" min="200" max="1600" step="20" value="${b.w||820}" data-width="${b.id}" title="Ширина блока, px"></span>
+        <span class="hint" style="margin-left:auto">редактируйте заголовок и текст прямо здесь</span>
+        <button class="del" data-action="delete">Удалить блок</button>
+      </div>`;
+  }
+  let inner='';
   if(b.type==='img'){
     const src = safeMediaSrc(mediaFor(b));
     if(src && b.kind==='image'){
@@ -342,9 +386,7 @@ function bodyHtml(b){
       </div>`;
     }
   }
-  if(b.type==='mob' && b.mdata){ inner += `<div class="hint" style="margin-top:6px">Текстовая заметка к статблоку:</div><textarea data-field="text" data-id="${b.id}" style="min-height:60px">${escapeHtml(b.text)}</textarea>`; }
-  else if(b.type==='img'){ /* no textarea for media blocks */ }
-  else inner += `<textarea data-field="text" data-id="${b.id}">${escapeHtml(b.text)}</textarea>`;
+  inner += `<textarea data-field="text" data-id="${b.id}">${escapeHtml(b.text)}</textarea>`;
   return `<div class="block-body">${inner}</div>
     <div class="block-foot">
       <button data-action="collapse">Свернуть</button>
@@ -441,23 +483,25 @@ function mobStatBlockHtml(b){
       <div class="mob-ab-m">${a.m>=0?'+'+a.m:a.m}${a.s&&a.s!==(a.m>=0?'+'+a.m:a.m)?' ('+a.s+')':''}</div>
     </div>`).join('');
   const actsHtml = actsGroupsHtml(d);
-  return `<div class="mob-block">
-    <div class="mob-meta">
-      <div class="mob-type">${escapeHtml(d.type||'')}</div>
-      <div class="mob-meta-row">
-        <span>КД <b>${escapeHtml(d.ac||'—')}</b></span>
-        <span>ХП <b>${escapeHtml(d.hp||'—')}</b></span>
-        <span>Скорость <b>${escapeHtml(d.sp||'—')}</b></span>
+  return `<div class="card-cols">
+      <div class="card-col-left">
+        <div class="mob-type">${escapeHtml(d.type||'')}</div>
+        <div class="mob-meta-row">
+          <span>КД <b>${escapeHtml(d.ac||'—')}</b></span>
+          <span>ХП <b>${escapeHtml(d.hp||'—')}</b></span>
+          <span>Скорость <b>${escapeHtml(d.sp||'—')}</b></span>
+        </div>
+        <div class="mob-ab-row">${abRow}</div>
+        ${d.sk?`<div class="mob-line"><b>Навыки</b> ${escapeHtml(d.sk)}</div>`:''}
+        ${d.sen?`<div class="mob-line"><b>Чувства</b> ${escapeHtml(d.sen)}</div>`:''}
+        ${d.lang?`<div class="mob-line"><b>Языки</b> ${escapeHtml(d.lang)}</div>`:''}
+        <div class="mob-line"><b>Опасность</b> ${escapeHtml(shortCr(d.cr))}</div>
+        <div class="mob-line"><b>Инициатива</b> ${escapeHtml(d.init||'—')}</div>
       </div>
-    </div>
-    <div class="mob-ab-row">${abRow}</div>
-    ${d.sk?`<div class="mob-line"><b>Навыки</b> ${escapeHtml(d.sk)}</div>`:''}
-    ${d.sen?`<div class="mob-line"><b>Чувства</b> ${escapeHtml(d.sen)}</div>`:''}
-    ${d.lang?`<div class="mob-line"><b>Языки</b> ${escapeHtml(d.lang)}</div>`:''}
-    <div class="mob-line"><b>Опасность</b> ${escapeHtml(shortCr(d.cr))}</div>
-    <div class="mob-line"><b>Инициатива</b> ${escapeHtml(d.init||'—')}</div>
-    ${actsHtml}
-  </div>`;
+      <div class="card-col-right">
+        ${actsHtml}
+      </div>
+    </div>`;
 }
 /* Общий разбор действия монстра: «Название. Текст» */
 function splitAct(txt){
@@ -907,6 +951,17 @@ if(timerBtn) timerBtn.addEventListener('click', timerToggle);
 
 /* ════════════ Events ════════════ */
 document.getElementById('addPc').addEventListener('click', ()=> addBlock('pc'));
+(function(){
+  const pc = document.getElementById('addPcTop');
+  if(pc) pc.addEventListener('click', ()=> addBlock('pc'));
+  const cm = document.getElementById('createMobTop');
+  if(cm) cm.addEventListener('click', ()=> addBlock('mob'));
+  const am = document.getElementById('addMobTop');
+  if(am) am.addEventListener('click', ()=>{ const b=document.getElementById('btnBestiary'); if(b) b.click(); });
+  document.querySelectorAll('[data-menu-target]').forEach(b=>{
+    b.addEventListener('click', ()=>{ const t=document.getElementById(b.dataset.menuTarget); if(t) t.click(); });
+  });
+})();
 
 /* ═══ Base rules D&D 5.5 ═══ */
 
@@ -1407,6 +1462,7 @@ let currentTab = 'chars';
 let blocksTab = 'chars'; // 'chars' | 'monsters'
 KEYS.tab = 'shirma_tab_last_v1';
 const tabs = {
+  home: document.getElementById('view-home'),
   chars: document.getElementById('view-chars'),
   sessions: document.getElementById('view-sessions'),
   map: document.getElementById('view-map'),
@@ -1416,11 +1472,14 @@ function showTab(name){
   currentTab = name;
   try{ localStorage.setItem(KEYS.tab, name); }catch(e){}
   document.querySelectorAll('.tab').forEach(t=> t.classList.toggle('active', t.dataset.tab===name));
+  tabs.home.hidden = true;
   tabs.chars.hidden = true;
   tabs.sessions.hidden = true;
   tabs.map.hidden = true;
   tabs.battle.hidden = true;
-  if(name==='chars'||name==='monsters'){
+  if(name==='home'){
+    tabs.home.hidden = false;
+  } else if(name==='chars'||name==='monsters'){
     blocksTab = name;
     tabs.chars.hidden = false;
     render();
@@ -1446,7 +1505,7 @@ let maps = [];                 // {id,name,bgKey,bg,baseW,baseH,zoom,scrollX,scr
 let activeMapId = null;
 let mapLocked = false;
 let mapPenOn = false;
-let mapGridOn = true;   // сетка карты включена по умолчанию
+let mapGridOn = false;  // сетка отключена
 let mapGridStep = 18;   // шаг сетки, px
 let mapPlaceOn = false; // режим расстановки маркеров кликом
 let selectedMarkerId = null;
@@ -1494,10 +1553,8 @@ function normStroke(s){ return { color:s.color||'#c9a227', width:+s.width||2,
 function saveMap(){ try{ localStorage.setItem(STORE_MAP, JSON.stringify(maps)); }catch(e){} }
 
 function mapZoom(delta){
-  if(mapLocked) return;
-  const m=curMap(); if(!m) return;
-  m.zoom = Math.min(4, Math.max(0.15, m.zoom + delta));
-  renderMap();
+  // зум отключён
+  return;
 }
 function updateMapLockBtn(){
   const btn=document.getElementById('mapLock'); if(!btn) return;
@@ -1525,7 +1582,8 @@ function renderMap(){
   mc.classList.toggle('no-grid', !mapGridOn);
   mc.style.setProperty('--grid-step', mapGridStep+'px');
   mc.scrollLeft = m.scrollX||0; mc.scrollTop = m.scrollY||0;
-  const z = m.zoom;
+  m.zoom = 1;
+  const z = 1;
   const wrapper=document.createElement('div');
   wrapper.className='map-zoom';
   wrapper.style.transform='scale('+z+')';
@@ -1792,7 +1850,7 @@ function mapClearDraw(){
     mc.addEventListener('scroll', ()=>{
       const m=curMap(); if(!m||mapLocked) return; m.scrollX=mc.scrollLeft; m.scrollY=mc.scrollTop; saveMap();
     });
-    mc.addEventListener('wheel', e=>{ e.preventDefault(); if(!mapLocked) mapZoom(e.deltaY<0?0.1:-0.1); }, { passive:false });
+    // зум колесом отключён — колесо прокручивает карту
     // панорама: тащим пустое место карты мышью
     mc.addEventListener('mousedown', e=>{
       if(mapLocked||mapPenOn) return;
@@ -2615,9 +2673,9 @@ if(monEffType) monEffType.addEventListener('change', renderMonEff);
     if(migrated){ persistBlocks(); saveMap(); }
     render(); renderMap();
   });
-  let savedTab='chars';
-  try{ savedTab=localStorage.getItem(KEYS.tab)||'chars'; }catch(e){}
-  if(!['chars','monsters','sessions','map','battle'].includes(savedTab)) savedTab='chars';
+  let savedTab='home';
+  try{ savedTab=localStorage.getItem(KEYS.tab)||'home'; }catch(e){}
+  if(!['home','chars','monsters','sessions','map','battle'].includes(savedTab)) savedTab='home';
   bindBattle();
   showTab(savedTab);   // remember последняя вкладка
 })();
