@@ -235,6 +235,7 @@
           <button id="battleAddChar" title="Добавить персонажа"><span class="gi" data-gi="character"></span> Персонаж</button>
           <span class="acts-sep"></span>
           <button id="battleClear" title="Убрать всех участников">✕ Очистить</button>
+          <button id="battleStatesBtn" title="Эффекты состояний и реакции монстров"><span class="gi" data-gi="effects"></span> Состояния</button>
         </div>
         <div class="battle-body">
           <div id="battleList" class="battle-list"></div>
@@ -352,6 +353,44 @@
       <span class="hint">Типичные эффекты, состояния и тактики для быстрой игры</span>
     </div>
     <div class="modal-results" id="monEffResults"></div>
+  </div>
+</div>
+
+<!-- States modal -->
+<div class="modal" id="statesModal" hidden>
+  <div class="modal-box modal-lg">
+    <div class="modal-head">
+      <strong>Состояния: потрёпан / окровавлен / выбыл</strong>
+      <button class="modal-close" id="statesClose">✕</button>
+    </div>
+    <div class="states-wrap">
+      <h3>Базовые эффекты</h3>
+      <table class="states-table">
+        <thead><tr><th>Состояние</th><th>Условие</th><th>Эффекты</th></tr></thead>
+        <tbody>
+          <tr><td><span class="bt-wound">потрёпан</span></td><td>ХП ≤ 50% от максимума</td><td>Ранение: −1 к КД и к проверкам характеристик.</td></tr>
+          <tr><td><span class="bt-wound crit">окровавлен</span></td><td>ХП ≤ 10% от максимума</td><td>Кровотечение: в начале своего хода теряет 1 ХП; помеха на спасброски Телосложения.</td></tr>
+          <tr><td><span class="bt-wound crit">☠ выбыл</span></td><td>ХП = 0</td><td>Выведен из боя: не действует, пока не стабилизирован или не вылечен.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Реакции и усиления монстров</h3>
+      <p class="hint">Официальные свойства «Bloodied» из Monster Manual 2024 срабатывают при ХП ≤ 50%. Для «окровавлен» (≤ 10%) — домашние варианты.</p>
+      <table class="states-table">
+        <thead><tr><th>Монстр / пример</th><th>Состояние</th><th>Усиление / реакция</th></tr></thead>
+        <tbody>
+          <tr><td>Кабан, гигантский кабан, кваггот</td><td>потрёпан</td><td><b>Bloodied Fury:</b> преимущество на броски атаки.</td></tr>
+          <tr><td>Берсерк, командир берсерков</td><td>потрёпан</td><td><b>Bloodied Frenzy:</b> преимущество на атаки и спасброски.</td></tr>
+          <tr><td>Глиняный / мясной голем</td><td>потрёпан</td><td><b>Berserk:</b> в начале хода бросает 1d6; на 6 — атакует ближайшее существо.</td></tr>
+          <tr><td>Чёрный пудинг, охра-желе</td><td>потрёпан</td><td><b>Split:</b> при 10+ ХП делится на два новых существа.</td></tr>
+          <tr><td>Гноллы, гигантская гиена</td><td>потрёпан</td><td><b>Rampage:</b> после урона по уже раненому — движение на полскорости и атака.</td></tr>
+          <tr><td>Рои (крысы, летучие мыши, змеи и др.)</td><td>потрёпан</td><td>Наносит половинный урон (сокращается численность).</td></tr>
+          <tr><td>Любой монстр (домашнее)</td><td>окровавлен</td><td><b>Последний рывок:</b> +1d6 урона и +10 фт скорости, но −2 КД.</td></tr>
+          <tr><td>Любой монстр (домашнее)</td><td>окровавлен</td><td><b>Отчаяние:</b> в начале хода спасбросок Мудрости DC 10, иначе пытается отступить.</td></tr>
+        </tbody>
+      </table>
+      <p class="hint">Домашнее правило: эффекты и реакции не применяются автоматически — учитывайте их вручную.</p>
+    </div>
   </div>
 </div>
 

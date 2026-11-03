@@ -786,3 +786,21 @@ select{background:var(--panel2); color:var(--text); border:1px solid var(--line)
     .home-updates{overflow:visible}
     .home-updates ul{overflow:visible}
   }
+
+  /* Справочник эффектов состояний в бою */
+  .battle-states-help{border-bottom:1px solid var(--line); background:var(--panel); padding:2px 12px}
+  .battle-states-help summary{cursor:pointer; color:var(--accent2); font-weight:600; padding:6px 0; font-size:13px; list-style:none}
+  .battle-states-help summary::-webkit-details-marker{display:none}
+  .battle-states-help summary::before{content:'▸'; margin-right:6px; color:var(--muted)}
+  .battle-states-help[open] summary::before{content:'▾'}
+  .battle-states-help table{width:100%; border-collapse:collapse; margin:4px 0 8px}
+  .battle-states-help th,.battle-states-help td{border:1px solid var(--line); padding:5px 8px; text-align:left; vertical-align:top; font-size:13px}
+  .battle-states-help th{background:var(--panel2); color:var(--muted); text-transform:uppercase; font-size:11px}
+  .battle-states-help .hint{display:block; margin:0 0 8px; font-size:12px}
+
+  /* Модалка состояний */
+  .states-wrap{padding:12px; overflow:auto; min-height:0}
+  .states-wrap h3{margin:8px 0 6px; font-size:15px; color:var(--heading)}
+  .states-table{width:100%; border-collapse:collapse; margin-bottom:10px}
+  .states-table th,.states-table td{border:1px solid var(--line); padding:5px 8px; text-align:left; vertical-align:top; font-size:13px}
+  .states-table th{background:var(--panel2); color:var(--muted); text-transform:uppercase; font-size:11px}

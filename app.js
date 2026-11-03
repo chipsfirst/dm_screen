@@ -1284,6 +1284,17 @@ function closeModal(m){
   modalOpener = null;
 }
 
+/* ═══ Модалка состояний боя ═══ */
+(function(){
+  const modal=document.getElementById('statesModal');
+  if(!modal) return;
+  const btn=document.getElementById('battleStatesBtn');
+  const close=document.getElementById('statesClose');
+  if(btn) btn.addEventListener('click', ()=> openModal(modal, btn));
+  if(close) close.addEventListener('click', ()=> closeModal(modal));
+  modal.addEventListener('click', e=>{ if(e.target===modal) closeModal(modal); });
+})();
+
 /* ═══ Bestiary (ленивая загрузка тяжёлого bestiary-data.js) ═══ */
 let bestiaryLoadingPromise = null;
 function ensureBestiary(){
