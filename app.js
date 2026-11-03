@@ -1677,7 +1677,7 @@ document.getElementById('btnReset').addEventListener('click', ()=>{
 });
 
 /* ═══ Shop ═══ */
-const SHOP = window.SHOP || [];
+const SHOP = (window.SHOP || []).concat(window.SHOP_CATALOG || []);
 const shopModal = document.getElementById('shopModal');
 const shopSearch = document.getElementById('shopSearch');
 const shopCat = document.getElementById('shopCat');
@@ -1693,19 +1693,24 @@ function renderShop(){
   const cat = shopCat.value;
   let list = SHOP.filter(i=>{
     if(cat!=='all' && i.c!==cat) return false;
-    if(q && !normalizeLib(i.n+' '+i.c).includes(q)) return false;
+    if(q && !normalizeLib(i.n+' '+i.c+' '+(i.g||'')+' '+(i.d||'')).includes(q)) return false;
     return true;
   });
   if(!list.length){ shopResults.innerHTML='<div class="lib-empty">Ничего не найдено.</div>'; return; }
-  const limit=100;
-  shopResults.innerHTML = list.slice(0,limit).map(i=>`
+  const limit=120;
+  shopResults.innerHTML = list.slice(0,limit).map(i=>{
+    const meta = [i.c, i.g, i.d, i.w ? i.w+' фнт' : ''].filter(Boolean).join(' · ');
+    const alt = i.vc||i.ve ? `<span class="shop-alt" title="дешёвая / дорогая цена">${escapeHtml(i.vc||'—')} / ${escapeHtml(i.ve||'—')}</span>` : '';
+    const rare = i.l ? '<span class="shop-rare" title="ограниченный запас">редко</span>' : '';
+    return `
     <div class="lib-row"><span class="lib-kind k-item">${escapeHtml(i.c.split(' ')[0])}</span>
       <div class="lib-main">
-        <div class="lib-title">${escapeHtml(i.n)}</div>
-        <div class="lib-meta">${escapeHtml(i.c)}${i.w?` · ${escapeHtml(i.w)}`:''}</div>
+        <div class="lib-title">${escapeHtml(i.n)}${rare}</div>
+        <div class="lib-meta">${escapeHtml(meta)}</div>
       </div>
-      <span class="shop-price" style="color:var(--accent2); font-weight:700; align-self:center">${escapeHtml(i.v)}</span>
-    </div>`).join('');
+      <span class="shop-price"><b>${escapeHtml(i.v)}</b>${alt}</span>
+    </div>`;
+  }).join('');
   if(list.length>limit) shopResults.innerHTML+=`<div class="lib-empty">…ещё ${list.length-limit} — уточните запрос.</div>`;
 }
 document.getElementById('btnShop').addEventListener('click', ()=>{
