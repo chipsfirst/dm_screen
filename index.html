@@ -16,7 +16,6 @@
 <div class="app">
   <!-- Main -->
   <main class="main">
-    <button id="topHandle" class="top-handle" hidden title="Развернуть верхнюю панель" aria-label="Развернуть верхнюю панель">▾</button>
     <div class="topbar">
       <img class="site-logo" src="logo.svg" alt="Ролёвки от Вовки">
       <div class="dicebar">
@@ -53,7 +52,6 @@
           <span class="acts-group">
             <button id="btnTheme" title="Переключить светлую/тёмную тему" aria-label="Переключить тему">☀️</button>
             <button id="btnFullscreen" title="Полноэкранный режим (F11)" aria-label="Полноэкранный режим">⛶</button>
-            <button id="topCollapse" title="Свернуть верхнюю панель" aria-label="Свернуть/развернуть верхнюю панель">╲╱</button>
           </span>
           <span class="acts-sep"></span>
           <span class="menu-wrap">
@@ -63,6 +61,7 @@
               <button id="addPc" title="Лист персонажа">+ Персонаж</button>
               <button id="btnBestiary" title="Бестиарий: монстры D&D 5e (поиск)">👹 Бестиарий</button>
               <button id="btnUndo" title="Отменить последнее действие (Ctrl+Z)">↩ Отменить</button>
+              <button id="btnImportJson" title="Импорт персонажа или монстра из JSON">📥 Импорт JSON</button>
               <span class="menu-caption">Справочники</span>
               <button id="btnLibrary" title="Поиск по библиотеке">🔍 База</button>
               <button id="btnShop" title="Магазин: снаряжение и цены">🛒 Магазин</button>
@@ -134,6 +133,7 @@
         <button id="addPcTop" class="only-chars">＋ Добавить персонажа</button>
         <button id="addMobTop" class="only-monsters">＋ Добавить монстра</button>
         <button id="createMobTop" class="only-monsters">✨ Создать монстра</button>
+        <button id="btnImportJsonTop" title="Импорт персонажа или монстра из JSON">📥 Из JSON</button>
       </div>
       <div class="canvas" id="canvas"></div>
     </div>
@@ -308,6 +308,52 @@
       <span class="hint">Типичные эффекты, состояния и тактики для быстрой игры</span>
     </div>
     <div class="modal-results" id="monEffResults"></div>
+  </div>
+</div>
+
+<!-- JSON import modal -->
+<div class="modal" id="jsonModal" hidden>
+  <div class="modal-box">
+    <div class="modal-head">
+      <strong>Импорт персонажа / монстра из JSON</strong>
+      <button class="modal-close" id="jsonClose">✕</button>
+    </div>
+    <div class="json-import">
+      <div class="json-row">
+        <label class="hint" for="jsonFile">Файл .json:</label>
+        <input type="file" id="jsonFile" accept=".json,application/json">
+      </div>
+      <textarea id="jsonText" spellcheck="false" placeholder="…или вставьте JSON сюда"></textarea>
+      <div class="json-actions">
+        <button id="jsonDoImport">Импортировать</button>
+        <button id="jsonFillExample">Вставить пример</button>
+        <span class="hint" id="jsonStatus"></span>
+      </div>
+      <details class="json-help">
+        <summary>Поддерживаемые форматы</summary>
+        <p class="hint">Можно импортировать один объект, массив или обёртки <code>{blocks:[…]}</code>, <code>{characters:[…]}</code>, <code>{monsters:[…]}</code>. Формат определяется по полям.</p>
+        <pre>{
+  "type": "character",
+  "name": "Арин",
+  "class": "Плут", "race": "Полурослик", "level": 3,
+  "hp": 24, "ac": 15, "initiative": "+3",
+  "abilities": { "str": 10, "dex": 16, "con": 12, "int": 13, "wis": 11, "cha": 14 },
+  "attack": "+5",
+  "resources": [{ "name": "Вдохновение", "cur": 1, "max": 1 }],
+  "notes": "Любит тени и золото."
+}</pre>
+        <pre>{
+  "type": "monster",
+  "name": "Гоблин",
+  "cr": "1/4", "ac": 15, "hp": "7 (2d6)", "speed": "30 фт",
+  "abilities": { "str": 8, "dex": 14, "con": 10, "int": 10, "wis": 8, "cha": 8 },
+  "skills": "Скрытность +6", "senses": "Тёмное зрение 60 фт",
+  "languages": "Общий, Гоблинский", "initiative": "+2",
+  "actions": [ { "tag": "Действия", "name": "Скимитар", "text": "+4 к попаданию, 1d6+2 рубящего урона." } ]
+}</pre>
+        <p class="hint">Также принимается нативный блок ширмы: <code>{"type":"pc"|"mob","title","stats":[6 чисел],"props":{…},"res":[…],"text","mdata":{…}}</code>.</p>
+      </details>
+    </div>
   </div>
 </div>
 
