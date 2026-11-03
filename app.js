@@ -3,6 +3,19 @@
 const TYPES = { pc:'pc', rule:'rule', note:'note' };
 const TYPE_LABEL = { pc:'ПК', mob:'Монстр', rule:'Правила', note:'Заметка', img:'Файл' };
 
+/* Иконки: game-icons.net (Lorc, Delapouite), CC BY 3.0 */
+function gi(name, cls){
+  const p = (window.GI_PATHS && window.GI_PATHS[name]) || '';
+  return `<svg class="gi${cls?' '+cls:''}" viewBox="0 0 512 512" aria-hidden="true" focusable="false">${p}</svg>`;
+}
+function hydrateIcons(root){
+  (root||document).querySelectorAll('[data-gi]').forEach(el=>{
+    if(el.dataset.giDone) return;
+    el.innerHTML = gi(el.dataset.gi);
+    el.dataset.giDone = '1';
+  });
+}
+
 let blocks = [];
 let activeParentId = null;   // какой блок сейчас "раскрыт" как коллекция (null = корень)
 let collapsed = new Set();   // id блоков, свёрнутых на дашборде
@@ -363,7 +376,7 @@ function render(){
     + (searchFilter?' · результаты поиска':(activeParentId===null?'':(' / '+(findBlock(activeParentId)?.title||'корень'))));
 
   if(!list.length){
-    canvas.innerHTML = `<div class="canvas-watermark">${searchFilter?'Ничего не найдено.':(blocksTab==='monsters'?'Здесь будут монстры. Добавьте их через «👹 Бестиарий» → «＋ Добавить на ширму».':'Добавьте первого персонажа — «＋ ПК» в правом меню.')}</div>`;
+    canvas.innerHTML = `<div class="canvas-watermark">${searchFilter?'Ничего не найдено.':(blocksTab==='monsters'?'Здесь будут монстры. Добавьте их через «Бестиарий» → «＋ Добавить на ширму».':'Добавьте первого персонажа — «＋ ПК» в правом меню.')}</div>`;
   } else {
     const safeCard = b => { try { return blockCard(b); } catch(e){
       return `<div class="block" data-id="${b.id}"><div class="block-head"><div class="ttl-note"><span>${escapeHtml(b.title||'Блок')}</span></div></div><div class="block-body"><div class="hint">Ошибка отображения блока: ${escapeHtml(String((e&&e.message)||e))}</div></div></div>`;
@@ -401,6 +414,7 @@ function blockCard(b){
       <div class="ttl-note">
         <span class="block-title" data-title="${b.id}" contenteditable="true" spellcheck="false" title="Кликните, чтобы переименовать">${escapeHtml(b.title||'(без названия)')}</span>
         <span class="type-tag ${b.type}">${ttype}</span>
+        ${b.type==='pc' ? blockHpBarHtml(b) : ''}
       </div>
     </div>
     ${ open ? bodyHtml(b) : `<div class="block-foot"><button class="del" data-action="delete" data-id="${b.id}">Удалить</button></div>` }
@@ -427,7 +441,7 @@ function bodyHtml(b){
       <div class="block-foot">
         <button data-action="collapse">Свернуть</button>
         <button data-action="expand">Развернуть</button>
-        ${(b.type==='pc'||b.type==='mob')?`<button data-action="battle" data-battle-id="${b.id}" title="Добавить в вкладку «Бой»">⚔ В бой</button>`:''}
+        ${(b.type==='pc'||b.type==='mob')?`<button data-action="battle" data-battle-id="${b.id}" title="Добавить в вкладку «Бой»">${gi('battle')} В бой</button>`:''}
         <span class="size-info">Ширина: <input class="resize-input" type="number" min="200" max="1600" step="20" value="${b.w||820}" data-width="${b.id}" title="Ширина блока, px"></span>
         <span class="hint" style="margin-left:auto">редактируйте заголовок и текст прямо здесь</span>
         <button class="del" data-action="delete">Удалить блок</button>
@@ -445,7 +459,7 @@ function bodyHtml(b){
         ? `<div class="attack-row">
             <span class="lbl">Атака:</span>
             <input class="attack-input" type="text" data-attack="${b.id}" value="${escapeHtml(b.attack!==undefined?b.attack:'+0')}" placeholder="+бонус" title="Бонус атаки, напр. +5">
-            <button data-rollatt="${b.id}" title="Бросок атаки: d20 + бонус">⚔️ Бросить атаку</button>
+            <button data-rollatt="${b.id}" title="Бросок атаки: d20 + бонус">${gi('sword')} Бросить атаку</button>
             <span class="hint" data-attresult="${b.id}"></span>
           </div>`
         : ''}
@@ -457,7 +471,7 @@ function bodyHtml(b){
         <button data-action="collapse">Свернуть</button>
         <button data-action="expand">Развернуть</button>
         ${b.type==='pc'?`<button data-action="rollAll" data-roll-id="${b.id}" title="Бросить d20 по всем характеристикам">Бросок всех</button>`:''}
-        ${(b.type==='pc'||b.type==='mob')?`<button data-action="battle" data-battle-id="${b.id}" title="Добавить в вкладку «Бой»">⚔ В бой</button>`:''}
+        ${(b.type==='pc'||b.type==='mob')?`<button data-action="battle" data-battle-id="${b.id}" title="Добавить в вкладку «Бой»">${gi('battle')} В бой</button>`:''}
         <span class="size-info">Ширина: <input class="resize-input" type="number" min="200" max="1600" step="20" value="${b.w||820}" data-width="${b.id}" title="Ширина блока, px"></span>
         <span class="hint" style="margin-left:auto">редактируйте заголовок и текст прямо здесь</span>
         <button class="del" data-action="delete">Удалить блок</button>
@@ -483,7 +497,7 @@ function bodyHtml(b){
       <button data-action="collapse">Свернуть</button>
       <button data-action="expand">Развернуть</button>
       ${b.type==='pc'?`<button data-action="rollAll" data-roll-id="${b.id}" title="Бросить d20 по всем характеристикам">Бросок всех</button>`:''}
-      ${(b.type==='pc'||b.type==='mob')?`<button data-action="battle" data-battle-id="${b.id}" title="Добавить в вкладку «Бой»">⚔ В бой</button>`:''}
+      ${(b.type==='pc'||b.type==='mob')?`<button data-action="battle" data-battle-id="${b.id}" title="Добавить в вкладку «Бой»">${gi('battle')} В бой</button>`:''}
       <span class="size-info">Ширина: <input class="resize-input" type="number" min="200" max="1600" step="20" value="${b.w||820}" data-width="${b.id}" title="Ширина блока, px"></span>
       <span class="hint" style="margin-left:auto">редактируйте заголовок и текст прямо здесь</span>
       <button class="del" data-action="delete">Удалить блок</button>
@@ -513,6 +527,27 @@ function hpMaxOf(b){ return Math.max(0, parseInt(b.props && b.props['ХП'] || b
 function hpCurOf(b){
   const max=hpMaxOf(b);
   return Math.max(0, Math.min(max, max - Math.max(0, Math.round(+b.dmg)||0)));
+}
+function blockHpInfo(b){
+  const max = hpMaxOf(b);
+  if(!max) return null;
+  const cur = hpCurOf(b);
+  const r = cur/max;
+  let state = '';
+  if(cur<=0) state='dead';
+  else if(r<=0.1) state='critical';
+  else if(r<=0.5) state='wounded';
+  return { max, cur, state };
+}
+function blockHpBarHtml(b){
+  const info = blockHpInfo(b);
+  if(!info) return '';
+  const pct = Math.max(0, Math.min(100, Math.round(info.cur/info.max*100)));
+  const crit = (info.state==='critical' || info.state==='dead');
+  const cls = crit ? ' crit' : (info.state==='wounded' ? ' warn' : '');
+  const label = info.state==='dead' ? '☠ выбыл' : info.state==='critical' ? 'окровавлен' : info.state==='wounded' ? 'потрёпан' : '';
+  return `<span class="bt-hpbar${cls}" title="ХП ${info.cur}/${info.max}"><i style="width:${pct}%"></i></span>` +
+         (label ? `<span class="bt-wound${crit?' crit':''}">${label}</span>` : '');
 }
 function hpRowHtml(b){
   const hpMax=hpMaxOf(b), cur=hpCurOf(b);
@@ -553,6 +588,7 @@ function hpApply(bid, op){
     }
   }
   save();
+  renderBlockOnly(b.id);
 }
 function hpInputDamage(inEl){
   const b=findBlock(inEl.dataset.hpIn); if(!b) return;
@@ -619,11 +655,8 @@ function actsGroupsHtml(d){
 }
 function docIcon(name){
   const n=(name||'').toLowerCase();
-  if(n.endsWith('.pdf')) return '📕';
-  if(n.endsWith('.txt')||n.endsWith('.md')) return '📄';
-  if(n.endsWith('.docx')||n.endsWith('.doc')) return '📘';
-  if(n.endsWith('.json')) return '🧾';
-  return '📎';
+  if(n.endsWith('.pdf')||n.endsWith('.docx')||n.endsWith('.doc')) return gi('book');
+  return gi('note');
 }
 
 /* ════════════ Helpers ════════════ */
@@ -895,7 +928,7 @@ function applyTheme(t){
   if(t==='light'){ document.documentElement.setAttribute('data-theme','light'); }
   else { document.documentElement.removeAttribute('data-theme'); }
   const b=document.getElementById('btnTheme');
-  if(b){ b.textContent = t==='light' ? '🌙' : '☀️'; }
+  if(b){ b.innerHTML = gi(t==='light' ? 'moon' : 'sun'); }
 }
 function currentTheme(){
   try{
@@ -982,7 +1015,7 @@ function playSound(name){
   else if(name==='ding'){ beep(980,.14,'sine'); beep(1470,.22,'sine',.05,.12); }
 }
 const soundBtn = document.getElementById('btnSound');
-function soundBtnState(){ if(soundBtn){ soundBtn.textContent = soundOn?'🔔':'🔕'; soundBtn.title = soundOn?'Звуки включены (клик — выключить)':'Звуки выключены (клик — включить)'; } }
+function soundBtnState(){ if(soundBtn){ soundBtn.innerHTML = gi('effects'); soundBtn.title = soundOn?'Звуки включены (клик — выключить)':'Звуки выключены (клик — включить)'; } }
 if(soundBtn) soundBtn.addEventListener('click', ()=>{
   soundOn=!soundOn;
   try{ localStorage.setItem(SOUND_KEY, soundOn?'1':'0'); }catch(e){}
@@ -1093,7 +1126,7 @@ document.getElementById('addPc').addEventListener('click', ()=> addBlock('pc'));
       return b;
     }
     if(isMonster(o)){
-      const b=makeBlock('mob','👹 '+str(o.name||o.n||'Монстр',100));
+      const b=makeBlock('mob',str(o.name||o.n||'Монстр',100));
       const cr=o.cr, ac=o.ac, hp=o.hp, sp=o.speed||o.sp, init=o.initiative||o.init;
       b.props={ 'Опасн.':str(cr,20)||'—', 'КД':str(ac,20)||'—', 'ХП':str(hp,30)||'—', 'Скорость':str(sp,60)||'—', 'Иниц.':str(init,20)||'—' };
       const raw=Array.isArray(o.actions)?o.actions:(Array.isArray(o.acts)?o.acts:[]);
@@ -1384,7 +1417,7 @@ function addMarkerFromMonster(m){
 
 function addMonsterBlock(m){
   prepareCanvasForAdd();
-  const b=makeBlock('mob', '👹 '+m.n);
+  const b=makeBlock('mob', m.n);
   Object.assign(b, freeCascadePos());
   b.props = {
     'Опасн.': shortCr(m.cr), 'КД': m.ac, 'ХП': m.hp,
@@ -1519,7 +1552,7 @@ function renderLib(){
 
 /* ═══ Adding from library to canvas ═══ */
 function addSpellBlock(s){
-  const b=makeBlock('rule', '📜 '+s.n);
+  const b=makeBlock('rule', s.n);
   let txt = `Уровень: ${s.l} (${s.sc})\nВремя: ${s.t}\nДистанция: ${s.r}\nДлительность: ${s.d}`;
   if(s.c) txt += `\n${s.c}`;
   if(s.cls) txt += `\nДоступно: ${s.cls}`;
@@ -1534,7 +1567,7 @@ function addItemBlock(it){
   if(it.v) txt += `\nЦена: ${it.v}`;
   if(it.w) txt += `\nВес: ${it.w}`;
   if(it.p) txt += `\nСвойства: ${it.p}`;
-  addRuleBlock({ title:'🎒 '+it.n, text:txt.trim() });
+  addRuleBlock({ title:it.n, text:txt.trim() });
 }
 function addRuleBlock(r){
   const b=makeBlock('rule', r.title);
@@ -1777,7 +1810,7 @@ function mapZoom(delta){
 }
 function updateMapLockBtn(){
   const btn=document.getElementById('mapLock'); if(!btn) return;
-  btn.textContent = mapLocked ? '🔒 Закреплено' : '🔓 Закрепить';
+  btn.textContent = mapLocked ? 'Закреплено' : 'Закрепить';
   btn.title = mapLocked ? 'Карта закреплена: масштаб и прокрутка заблокированы' : 'Закрепить карту в текущем положении';
 }
 function updateMapPenBtn(){
@@ -2174,9 +2207,9 @@ function renderGo(qRaw){
   const hit = t => normalizeLib(t).includes(q);
   const push = r => { if(rows.length<LIMIT) rows.push(r); };
   blocks.forEach(b=>{ if(hit((b.title||'')+' '+(b.text||'')+' '+Object.values(b.props||{}).join(' '))) push({kind:'block',label:b.title||'Блок',meta:TYPE_LABEL[b.type]||'',b}); });
-  (bestAll||[]).forEach(m=>{ if(hit((m.n||'')+' '+(m.en||'')+' '+(m.type||''))) push({kind:'monster',label:'👹 '+(m.n||''),meta:m.type||'',mon:m}); });
-  ((LIB&&LIB.spells)||[]).forEach(sp=>{ if(hit((sp.n||'')+' '+(sp.sc||'')+' '+(sp.cls||''))) push({kind:'spell',label:'📜 '+sp.n,meta:(sp.l!==undefined?('Ур.'+sp.l+' · '):'')+(sp.sc||''),sp}); });
-  ((LIB&&LIB.items)||[]).forEach(it=>{ if(hit(it.n||'')) push({kind:'item',label:'🎒 '+it.n,meta:it.t||'',it}); });
+  (bestAll||[]).forEach(m=>{ if(hit((m.n||'')+' '+(m.en||'')+' '+(m.type||''))) push({kind:'monster',label:(m.n||''),meta:m.type||'',mon:m}); });
+  ((LIB&&LIB.spells)||[]).forEach(sp=>{ if(hit((sp.n||'')+' '+(sp.sc||'')+' '+(sp.cls||''))) push({kind:'spell',label:sp.n,meta:(sp.l!==undefined?('Ур.'+sp.l+' · '):'')+(sp.sc||''),sp}); });
+  ((LIB&&LIB.items)||[]).forEach(it=>{ if(hit(it.n||'')) push({kind:'item',label:it.n,meta:it.t||'',it}); });
   RULES_FOR_LIB.forEach(r=>{ if(hit((r.title||'')+' '+(r.text||''))) push({kind:'rule',label:r.title,meta:'Правила',rule:r}); });
   if(!rows.length){ goResults.innerHTML='<div class="lib-empty">Ничего не найдено.</div>'; return; }
   const badge={block:'Блок',monster:'Монстр',spell:'Закл.',item:'Предм.',rule:'Прав.'};
@@ -2575,8 +2608,9 @@ function loadBattle(){
   const data = safeParseRaw(localStorage.getItem(STORE_BATTLE), 'shirma_battle');
   if(Array.isArray(data) && data.length){
     battleParts = data.map(p=>({ id:String(p.id||uniq()), name:String(p.name||'Участник').slice(0,60),
-      side: p.side==='char'?'char':'opp', ac: numField(p.ac), hp: numField(p.hp), init: numField(p.init),
+      side: p.side==='char'?'char':'opp', ac: numField(p.ac), hp: numField(p.hp), hpMax: numField(p.hpMax), init: numField(p.init),
       atk: p.atk===undefined ? '' : numField(p.atk),
+      statuses: Array.isArray(p.statuses) ? p.statuses.slice(0,20).map(x=>String(x)) : [],
       acts: Array.isArray(p.acts) ? p.acts.slice(0,40).map(a=>({tag:String(a.tag||''),text:String(a.text||'')})) : [],
       applied: Array.isArray(p.applied) ? p.applied.slice(0,40).map(x=>String(x)) : [],
       collapsed: !!p.collapsed }));
@@ -2609,8 +2643,10 @@ function renderBattle(){
   list.innerHTML = sorted.map(p=>`
     <div class="battle-card ${p.side==='opp'?'opp':''}${p.collapsed?' collapsed':''}" data-bid="${p.id}">
       <span class="bt-chev" title="Свернуть/развернуть">▾</span>
-      <div class="bt-side">${p.side==='opp'?'⬤':'👤'}</div>
+      <div class="bt-side">${gi(p.side==='opp'?'monsters':'character')}</div>
       <input class="bt-name" data-field="name" data-bid="${p.id}" value="${escapeHtml(p.name)}" spellcheck="false" aria-label="Имя">
+      ${hpBarTag(p)}
+      ${woundTag(p)}
       ${(p.acts && p.acts.length) ? `<div class="bt-acts">
         <select class="bt-acts-select" data-act-select="${p.id}" aria-label="Действия монстра">
           <option value="">действие…</option>
@@ -2618,7 +2654,7 @@ function renderBattle(){
         </select>
       </div>` : ''}
       <span class="bt-grp bt-stat bt-acgrp">
-        <span class="bt-ico" title="КД" aria-hidden="true">🛡️</span>
+        <span class="bt-ico" title="КД" aria-hidden="true">${gi('shield')}</span>
         <input class="bt-in bt-ac" data-field="ac" data-bid="${p.id}" type="number" value="${p.ac}" aria-label="КД">
         <span class="bt-step">
           <button class="bt-stepbtn" data-ac-op="inc" data-bid="${p.id}" title="+1 КД" aria-label="+1 КД">+</button>
@@ -2626,7 +2662,7 @@ function renderBattle(){
         </span>
       </span>
       <span class="bt-grp bt-stat bt-hpgrp">
-        <span class="bt-ico" title="ХП" aria-hidden="true">❤️</span>
+        <span class="bt-ico" title="ХП" aria-hidden="true">${gi('heart')}</span>
         <input class="bt-in bt-hp" data-field="hp" data-bid="${p.id}" type="number" value="${p.hp}" aria-label="ХП">
         <span class="bt-step">
           <button class="bt-stepbtn" data-hp-op="inc" data-bid="${p.id}" title="+1 ХП" aria-label="+1 ХП">+</button>
@@ -2634,7 +2670,7 @@ function renderBattle(){
         </span>
       </span>
       <span class="bt-grp bt-stat bt-dmggrp">
-        <span class="bt-ico" title="Урон" aria-hidden="true">⚔️</span>
+        <span class="bt-ico" title="Урон" aria-hidden="true">${gi('sword')}</span>
         <input class="bt-in bt-dmg" data-dmg data-bid="${p.id}" type="number" placeholder="⏎" title="Введите урон и нажмите Enter" aria-label="Урон">
         <span class="bt-step">
           <button class="bt-stepbtn" data-dmg-op="inc" data-bid="${p.id}" title="Нанести 1 урон" aria-label="Нанести 1 урон">+</button>
@@ -2642,7 +2678,14 @@ function renderBattle(){
         </span>
       </span>
       <span class="bt-grp bt-initgrp"><span class="bt-lbl">Иниц</span><input class="bt-in bt-init" data-field="init" data-bid="${p.id}" type="number" value="${p.init}" aria-label="Инициатива"></span>
-      <button class="bt-del" data-del="${p.id}" title="Убрать из боя" aria-label="Убрать">🗑</button>
+      <button class="bt-del" data-del="${p.id}" title="Убрать из боя" aria-label="Убрать">${gi('trash')}</button>
+      <div class="bt-statuses">
+        ${(p.statuses||[]).map((s,i)=>`<span class="bt-status">${escapeHtml(s)}<button class="bt-status-del" data-status-del="${p.id}" data-si="${i}" title="Убрать статус">✕</button></span>`).join('')}
+        <select class="bt-status-add" data-status-add="${p.id}" aria-label="Добавить статус">
+          <option value="">+ статус…</option>
+          ${BATTLE_STATUSES.map(s=>`<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('')}
+        </select>
+      </div>
       ${(p.applied && p.applied.length) ? `<div class="bt-applied">${p.applied.map((t,i)=>`
         <span class="bt-chip">${escapeHtml(t)}<button class="bt-chip-del" data-achip="${p.id}" data-ai="${i}" title="Убрать">✕</button></span>`).join('')}</div>` : ''}
     </div>`).join('');
@@ -2653,14 +2696,78 @@ function applyBattleDamage(inp){
   const dmg = Math.max(0, Math.round(+inp.value)||0);
   inp.value='';
   if(dmg<=0){ if(p.hp==='') return; }
+  ensureHpMax(p);
+  const woundBefore = woundState(p);
   const cur = p.hp==='' ? 0 : (p.hp||0);
   p.hp = Math.max(0, cur - dmg);
   saveBattle();
   const hpInput = document.querySelector(`.battle-list [data-bid="${p.id}"][data-field="hp"]`);
   if(hpInput) hpInput.value = p.hp;
+  refreshBattleState(p);
+  logWoundChange(p, woundBefore);
   if(dmg>0) toast(`«${p.name}» получил ${dmg} урона → ХП ${p.hp}`);
   if(dmg>0) battleLogPush(`«${p.name}» получил ${dmg} урона → ХП ${p.hp}`);
 }
+const BATTLE_STATUSES = ['Концентрация','Ослеплён','Оглох','Очарован','Испуган','Отравлен','Парализован','Окаменел','Схвачен','Опутан','Сбит с ног','Ошеломлён','Без сознания','Невидимый','Недееспособен','Истощён','Ускорен','Замедлен'];
+function ensureHpMax(p){
+  if(p && (p.hpMax==='' || p.hpMax==null || +p.hpMax<=0) && p.hp!=='' && p.hp!=null){
+    p.hpMax = +p.hp || 0;
+  }
+}
+function woundState(p){
+  const max = (p.hpMax!=='' && p.hpMax!=null && +p.hpMax>0) ? +p.hpMax : 0;
+  const cur = (p.hp==='' || p.hp==null) ? null : +p.hp;
+  if(!max || cur===null) return '';
+  if(cur<=0) return 'dead';
+  const r = cur/max;
+  if(r<=0.1) return 'critical';
+  if(r<=0.5) return 'wounded';
+  return '';
+}
+function woundLabel(s){ return s==='dead' ? '☠ выбыл' : s==='critical' ? 'окровавлен' : s==='wounded' ? 'потрёпан' : ''; }
+function woundTag(p){
+  const st = woundState(p);
+  if(!st) return '';
+  const label = woundLabel(st);
+  return st==='wounded' ? `<span class="bt-wound">${label}</span>` : `<span class="bt-wound crit">${label}</span>`;
+}
+function logWoundChange(p, before){
+  const after = woundState(p);
+  if(after===before) return;
+  if(after) battleLogPush(`«${p.name}» — ${woundLabel(after)} (ХП ${p.hp}/${p.hpMax})`);
+  else if(before) battleLogPush(`«${p.name}» — состояние в норме (ХП ${p.hp}/${p.hpMax})`);
+}
+function hpPct(p){
+  const max = (p.hpMax!=='' && p.hpMax!=null && +p.hpMax>0) ? +p.hpMax : 0;
+  const cur = (p.hp==='' || p.hp==null) ? 0 : +p.hp;
+  if(!max) return null;
+  return Math.max(0, Math.min(100, Math.round(cur/max*100)));
+}
+function hpBarTag(p){
+  const pct = hpPct(p);
+  if(pct===null) return '';
+  const st = woundState(p);
+  const cls = (st==='critical' || st==='dead') ? ' crit' : (st==='wounded' ? ' warn' : '');
+  return `<span class="bt-hpbar${cls}" title="ХП ${p.hp}/${p.hpMax}"><i style="width:${pct}%"></i></span>`;
+}
+function refreshBattleState(p){
+  if(!p) return;
+  const card = document.querySelector(`.battle-card[data-bid="${p.id}"]`);
+  if(!card) return;
+  const nameInput = card.querySelector('.bt-name');
+  if(!nameInput) return;
+  const wHtml = woundTag(p);
+  const wOld = card.querySelector('.bt-wound');
+  if(!wHtml){ if(wOld) wOld.remove(); }
+  else if(wOld){ wOld.outerHTML = wHtml; }
+  else { nameInput.insertAdjacentHTML('afterend', wHtml); }
+  const bHtml = hpBarTag(p);
+  const bOld = card.querySelector('.bt-hpbar');
+  if(!bHtml){ if(bOld) bOld.remove(); }
+  else if(bOld){ bOld.outerHTML = bHtml; }
+  else { nameInput.insertAdjacentHTML('afterend', bHtml); }
+}
+
 function addBlockToBattle(b){
   if(!b) return;
   const side = b.type==='mob' ? 'opp' : 'char';
@@ -2677,8 +2784,9 @@ function addBlockToBattle(b){
     ? (md.init!==undefined ? md.init : '')
     : (p['Инициат'] ?? p['Иниц'] ?? '');
   const acts = side==='opp' ? ((md.acts||[]).map(a=>({tag:String(a.tag||''),text:String(a.text||'')}))) : [];
+  const hpNum = numField(hp);
   battleParts.push({ id:uniq(), name:String(name).slice(0,60), side,
-    ac: numField(ac), hp: numField(hp), init: numField(init), atk: '', acts, applied: [] });
+    ac: numField(ac), hp: hpNum, hpMax: hpNum, init: numField(init), atk: '', acts, applied: [], statuses: [] });
   saveBattle(); renderBattle();
   toast('«'+name+'» добавлен(а) в бой');
   showTab('battle');
@@ -2686,7 +2794,7 @@ function addBlockToBattle(b){
 function battleAdd(side){
   const name = prompt((side==='opp'?'Имя противника':'Имя персонажа')+':', side==='opp'?'Противник':'Персонаж');
   if(name===null || !name.trim()) return;
-  battleParts.push({ id:uniq(), name:name.trim().slice(0,60), side, ac:'', hp:'', init:'', atk:'', acts:[], applied:[] });
+  battleParts.push({ id:uniq(), name:name.trim().slice(0,60), side, ac:'', hp:'', hpMax:'', init:'', atk:'', acts:[], applied:[], statuses:[] });
   saveBattle(); renderBattle();
   battleLogPush(`«${name.trim().slice(0,60)}» добавлен в бой`);
 }
@@ -2712,6 +2820,7 @@ function bindBattle(){
       const f = inp.dataset.field;
       if(f==='name'){ p.name = inp.value.slice(0,60); }
       else { p[f] = numField(inp.value); }
+      if(f==='hp'){ ensureHpMax(p); refreshBattleState(p); }
       saveBattle();
       if(f==='init'){
         const order = battleSorted().map(x=>x.id);
@@ -2735,6 +2844,17 @@ function bindBattle(){
         if(p && Array.isArray(p.applied)){ p.applied.splice(+chip.dataset.ai,1); saveBattle(); renderBattle(); }
         return;
       }
+      const stDel = e.target.closest('[data-status-del]');
+      if(stDel){
+        const p = battleParts.find(x=>x.id===stDel.dataset.statusDel);
+        if(p && Array.isArray(p.statuses)){
+          const removed = p.statuses[+stDel.dataset.si];
+          p.statuses.splice(+stDel.dataset.si,1);
+          saveBattle(); renderBattle();
+          if(removed) battleLogPush(`«${p.name}» — снят статус: ${removed}`);
+        }
+        return;
+      }
       const acBtn = e.target.closest('[data-ac-op]');
       if(acBtn){
         const p = battleParts.find(x=>x.id===acBtn.dataset.bid);
@@ -2750,11 +2870,15 @@ function bindBattle(){
       if(dmgBtn){
         const p = battleParts.find(x=>x.id===dmgBtn.dataset.bid);
         if(!p) return;
+        ensureHpMax(p);
+        const woundBefore = woundState(p);
         const cur = p.hp==='' ? 0 : (+p.hp||0);
         p.hp = dmgBtn.dataset.dmgOp==='inc' ? Math.max(0, cur-1) : cur+1;
         saveBattle();
         const hpInp = list.querySelector(`[data-bid="${p.id}"][data-field="hp"]`);
         if(hpInp) hpInp.value = p.hp;
+        refreshBattleState(p);
+        logWoundChange(p, woundBefore);
         const dmgInp = list.querySelector(`[data-bid="${p.id}"][data-dmg]`);
         if(dmgInp) dmgInp.value = '';
         battleLogPush(dmgBtn.dataset.dmgOp==='inc'
@@ -2766,11 +2890,15 @@ function bindBattle(){
       if(hpBtn){
         const p = battleParts.find(x=>x.id===hpBtn.dataset.bid);
         if(!p) return;
+        ensureHpMax(p);
+        const woundBefore = woundState(p);
         const cur = p.hp==='' ? 0 : (p.hp||0);
         const nv = hpBtn.dataset.hpOp==='dec' ? Math.max(0, cur-1) : cur+1;
         p.hp = nv; saveBattle();
         const hpInput = list.querySelector(`[data-bid="${p.id}"][data-field="hp"]`);
         if(hpInput) hpInput.value = nv;
+        refreshBattleState(p);
+        logWoundChange(p, woundBefore);
         battleLogPush(`«${p.name}»: ХП ${nv}`);
         return;
       }
@@ -2797,6 +2925,18 @@ function bindBattle(){
     list.addEventListener('change', e=>{
       const dmg = e.target.closest('[data-dmg]');
       if(dmg){ applyBattleDamage(dmg); return; }
+      const stAdd = e.target.closest('[data-status-add]');
+      if(stAdd){
+        const v = stAdd.value; stAdd.value='';
+        if(!v) return;
+        const p = battleParts.find(x=>x.id===stAdd.dataset.statusAdd);
+        if(!p) return;
+        if(!Array.isArray(p.statuses)) p.statuses=[];
+        if(!p.statuses.includes(v)) p.statuses.push(v);
+        saveBattle(); renderBattle();
+        battleLogPush(`«${p.name}» — статус: ${v}`);
+        return;
+      }
       const actSel = e.target.closest('[data-act-select]');
       if(actSel){
         const idx = +actSel.value;
@@ -2990,4 +3130,5 @@ if(monEffType) monEffType.addEventListener('change', renderMonEff);
   if(!['home','chars','monsters','sessions','map','battle'].includes(savedTab)) savedTab='home';
   bindBattle();
   showTab(savedTab);   // remember последняя вкладка
+  hydrateIcons();
 })();

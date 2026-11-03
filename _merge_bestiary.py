@@ -262,8 +262,22 @@ def type_5e(m):
         base += ' (' + ', '.join(w for w in tag_words if w) + ')'
     al = m.get('alignment')
     if isinstance(al, list) and al:
-        words = [ALIGN_MAP.get(c, c) for c in al]
-        base += ', ' + ' '.join(words)
+        flat = []
+        for c in al:
+            if isinstance(c, dict):
+                v = c.get('alignment')
+                if isinstance(v, list): flat.extend(v)
+                elif v is not None: flat.append(v)
+                else:
+                    for k, v2 in c.items():
+                        if k == 'chance': continue
+                        if isinstance(v2, list): flat.extend(v2)
+                        elif v2 is not None: flat.append(v2)
+            elif isinstance(c, str):
+                flat.append(c)
+        words = [ALIGN_MAP.get(str(x), str(x)) for x in flat if str(x).strip()]
+        if words:
+            base += ', ' + ' '.join(words)
     return base.strip()[:80]
 
 
