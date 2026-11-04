@@ -1255,16 +1255,65 @@ const renderSearchDebounced = debounce(render, 180);
 const searchEl=document.getElementById('search');
 if(searchEl) searchEl.addEventListener('input', e=>{ searchFilter=e.target.value.trim(); renderSearchDebounced(); });
 
+/* ═══ Данные из книг (DMG: таблицы предметов, AU: заклинания/предметы/существа) ═══ */
+const BOOKS = window.BOOKS || { spells:[], items:[], creatures:[], rules:[], tables:{} };
+const BOOKS_SPELLS = (BOOKS.spells||[]).map(s=>({
+  n: s.n, l: s.l, sc: s.sc || '—', t:'—', r:'—', d:'—',
+  c: s.comp ? ('Компоненты: '+s.comp) : '',
+  cls: (s.cls||[]).join(', '), desc:'', src:'AU'
+}));
+const BOOKS_CREATURES = (BOOKS.creatures||[]).map((c,i)=>({
+  n: c.n, en: c.en, type:'Персонаж (AU)', cr:'—', ac:'—', hp:'—', sp:'—', init:'—',
+  ab:'', sk:'', sen:'', lang:'', acts:[], src:'AU'
+}));
+function booksLibMerged(){
+  if(!LIB) return;
+  if(LIB.__booksMerged) return;
+  LIB.__booksMerged = true;
+  LIB.spells = (LIB.spells||[]).concat(BOOKS_SPELLS);
+}
+/* предметы книг — в магазин */
+(function mergeBooksShop(){
+  if(!Array.isArray(window.SHOP)) return;
+  const existing = new Set(window.SHOP.map(i=>i.n));
+  (BOOKS.items||[]).forEach(it=>{
+    if(existing.has(it.n)) return;
+    existing.add(it.n);
+    const meta = it.src==='AU'
+      ? ('AU · ' + (it.rarity||'') + (it.attune?' · настройка':''))
+      : ('DMG · таблица ' + (it.t||''));
+    window.SHOP.push({ n: it.n, c: it.src==='AU' ? 'Магические предметы (AU)' : 'Магические предметы (DMG)',
+      v:'—', w: meta.trim(), src: it.src });
+  });
+})();
+/* правила книг — в «Правила» */
+(function mergeBooksRules(){
+  (BOOKS.rules||[]).forEach(r=>{
+    RULES_FOR_LIB.push({ title: r.n + ' · ' + (r.sec||''), text: r.text + '\n\nИсточник: ' + (r.src||'DMG') });
+  });
+})();
+/* таблицы книг — в «Случайные таблицы» */
+(function mergeBooksTables(){
+  Object.entries(BOOKS.tables||{}).forEach(([name, t])=>{
+    if(!t || !t.rows) return;
+    const cols = t.cols || [];
+    RANDOM_TABLES[name] = t.rows.map(r=>{
+      const vals = (r.vals||[]).map((v,i)=> v==='—' ? '' : (cols[i] ? v+' '+cols[i] : v)).filter(Boolean).join(', ');
+      return r.roll + ' — ' + (vals || 'ничего');
+    });
+  });
+})();
+
 /* ═══ Local library search (ленивая загрузка library-data.js) ═══ */
 let LIB = null;
 let libLoadingPromise = null;
 function ensureLibrary(){
-  if(window.LIBRARY){ LIB=window.LIBRARY; return Promise.resolve(); }
+  if(window.LIBRARY){ LIB=window.LIBRARY; booksLibMerged(); return Promise.resolve(); }
   if(libLoadingPromise) return libLoadingPromise;
   libLoadingPromise = new Promise((resolve, reject)=>{
     const s=document.createElement('script');
     s.src='library-data.js';
-    s.onload=()=>{ LIB=window.LIBRARY || { spells:[], items:[] }; resolve(); };
+    s.onload=()=>{ LIB=window.LIBRARY || { spells:[], items:[] }; booksLibMerged(); resolve(); };
     s.onerror=()=>{ libLoadingPromise=null; reject(new Error('не удалось загрузить library-data.js')); };
     document.head.appendChild(s);
   });
@@ -1509,7 +1558,7 @@ function addMonsterBlock(m){
 bestResultClose.addEventListener('click', ()=>{ bestState.list=true; bestState.monster=null; renderBestiary(); });
 document.getElementById('btnBestiary').addEventListener('click', ()=>{
   ensureBestiary().then(()=>{
-    bestAll = (window.BESTIARY || []).slice();
+    bestAll = (window.BESTIARY || []).slice().concat(BOOKS_CREATURES);
     bestState = { list:true, monster:null };
     bestSearch.value='';
     bestShowCount = 60;
@@ -2672,8 +2721,8 @@ function openMapPicker(){
   openModal(mapPickModal, document.getElementById('mapAddToken'));
   if(mapPickSearch) mapPickSearch.value='';
   if(bestAll && bestAll.length){ renderMapPicker(); }
-  else if(window.BESTIARY && window.BESTIARY.length){ bestAll = window.BESTIARY.slice(); renderMapPicker(); }
-  else { renderMapPicker(); ensureBestiary().then(()=>{ bestAll = (window.BESTIARY||[]).slice(); renderMapPicker(); }).catch(()=>{}); }
+  else if(window.BESTIARY && window.BESTIARY.length){ bestAll = window.BESTIARY.slice().concat(BOOKS_CREATURES); renderMapPicker(); }
+  else { renderMapPicker(); ensureBestiary().then(()=>{ bestAll = (window.BESTIARY||[]).slice().concat(BOOKS_CREATURES); renderMapPicker(); }).catch(()=>{}); }
 }
 if(mapPickModal){
   document.getElementById('mapAddToken')?.addEventListener('click', openMapPicker);
