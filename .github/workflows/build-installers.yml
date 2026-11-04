@@ -1,7 +1,12 @@
-name: Сборка установщиков
+name: Сборка и релиз
 
 on:
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Создать релиз с этим тегом (например, v1.0.0). Пусто — только артефакты"
+        required: false
+        default: ""
   push:
     tags: ["v*"]
 
@@ -37,6 +42,20 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
+      - name: Версия из тега
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          export V="${GITHUB_REF_NAME#v}"
+          node -e "
+            const fs=require('fs');
+            const p='src-tauri/tauri.conf.json';
+            const d=JSON.parse(fs.readFileSync(p,'utf8'));
+            d.version=process.env.V;
+            fs.writeFileSync(p, JSON.stringify(d,null,2)+'\n');
+          "
+          echo "Версия приложения: $V"
+
       - name: Собрать веб-файлы в dist
         shell: bash
         run: bash packaging/pack_web.sh dist
@@ -58,3 +77,29 @@ jobs:
           if-no-files-found: error
           path: |
             src-tauri/target/${{ matrix.target }}/release/bundle/**
+
+  release:
+    name: Публикация релиза
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v') || github.event.inputs.release_tag != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Показать найденные файлы
+        run: find artifacts -type f | sort
+
+      - name: Создать релиз
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.release_tag || github.ref_name }}
+          name: Ширма мастера ${{ github.event.inputs.release_tag || github.ref_name }}
+          generate_release_notes: true
+          fail_on_unmatched_files: false
+          files: |
+            artifacts/**/*.dmg
+            artifacts/**/*.msi
+            artifacts/**/*.exe
