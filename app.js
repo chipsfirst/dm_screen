@@ -575,6 +575,7 @@ function hpApply(bid, op){
   else if(op==='healFull'){ cur=hpMax; }
   cur=Math.max(0, Math.min(hpMax, cur));
   b.dmg = hpMax - cur;
+  if(syncBlockToTokens(b) && currentTab==='map') renderMap();
   const el=document.querySelector('[data-hp-val="'+b.id+'"]');
   if(el){
     el.textContent = cur;
@@ -1421,17 +1422,35 @@ function renderBestMonster(m){
     });
   });
 }
+/* ХП/КД блока для токена */
+function blockCombatStats(b){
+  const p=b.props||{}, md=b.mdata||{};
+  const ac = b.type==='mob'
+    ? (md.ac!==undefined && md.ac!=='' ? String(md.ac) : '')
+    : String(p['Броня КК'] ?? p['КД'] ?? p['AC'] ?? '');
+  const hpMax = b.type==='mob'
+    ? (parseInt(String(md.hp||'').replace(/[^0-9]/g,''),10) || hpMaxOf(b))
+    : hpMaxOf(b);
+  const hp = b.type==='mob' ? hpMax : hpCurOf(b);
+  return { ac, hp: hp||null, hpMax: hpMax||null };
+}
+
 /* Персонаж или монстр с ширмы → маркер на карте */
 function addBlockToMap(b){
   if(!b) return;
   const mp=curMap();
   if(mp){
     const n=(mp.markers||[]).length;
+    const pt = snapPoint(mp, mp.baseW/2 + (n%5)*26, mp.baseH/2 + (n%5)*26);
+    const stat = blockCombatStats(b);
     mp.markers.push({
       id:'k'+Math.random().toString(36).slice(2,7),
-      x: Math.min(mp.baseW-18, Math.max(18, mp.baseW/2 + (n%5)*26)),
-      y: Math.min(mp.baseH-18, Math.max(18, mp.baseH/2 + (n%5)*26)),
+      x: Math.min(mp.baseW-18, Math.max(18, pt.x)),
+      y: Math.min(mp.baseH-18, Math.max(18, pt.y)),
       label: String(b.title||'Участник').slice(0,40),
+      kind: b.type==='mob' ? 'mob' : 'pc',
+      blockId: b.id,
+      hp: stat.hp, hpMax: stat.hpMax, ac: stat.ac,
       color: b.type==='mob' ? '#c0564f' : '#7fb3e6'
     });
     saveMap();
@@ -1445,9 +1464,14 @@ function addMarkerFromMonster(m){
   if(!m || m.id==null) return;
   const mp=curMap();
   if(mp){
+    const n=(mp.markers||[]).length;
+    const pt = snapPoint(mp, mp.baseW/2 + (n%4)*24, mp.baseH/2 + (n%4)*24);
+    const hpMax = parseInt(String(m.hp||'').replace(/[^0-9]/g,''),10) || null;
     mp.markers.push({ id:'k'+Math.random().toString(36).slice(2,7),
-      x: mp.baseW/2 + (mp.markers.length%4)*24, y: mp.baseH/2 + (mp.markers.length%4)*24,
-      label: m.n||'Монстр', color:'#c0564f' });
+      x: pt.x, y: pt.y,
+      label: m.n||'Монстр', kind:'mob', bestId: m.id,
+      hp: hpMax, hpMax: hpMax, ac: String(m.ac||''),
+      color:'#c0564f' });
     saveMap();
   }
   if(currentTab!=='map') showTab('map'); else renderMap();
@@ -1806,6 +1830,8 @@ let mapGridStep = 18;   // шаг сетки, px
 let mapPlaceOn = false; // режим расстановки маркеров кликом
 let selectedMarkerId = null;
 let mapRulerOn = false;
+let mapFogMode = 'off';       // 'off' | 'hide' | 'reveal'
+let mapZoneType = 'none';     // 'none' | 'circle' | 'cone' | 'line' | 'cube'
 let rulerPt = null;     // {x,y} точка начала измерения (в координатах карты)
 
 function curMap(){ return maps.find(m=>m.id===activeMapId) || null; }
@@ -1837,12 +1863,32 @@ function normMap(m){
     baseW:Math.max(100, +m.baseW||800), baseH:Math.max(100, +m.baseH||600),
     zoom: (+m.zoom>0? +m.zoom : 1),
     scrollX:+m.scrollX||0, scrollY:+m.scrollY||0,
+    shape: m.shape==='square'? 'square' : 'hex',
+    snap: !!m.snap,
+    cellPx: Math.max(12, Math.min(160, +m.cellPx || 34.641)),
+    feetPerCell: Math.max(1, Math.min(60, +m.feetPerCell || 5)),
+    fogOn: !!m.fogOn,
+    fog: Array.isArray(m.fog)? m.fog.map(s=>({ mode: s.mode==='hide'?'hide':'reveal',
+      width: Math.max(8, +s.width||60), pts: Array.isArray(s.pts)? s.pts.map(p=>[+p[0],+p[1]]) : [] })) : [],
+    zones: Array.isArray(m.zones)? m.zones.map(z=>({ id:String(z.id||('z'+Math.random().toString(36).slice(2,7))),
+      type: ['circle','cone','line','cube'].includes(z.type)? z.type : 'circle',
+      x:+z.x||0, y:+z.y||0, r:Math.max(8, +z.r||60), rot:+z.rot||0,
+      color: z.color||'#c0564f' })) : [],
     markers: Array.isArray(m.markers)? m.markers.map(normMarker) : [],
     draw: Array.isArray(m.draw)? m.draw.map(normStroke) : []
   };
 }
-function normMarker(t){ return { id:String(t.id||('k'+Math.random().toString(36).slice(2,7))),
-  x:+t.x||0, y:+t.y||0, label:String(t.label||'Маркер').slice(0,40), color:t.color||'#7fb3e6' }; }
+function normMarker(t){
+  const num = v => (v===undefined||v===null||v==='')? null : Math.max(0, Math.round(+v));
+  return { id:String(t.id||('k'+Math.random().toString(36).slice(2,7))),
+    x:+t.x||0, y:+t.y||0, label:String(t.label||'Маркер').slice(0,40), color:t.color||'#7fb3e6',
+    kind: (t.kind==='pc'||t.kind==='mob')? t.kind : 'marker',
+    size: (+t.size===2? 2 : 1),
+    rot: (+t.rot===45? 45 : 0),
+    hp: num(t.hp), hpMax: num(t.hpMax),
+    ac: (t.ac===undefined||t.ac===null||t.ac==='')? '' : String(t.ac).slice(0,6),
+    blockId: t.blockId||null, bestId: t.bestId||null };
+}
 function normStroke(s){ return { color:s.color||'#c9a227', width:+s.width||2,
   pts: Array.isArray(s.pts)? s.pts.map(p=>[+p[0],+p[1]]) : [] }; }
 
@@ -1896,9 +1942,10 @@ function renderMap(){
   stage.className='map-stage';
   stage.style.width=W+'px'; stage.style.height=H+'px';
   const wrapper=document.createElement('div');
-  wrapper.className='map-zoom';
+  wrapper.className='map-zoom'+(m.shape==='square'?' shape-square':'');
   wrapper.style.width=W+'px'; wrapper.style.height=H+'px';
   wrapper.style.position='relative';
+  wrapper.style.setProperty('--cell', Math.round(mapCellPx(m))+'px');
   stage.appendChild(wrapper);
   mc.appendChild(stage);
   if(mapGridOn){
@@ -1931,17 +1978,43 @@ function renderMap(){
     wrapper.appendChild(img);
   } else { mc.classList.remove('has-bg'); }
 
-  // маркеры
+  // маркеры и токены
   (m.markers||[]).forEach(k=>{
-    const el=document.createElement('div');
     const sel = k.id===selectedMarkerId;
-    el.className='map-marker'+(sel?' selected':'');
-    el.style.left=percent(k.x,m.baseW)+'%'; el.style.top=percent(k.y,m.baseH)+'%';
-    el.style.background=k.color||'#7fb3e6';
-    el.dataset.id=k.id;
-    el.title=k.label;
-    const lbl2=document.createElement('div'); lbl2.className='map-marker-label'; lbl2.textContent=k.label;
-    el.appendChild(lbl2);
+    const isToken = k.kind==='pc' || k.kind==='mob';
+    const el=document.createElement('div');
+    if(isToken){
+      const cell = mapCellPx(m);
+      const d = Math.round(cell * (k.size===2 ? 1.8 : 0.92));
+      el.className='map-token'+(sel?' selected':'')+(k.kind==='mob'?' npc':'');
+      el.style.width=d+'px'; el.style.height=d+'px';
+      el.style.left=percent(k.x,m.baseW)+'%'; el.style.top=percent(k.y,m.baseH)+'%';
+      el.style.background=k.color||'#7fb3e6';
+      el.style.fontSize=Math.round(d*0.34)+'px';
+      el.dataset.id=k.id; el.title=k.label;
+      if(k.size===2){
+        const ft=document.createElement('i'); ft.className='tok-foot';
+        ft.style.transform='rotate('+(k.rot||0)+'deg)';
+        el.appendChild(ft);
+      }
+      const init=document.createElement('span'); init.className='tok-init'; init.textContent=tokenInitials(k.label);
+      el.appendChild(init);
+      if(k.hpMax){
+        const bar=document.createElement('div'); bar.className='tok-hp';
+        const fill=document.createElement('i');
+        fill.style.width=Math.max(0,Math.min(100, Math.round((Number(k.hp||0)/Math.max(1,Number(k.hpMax)))*100)))+'%';
+        bar.appendChild(fill); el.appendChild(bar);
+      }
+      const lbl=document.createElement('div'); lbl.className='tok-name'; lbl.textContent=k.label;
+      el.appendChild(lbl);
+    } else {
+      el.className='map-marker'+(sel?' selected':'');
+      el.style.left=percent(k.x,m.baseW)+'%'; el.style.top=percent(k.y,m.baseH)+'%';
+      el.style.background=k.color||'#7fb3e6';
+      el.dataset.id=k.id; el.title=k.label;
+      const lbl2=document.createElement('div'); lbl2.className='map-marker-label'; lbl2.textContent=k.label;
+      el.appendChild(lbl2);
+    }
     wrapper.appendChild(el);
     // клик — выбрать маркер (не перетаскивание)
     el.addEventListener('click', e=>{
@@ -1955,12 +2028,26 @@ function renderMap(){
       if(mapPenOn) return;
       const sx=e.clientX, sy=e.clientY, ox=k.x, oy=k.y;
       pointerDrag(e, ev=>{
-        k.x=Math.max(0,Math.min(m.baseW, ox + (ev.clientX-sx)/z));
-        k.y=Math.max(0,Math.min(m.baseH, oy + (ev.clientY-sy)/z));
+        let nx=Math.max(0,Math.min(m.baseW, ox + (ev.clientX-sx)/z));
+        let ny=Math.max(0,Math.min(m.baseH, oy + (ev.clientY-sy)/z));
+        const sp=snapPoint(m, nx, ny);
+        k.x=sp.x; k.y=sp.y;
         el.style.left=percent(k.x,m.baseW)+'%'; el.style.top=percent(k.y,m.baseH)+'%';
       }, ()=>{ saveMap(); renderMap(); });
     });
   });
+  // шаблоны зон (AoE)
+  drawZones(wrapper, m);
+
+  // слой тумана войны (выше токенов)
+  const fog=document.createElement('canvas');
+  fog.className='map-fog'+(mapFogMode!=='off'?' painting':'');
+  wrapper.appendChild(fog);
+  const fctx=fog.getContext('2d');
+  fitFog(fog,m,z);
+  drawFog(fctx,fog,m,z);
+  bindFog(fog,wrapper,m,z);
+
   // слой рисования
   const cv=document.createElement('canvas');
   cv.className='map-draw';
@@ -1971,13 +2058,363 @@ function renderMap(){
   bindDraw(cv,wrapper,m,z);
   updateMapLockBtn();
   updateMapPenBtn();
+  updateTokenPanel();
+  syncMapControls();
   // прокрутка после рендера — в пределах краёв карты
   requestAnimationFrame(()=>{
     mc.scrollLeft=m.scrollX||0; mc.scrollTop=m.scrollY||0;
     clampMapScroll(mc); m.scrollX=mc.scrollLeft; m.scrollY=mc.scrollTop;
   });
 }
+/* ── Шаблоны зон (AoE) ── */
+const ZONE_FEET = { circle: 20, cone: 15, line: 30, cube: 15 };
+function zoneRadiusPx(m, type){
+  const feet = ZONE_FEET[type] || 15;
+  return Math.max(10, (feet / Math.max(1, m.feetPerCell||5)) * mapCellPx(m));
+}
+function placeZoneAt(m, x, y){
+  const type = mapZoneType;
+  if(type==='none') return;
+  m.zones = m.zones || [];
+  m.zones.push({ id:'z'+Math.random().toString(36).slice(2,7), type, x, y,
+    r: zoneRadiusPx(m, type), rot: 0, color: type==='circle'?'#c0564f':(type==='cone'?'#e68a4a':(type==='line'?'#7fb3e6':'#86c48f')) });
+  saveMap(); renderMap();
+  toast('Зона добавлена — тащите, чтобы переместить, двойной клик удаляет');
+}
+function zoneShapeEl(ns, z){
+  const fill = (z.color||'#c0564f')+'55';
+  const stroke = z.color||'#c0564f';
+  const sw = 2;
+  if(z.type==='circle'){
+    const c=document.createElementNS(ns,'circle');
+    c.setAttribute('cx',z.x); c.setAttribute('cy',z.y); c.setAttribute('r',z.r);
+    c.setAttribute('fill',fill); c.setAttribute('stroke',stroke); c.setAttribute('stroke-width',sw);
+    return c;
+  }
+  if(z.type==='cube'){
+    const d=z.r, x=z.x-d/2, y=z.y-d/2;
+    const r=document.createElementNS(ns,'rect');
+    r.setAttribute('x',x); r.setAttribute('y',y); r.setAttribute('width',d); r.setAttribute('height',d);
+    r.setAttribute('fill',fill); r.setAttribute('stroke',stroke); r.setAttribute('stroke-width',sw);
+    return r;
+  }
+  if(z.type==='line'){
+    const rad=(z.rot||0)*Math.PI/180, L=z.r*2, W=z.r*0.12;
+    const dx=Math.cos(rad), dy=Math.sin(rad);
+    const px=-dy*W/2, py=dx*W/2;
+    const p=document.createElementNS(ns,'polygon');
+    p.setAttribute('points', [
+      [z.x+px, z.y+py],[z.x+dx*L+px, z.y+dy*L+py],
+      [z.x+dx*L-px, z.y+dy*L-py],[z.x-px, z.y-py]
+    ].map(a=>a[0].toFixed(1)+','+a[1].toFixed(1)).join(' '));
+    p.setAttribute('fill',fill); p.setAttribute('stroke',stroke); p.setAttribute('stroke-width',sw);
+    return p;
+  }
+  // конус: сектор 53° от точки
+  const rad=(z.rot||0)*Math.PI/180, half=Math.PI*53/180/2;
+  const a1=rad-half, a2=rad+half;
+  const x1=z.x+Math.cos(a1)*z.r, y1=z.y+Math.sin(a1)*z.r;
+  const x2=z.x+Math.cos(a2)*z.r, y2=z.y+Math.sin(a2)*z.r;
+  const p=document.createElementNS(ns,'path');
+  p.setAttribute('d', `M ${z.x} ${z.y} L ${x1} ${y1} A ${z.r} ${z.r} 0 0 1 ${x2} ${y2} Z`);
+  p.setAttribute('fill',fill); p.setAttribute('stroke',stroke); p.setAttribute('stroke-width',sw);
+  return p;
+}
+function drawZones(wrapper, m){
+  const list=m.zones||[];
+  if(!list.length) return;
+  const ns='http://www.w3.org/2000/svg';
+  const svg=document.createElementNS(ns,'svg');
+  svg.setAttribute('class','map-zones');
+  svg.setAttribute('viewBox', '0 0 '+m.baseW+' '+m.baseH);
+  svg.setAttribute('preserveAspectRatio','none');
+  const z0 = mapFitScale(document.getElementById('mapCanvas'), m);
+  list.forEach(z=>{
+    const el=zoneShapeEl(ns, z);
+    el.classList.add('zone');
+    el.dataset.zid=z.id;
+    el.addEventListener('mousedown', e=>{
+      e.preventDefault(); e.stopPropagation();
+      const sx=e.clientX, sy=e.clientY, ox=z.x, oy=z.y;
+      pointerDrag(e, ev=>{
+        z.x=ox+(ev.clientX-sx)/z0; z.y=oy+(ev.clientY-sy)/z0;
+        el.setAttribute('transform', `translate(${z.x-ox},${z.y-oy})`);
+      }, ()=>{ saveMap(); renderMap(); });
+    });
+    el.addEventListener('dblclick', e=>{
+      e.preventDefault(); e.stopPropagation();
+      m.zones=m.zones.filter(x=>x.id!==z.id); saveMap(); renderMap();
+    });
+    svg.appendChild(el);
+  });
+  wrapper.appendChild(svg);
+}
+
+/* ── Туман войны ── */
+function fitFog(fog, m, z){
+  const dpr=window.devicePixelRatio||1;
+  fog.style.width='100%'; fog.style.height='100%';
+  fog.width=Math.round(m.baseW*(z||1)*dpr);
+  fog.height=Math.round(m.baseH*(z||1)*dpr);
+}
+function drawFog(ctx, fog, m, z){
+  if(!ctx) return;
+  const dpr=window.devicePixelRatio||1;
+  ctx.clearRect(0,0,fog.width,fog.height);
+  if(!m.fogOn || !(m.fog||[]).length) return;
+  ctx.save();
+  ctx.scale(dpr*(z||1), dpr*(z||1));
+  ctx.lineCap='round'; ctx.lineJoin='round';
+  (m.fog||[]).forEach(s=>{
+    if(!s.pts || !s.pts.length) return;
+    const reveal = s.mode==='reveal';
+    ctx.globalCompositeOperation = reveal ? 'destination-out' : 'source-over';
+    ctx.strokeStyle = reveal ? 'rgba(0,0,0,1)' : 'rgba(10,12,16,0.94)';
+    ctx.fillStyle = ctx.strokeStyle;
+    ctx.lineWidth = Math.max(6, +s.width||60);
+    ctx.beginPath();
+    if(s.pts.length===1){
+      ctx.arc(s.pts[0][0], s.pts[0][1], ctx.lineWidth/2, 0, Math.PI*2);
+      ctx.fill();
+    } else {
+      s.pts.forEach((p,i)=> i? ctx.lineTo(p[0],p[1]) : ctx.moveTo(p[0],p[1]));
+      ctx.stroke();
+    }
+  });
+  ctx.restore();
+}
+function bindFog(fog, wrapper, m, z){
+  const dpr=window.devicePixelRatio||1;
+  let painting=false, cur=null;
+  const toBase = e => {
+    const r=fog.getBoundingClientRect();
+    return [ (e.clientX-r.left)/(z||1), (e.clientY-r.top)/(z||1) ];
+  };
+  fog.addEventListener('pointerdown', e=>{
+    if(mapFogMode==='off' || mapLocked) return;
+    e.preventDefault(); e.stopPropagation();
+    fog.setPointerCapture && fog.setPointerCapture(e.pointerId);
+    painting=true;
+    cur={ mode: mapFogMode==='reveal'?'reveal':'hide',
+          width: Math.round(Math.max(24, mapCellPx(m)*2.6)),
+          pts:[toBase(e)] };
+  });
+  fog.addEventListener('pointermove', e=>{
+    if(!painting||!cur) return;
+    e.preventDefault();
+    cur.pts.push(toBase(e));
+    // рисуем сразу, чтобы было видно мазок
+    const ctx=fog.getContext('2d');
+    ctx.save(); ctx.scale(dpr*(z||1), dpr*(z||1));
+    const reveal = cur.mode==='reveal';
+    ctx.globalCompositeOperation = reveal ? 'destination-out' : 'source-over';
+    ctx.strokeStyle = reveal ? 'rgba(0,0,0,1)' : 'rgba(10,12,16,0.94)';
+    ctx.lineWidth = cur.width; ctx.lineCap='round'; ctx.lineJoin='round';
+    const p0=cur.pts[cur.pts.length-2]||cur.pts[0], p1=cur.pts[cur.pts.length-1];
+    ctx.beginPath(); ctx.moveTo(p0[0],p0[1]); ctx.lineTo(p1[0],p1[1]); ctx.stroke();
+    ctx.restore();
+  });
+  const end=()=>{
+    if(!painting) return;
+    painting=false;
+    if(cur && cur.pts.length){ m.fog.push(cur); m.fogOn=true; saveMap(); }
+    cur=null;
+    renderMap();
+  };
+  fog.addEventListener('pointerup', end);
+  fog.addEventListener('pointercancel', end);
+  fog.addEventListener('pointerleave', end);
+}
+
+/* Переключатели карты: форма клетки, привязка, размер клетки */
+function syncMapControls(){
+  const m=curMap(); if(!m) return;
+  const sh=document.getElementById('mapShape'); if(sh) sh.value = m.shape==='square'?'square':'hex';
+  const sn=document.getElementById('mapSnap'); if(sn) sn.checked = !!m.snap;
+  const cp=document.getElementById('mapCellPx'); if(cp) cp.value = Math.round(mapCellPx(m));
+  const fm=document.getElementById('mapFogMode'); if(fm) fm.value = mapFogMode;
+  const ft=document.getElementById('mapFeet'); if(ft) ft.value = String(Math.round(m.feetPerCell||5));
+  const zt=document.getElementById('mapZoneType'); if(zt) zt.value = mapZoneType;
+}
+(function bindMapControls(){
+  document.getElementById('mapShape')?.addEventListener('change', e=>{
+    const m=curMap(); if(!m) return;
+    m.shape = e.target.value==='square'? 'square' : 'hex';
+    saveMap(); renderMap();
+  });
+  document.getElementById('mapSnap')?.addEventListener('change', e=>{
+    const m=curMap(); if(!m) return;
+    m.snap = !!e.target.checked; saveMap();
+    toast(m.snap ? 'Привязка к клеткам включена' : 'Привязка к клеткам выключена');
+  });
+  document.getElementById('mapZoneType')?.addEventListener('change', e=>{
+    mapZoneType = e.target.value;
+    if(mapZoneType!=='none') toast('Кликните по карте, чтобы поставить зону');
+  });
+  document.getElementById('mapZoneClear')?.addEventListener('click', ()=>{
+    const m=curMap(); if(!m) return;
+    m.zones=[]; saveMap(); renderMap(); toast('Зоны убраны');
+  });
+  document.getElementById('mapFeet')?.addEventListener('change', e=>{
+    const m=curMap(); if(!m) return;
+    m.feetPerCell = Math.max(1, Math.min(60, +e.target.value || 5));
+    saveMap();
+  });
+  document.getElementById('mapFogMode')?.addEventListener('change', e=>{
+    mapFogMode = e.target.value;
+    const m=curMap(); if(m){ m.fogOn = mapFogMode!=='off'; saveMap(); }
+    renderMap();
+    if(mapFogMode!=='off') toast(mapFogMode==='hide'?'Туман: закрашиваем области':'Туман: открываем области');
+  });
+  document.getElementById('mapCellPx')?.addEventListener('change', e=>{
+    const m=curMap(); if(!m) return;
+    m.cellPx = Math.max(12, Math.min(160, +e.target.value || 34.641));
+    saveMap(); renderMap();
+  });
+})();
+
+/* ХП/КД: держим токен и карточку персонажа/монстра синхронными */
+function tokenToBlock(k){
+  if(!k || !k.blockId) return null;
+  const b=findBlock(k.blockId);
+  return b || null;
+}
+function syncTokenToBlock(k){
+  const b=tokenToBlock(k);
+  if(!b) return;
+  const max=Math.max(0, Math.round(+k.hpMax||0));
+  if(max){ b.props = b.props || {}; b.props['ХП'] = String(max); }
+  if(k.hp!==null && k.hp!==undefined && max){
+    b.dmg = Math.max(0, max - Math.max(0, Math.round(+k.hp||0)));
+  }
+  save();
+  if(currentTab==='battle' && typeof renderBattle==='function'){ try{ renderBattle(); }catch(e){} }
+}
+function syncBlockToTokens(b){
+  if(!b) return 0;
+  const max=hpMaxOf(b);
+  if(!max) return 0;
+  const cur=hpCurOf(b);
+  let n=0;
+  (maps||[]).forEach(m=>{
+    (m.markers||[]).forEach(k=>{
+      if(k.blockId===b.id && (k.kind==='pc'||k.kind==='mob')){
+        k.hp=cur; k.hpMax=max; n++;
+      }
+    });
+  });
+  return n;
+}
+
+/* Панель выбранного токена (персонаж/монстр на карте) */
+function curToken(){
+  const m=curMap();
+  return (m && selectedMarkerId) ? (m.markers||[]).find(x=>x.id===selectedMarkerId) : null;
+}
+function updateTokenPanel(){
+  const pnl=document.getElementById('tokenPanel'); if(!pnl) return;
+  const k=curToken();
+  const show = !!(k && (k.kind==='pc'||k.kind==='mob'));
+  pnl.hidden = !show;
+  if(!show) return;
+  const t=document.getElementById('tokenPanelTitle'); if(t) t.textContent = k.kind==='mob'?'Монстр':'Персонаж';
+  const nm=document.getElementById('tokenName'); if(nm) nm.value=k.label||'';
+  const sz=document.getElementById('tokenSize'); if(sz) sz.value=String(k.size||1);
+  const rt=document.getElementById('tokenRot'); if(rt) rt.checked = k.rot===45;
+  const cl=document.getElementById('tokenColor'); if(cl) cl.value = /^#[0-9a-f]{6}$/i.test(k.color||'')? k.color : '#7fb3e6';
+  const hp=document.getElementById('tokenHp'); if(hp) hp.value = (k.hp===null||k.hp===undefined)?'':k.hp;
+  const hm=document.getElementById('tokenHpMax'); if(hm) hm.value = (k.hpMax===null||k.hpMax===undefined)?'':k.hpMax;
+  const ac=document.getElementById('tokenAc'); if(ac) ac.value = k.ac||'';
+}
+(function bindTokenPanel(){
+  const pnl=document.getElementById('tokenPanel'); if(!pnl) return;
+  const upd = ()=>{ saveMap(); renderMap(); };
+  document.getElementById('tokenName')?.addEventListener('change', e=>{
+    const k=curToken(); if(!k) return;
+    k.label=(e.target.value.trim()||'Токен').slice(0,40);
+    const el=document.querySelector('.map-token.selected .tok-name'); if(el) el.textContent=k.label;
+    const ini=document.querySelector('.map-token.selected .tok-init'); if(ini) ini.textContent=tokenInitials(k.label);
+    saveMap();
+  });
+  document.getElementById('tokenSize')?.addEventListener('change', e=>{
+    const k=curToken(); if(!k) return; k.size=(+e.target.value===2?2:1); upd();
+  });
+  document.getElementById('tokenRot')?.addEventListener('change', e=>{
+    const k=curToken(); if(!k) return; k.rot=e.target.checked?45:0; upd();
+  });
+  document.getElementById('tokenColor')?.addEventListener('input', e=>{
+    const k=curToken(); if(!k) return; k.color=e.target.value;
+    const el=document.querySelector('.map-token.selected'); if(el) el.style.background=k.color;
+    saveMap();
+  });
+  document.getElementById('tokenHp')?.addEventListener('change', e=>{
+    const k=curToken(); if(!k) return;
+    k.hp = Math.max(0, Math.round(+e.target.value||0));
+    syncTokenToBlock(k); saveMap(); renderMap();
+  });
+  document.getElementById('tokenHpMax')?.addEventListener('change', e=>{
+    const k=curToken(); if(!k) return;
+    k.hpMax = Math.max(0, Math.round(+e.target.value||0));
+    if(k.hp===null || k.hp>k.hpMax) k.hp = k.hpMax;
+    syncTokenToBlock(k); saveMap(); renderMap();
+  });
+  document.getElementById('tokenAc')?.addEventListener('change', e=>{
+    const k=curToken(); if(!k) return;
+    k.ac = String(Math.max(0, Math.min(40, +e.target.value||0)));
+    syncTokenToBlock(k); saveMap(); renderMap();
+  });
+  document.getElementById('tokenDelete')?.addEventListener('click', ()=>{
+    const m=curMap(); const k=curToken(); if(!m||!k) return;
+    m.markers=m.markers.filter(x=>x.id!==k.id);
+    selectedMarkerId=null; saveMap(); renderMap();
+    toast('Токен удалён');
+  });
+  document.getElementById('tokenClose')?.addEventListener('click', ()=>{
+    selectedMarkerId=null; renderMap();
+  });
+})();
+
 function percent(v,total){ return (total>0? (v/total*100) : 0).toFixed(2); }
+
+/* Размер клетки карты в пикселях (гекс из hex.svg — 34.641 × 60) */
+function mapCellPx(m){
+  if(m && m.cellPx) return Math.max(8, +m.cellPx);
+  return 34.641;
+}
+/* Инициалы для токена: до двух букв из имени */
+function tokenInitials(label){
+  const words = String(label||'').trim().split(/\s+/).filter(Boolean);
+  if(!words.length) return '?';
+  const a = words[0][0]||'';
+  const b = words.length>1 ? (words[1][0]||'') : (words[0][1]||'');
+  return (a+b).toUpperCase();
+}
+/* Привязка точки к центру клетки (включается в настройках карты) */
+function snapPoint(m, x, y){
+  if(!m || !m.snap) return {x:x, y:y};
+  const cell = mapCellPx(m);
+  if(m.shape==='square'){
+    const cx = cell/2 + Math.round((x-cell/2)/cell)*cell;
+    const cy = cell/2 + Math.round((y-cell/2)/cell)*cell;
+    return {x:Math.max(0,Math.min(m.baseW,cx)), y:Math.max(0,Math.min(m.baseH,cy))};
+  }
+  // гекс: ближайший центр по осевым координатам
+  const w = cell, h = cell*Math.sqrt(3);       // плоский гекс
+  const col = Math.round(x / w);
+  const rowOff = (col % 2) ? h/2 : 0;
+  const row = Math.round((y - rowOff) / h);
+  const cands = [];
+  for(let dc=-1; dc<=1; dc++){
+    for(let dr=-1; dr<=1; dr++){
+      const c = col+dc, r = row+dr;
+      const cx = c*w, cy = r*h + ((c%2)? h/2 : 0);
+      cands.push({x:cx, y:cy, d:(cx-x)**2 + (cy-y)**2});
+    }
+  }
+  cands.sort((a,b)=>a.d-b.d);
+  const p = cands[0];
+  return {x:Math.max(0,Math.min(m.baseW,p.x)), y:Math.max(0,Math.min(m.baseH,p.y))};
+}
 /* Масштаб вписывания карты в видимую область (не крупнее 1:1) */
 function mapFitScale(mc, m){
   const pad = 24;                                  // отступы сцены (padding .map-canvas)
@@ -2049,9 +2486,32 @@ function markerColor(){
   const palette=['#c9a227','#7fb3e6','#c0564f','#86c48f','#c9a2e6','#e68a4a'];
   return palette[(m.draw&&m.draw.length) % palette.length];
 }
+/* Быстрое переключение карт: Alt+1…9, а также «[» и «]» */
+document.addEventListener('keydown', e=>{
+  if(currentTab!=='map') return;
+  const tag=(e.target && e.target.tagName || '').toLowerCase();
+  if(tag==='input'||tag==='textarea'||tag==='select'||(e.target && e.target.isContentEditable)) return;
+  if(e.altKey && /^[1-9]$/.test(e.key)){
+    const idx=+e.key-1;
+    if(maps[idx]){ e.preventDefault(); activeMapId=maps[idx].id; saveMap(); renderMap(); }
+    return;
+  }
+  if(!e.altKey && !e.metaKey && !e.ctrlKey && (e.key==='[' || e.key===']')){
+    if(!maps.length) return;
+    const i=Math.max(0, maps.findIndex(m=>m.id===activeMapId));
+    const j=e.key===']' ? (i+1)%maps.length : (i-1+maps.length)%maps.length;
+    e.preventDefault(); activeMapId=maps[j].id; saveMap(); renderMap();
+  }
+});
+
 function renderMapTabs(){
   const box=document.getElementById('mapTabs'); if(!box) return;
+  const thumb = m => {
+    const src=(m.bgKey && mediaCache[m.bgKey]) || m.bg;
+    return src ? `<img class="mt-thumb" src="${escapeHtml(src)}" alt="">` : '<span class="mt-thumb mt-thumb-empty"></span>';
+  };
   box.innerHTML = maps.map(m=>`<span class="map-tab ${m.id===activeMapId?'active':''}" data-mid="${m.id}" title="${escapeHtml(m.name)}">
+    ${thumb(m)}
     <span class="mt-name">${escapeHtml(m.name)}</span>
     <button class="mt-del" data-md="${m.id}" title="Удалить карту" aria-label="Удалить карту">✕</button>
   </span>`).join('') + `<button class="map-tab add" id="mapAddTab" title="Добавить карту">＋</button>`;
@@ -2071,26 +2531,66 @@ function renderMapTabs(){
   }));
   const addTab=document.getElementById('mapAddTab');
   if(addTab) addTab.addEventListener('click', ()=> document.getElementById('mapFileInput').click());
+  const urlBtn=document.getElementById('mapFromUrl');
+  if(urlBtn && !urlBtn.dataset.bound){ urlBtn.dataset.bound='1'; urlBtn.addEventListener('click', mapAddFromUrl); }
+  if(!window.__mapPasteBound){
+    window.__mapPasteBound = true;
+    document.addEventListener('paste', e=>{
+      if(currentTab!=='map') return;
+      mapAddFromClipboard(e);
+    });
+  }
 }
 function mapAddFromFile(file){
   if(!file) return;
   if(!MAP_ALLOWED.includes(file.type) && !/^image\//.test(file.type)){ toast('Нужен файл изображения (PNG/JPG/WebP)'); return; }
   if(file.size > MAP_MAX_BYTES){ toast('Карта слишком большая: до 8 МБ'); return; }
   const reader=new FileReader();
-  reader.onload=()=>{
-    const data=reader.result;
-    const key='mapbg_'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-    mediaCache[key]=data; idbPut(key,data);
-    const m={ id:'m'+Math.random().toString(36).slice(2,8), name:'Карта '+(maps.length+1),
-      bgKey:key, bg:null, baseW:800, baseH:600, zoom:1, scrollX:0, scrollY:0, markers:[], draw:[] };
-    // пробуем узнать размеры картинки
-    const im=new Image(); im.onload=()=>{ m.baseW=im.naturalWidth||800; m.baseH=im.naturalHeight||600; saveMap(); renderMap(); };
-    im.src=data;
-    maps.push(m); activeMapId=m.id;
-    saveMap(); renderMap();
-    toast('Карта «'+m.name+'» добавлена');
-  };
+  reader.onload=()=> createMapFromDataUrl(reader.result, file.name);
   reader.readAsDataURL(file);
+}
+/* Создаёт карту из dataURL (файл, URL или буфер обмена) */
+function createMapFromDataUrl(data, name){
+  if(!data) return;
+  const key='mapbg_'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+  mediaCache[key]=data; idbPut(key,data);
+  const m={ id:'m'+Math.random().toString(36).slice(2,8),
+    name: String(name||'Карта '+(maps.length+1)).replace(/\.[a-z0-9]+$/i,'').slice(0,40) || ('Карта '+(maps.length+1)),
+    bgKey:key, bg:null, baseW:800, baseH:600, zoom:1, scrollX:0, scrollY:0, markers:[], draw:[] };
+  const im=new Image();
+  im.onload=()=>{ m.baseW=im.naturalWidth||800; m.baseH=im.naturalHeight||600; saveMap(); renderMap(); };
+  im.src=data;
+  maps.push(m); activeMapId=m.id;
+  saveMap(); renderMap();
+  toast('Карта «'+m.name+'» добавлена');
+}
+/* Карта по ссылке */
+async function mapAddFromUrl(){
+  const url = prompt('Ссылка на изображение карты (https://…):','');
+  if(!url) return;
+  try{
+    toast('Загружаю карту…');
+    const res = await fetch(url, { mode:'cors' });
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const blob = await res.blob();
+    if(!/^image\//.test(blob.type)) throw new Error('это не изображение');
+    if(blob.size > MAP_MAX_BYTES) throw new Error('файл больше 8 МБ');
+    const fr = new FileReader();
+    fr.onload = ()=> createMapFromDataUrl(fr.result, url.split('/').pop() || 'Карта по ссылке');
+    fr.readAsDataURL(blob);
+  }catch(err){
+    toast('Не удалось загрузить: '+(err && err.message ? err.message : 'ошибка сети'));
+  }
+}
+/* Карта из буфера обмена (Ctrl+V на вкладке «Карта») */
+function mapAddFromClipboard(e){
+  const items = e.clipboardData && e.clipboardData.items; if(!items) return false;
+  for(const it of items){
+    if(it.type && it.type.indexOf('image')===0){
+      const f = it.getAsFile(); if(f){ e.preventDefault(); mapAddFromFile(f); return true; }
+    }
+  }
+  return false;
 }
 /* ═══ Выбор персонажа/монстра для карты ═══ */
 const mapPickModal = document.getElementById('mapPickModal');
@@ -2173,6 +2673,7 @@ function mapRulerToggle(){
   mapRulerOn=!mapRulerOn; rulerPt=null;
   const b=document.getElementById('mapRuler'); if(b) b.classList.toggle('active', !!mapRulerOn);
   const l=document.getElementById('mapRulerLabel'); if(l){ l.hidden=!mapRulerOn; l.textContent=mapRulerOn?'Клик №1…':''; }
+  if(mapRulerOn) toast('Линейка: кликните начало, затем конец');
 }
 function mapDuplicate(){
   const m=curMap(); if(!m) return;
@@ -2261,6 +2762,7 @@ function mapClearDraw(){
     if(MC){
       MC.addEventListener('click', e=>{
         if(e.target.closest('.map-marker')) return; // выбор маркера — в самом маркере
+        if(e.target.closest('.zone')) return;        // зону тащим, новую не ставим
         const m=curMap(); if(!m) return;
         const w=MC.querySelector('.map-zoom'); if(!w) return;
         const r=w.getBoundingClientRect();
@@ -2270,14 +2772,17 @@ function mapClearDraw(){
         if(mapRulerOn){
           if(!rulerPt){ rulerPt={x:x,y:y}; const l=document.getElementById('mapRulerLabel'); if(l) l.textContent='Клик №2 — конец измерения'; }
           else{
-            const dist=Math.round(Math.hypot(x-rulerPt.x, y-rulerPt.y) / (mapGridStep||18) * 10)/10;
+            const px=Math.hypot(x-rulerPt.x, y-rulerPt.y);
+            const cells=Math.round(px / Math.max(1,mapCellPx(m)) * 10)/10;
+            const feet=Math.round(cells * Math.max(1, m.feetPerCell||5));
             const l=document.getElementById('mapRulerLabel'); if(l){ l.hidden=true; l.textContent=''; }
-            toast('Расстояние: '+dist+' клеток');
+            toast('Расстояние: '+feet+' фт ('+cells+' кл.)');
             rulerPt=null; renderMap();
           }
           return;
         }
-        if(mapPlaceOn){ placeMarkerAt(x,y); return; }
+        if(mapZoneType!=='none'){ placeZoneAt(m, x, y); return; }
+        if(mapPlaceOn){ const sp=snapPoint(m,x,y); placeMarkerAt(sp.x,sp.y); return; }
         if(selectedMarkerId){ selectedMarkerId=null; renderMap(); }
       });
     }

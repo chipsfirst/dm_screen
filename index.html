@@ -138,6 +138,7 @@
         <section class="home-card home-updates">
           <h2>Обновления</h2>
           <ul>
+            <li><span class="upd-date">04.11.2026</span><span>Карта: токены персонажей и монстров (инициалы, размер, поворот, ХП/КД), сетка «гексы/квадраты» с привязкой, линейка в футах, туман войны, шаблоны зон, импорт по URL и из буфера, миниатюры и Alt+1…9.</span></li>
             <li><span class="upd-date">04.11.2026</span><span>Карта: вписывается в экран, за её края не уехать; персонажей и монстров можно ставить на карту из карточек, бестиария и кнопкой «＋ На карту».</span></li>
             <li><span class="upd-date">04.11.2026</span><span>Бестиарий полностью переведён на русский: 677 монстров — имена, типы, языки, чувства и все описания действий (2337 записей).</span></li>
             <li><span class="upd-date">04.11.2026</span><span>Магазин: добавлен каталог из 682 позиций по типам лавок (кузница, храм, ювелир, зелья, аркана, таверна, рынок, тату-салон) с обычной, дешёвой и дорогой ценой.</span></li>
@@ -223,12 +224,46 @@
     <div class="tabview" id="view-map" hidden>
       <div class="map-toolbar">
         <button id="mapAdd" title="Добавить новую карту"><span class="gi" data-gi="map"></span> + Карта</button>
+        <button id="mapFromUrl" title="Добавить карту по ссылке на изображение">Из URL</button>
         <button id="mapAddToken" title="Поставить персонажа или монстра на карту"><span class="gi" data-gi="character"></span> ＋ На карту</button>
         <input type="file" id="mapFileInput" accept="image/*" class="hidden" aria-label="Загрузка карты">
+        <select id="mapShape" title="Форма клетки">
+          <option value="hex">Гексы</option>
+          <option value="square">Квадраты</option>
+        </select>
+        <label class="map-chk"><input type="checkbox" id="mapSnap"> привязка к клеткам</label>
+        <label class="map-chk">клетка <input type="number" id="mapCellPx" min="12" max="160" step="1" value="34"> px</label>
+        <label class="map-chk">клетка = <input type="number" id="mapFeet" min="1" max="60" step="1" value="5"> фт</label>
+        <button id="mapRuler" title="Линейка: два клика по карте">Линейка</button>
+        <span class="hint" id="mapRulerLabel" hidden></span>
+        <select id="mapZoneType" title="Шаблон зоны (AoE)">
+          <option value="none">Зона: нет</option>
+          <option value="circle">Зона: круг</option>
+          <option value="cone">Зона: конус</option>
+          <option value="line">Зона: линия</option>
+          <option value="cube">Зона: куб</option>
+        </select>
+        <button id="mapZoneClear" title="Убрать все зоны с карты">Очистить зоны</button>
+        <select id="mapFogMode" title="Туман войны">
+          <option value="off">Туман: выкл</option>
+          <option value="hide">Туман: закрыть</option>
+          <option value="reveal">Туман: открыть</option>
+        </select>
         <span class="hint" id="mapTypeHint">изображение, до 8 МБ · PNG/JPG/WebP</span>
       </div>
       <div id="mapTabs" class="map-tabs"></div>
       <div class="map-canvas" id="mapCanvas"></div>
+      <div class="map-panel" id="tokenPanel" hidden>
+        <div class="mp-head"><strong id="tokenPanelTitle">Токен</strong><button class="mp-close" id="tokenClose" title="Закрыть">✕</button></div>
+        <label>Имя<input type="text" id="tokenName" maxlength="40"></label>
+        <label>Размер<select id="tokenSize"><option value="1">1 клетка</option><option value="2">2 клетки</option></select></label>
+        <label>Поворот<input type="checkbox" id="tokenRot"></label>
+        <label>ХП<input type="number" id="tokenHp" min="0" step="1"></label>
+        <label>ХП макс.<input type="number" id="tokenHpMax" min="0" step="1"></label>
+        <label>КД<input type="number" id="tokenAc" min="0" max="40" step="1"></label>
+        <label>Цвет<input type="color" id="tokenColor"></label>
+        <button class="del" id="tokenDelete">Удалить токен</button>
+      </div>
     </div>
     <div class="tabview" id="view-battle" hidden>
       <div class="battle-wrap">
