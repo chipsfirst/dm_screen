@@ -112,11 +112,7 @@ function safeParseRaw(raw, label){
   try{ return JSON.parse(raw); }
   catch(e){
     try{
-      const blob=new Blob([raw],{type:'application/octet-stream'});
-      const a=document.createElement('a');
-      a.href=URL.createObjectURL(blob); a.download=label+'.повреждено.json';
-      document.body.appendChild(a); a.click(); a.remove();
-      setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
+      saveFile(label+'.повреждено.json', raw, 'application/octet-stream');
     }catch(e2){}
     toast('Данные «'+label+'» повреждены — повреждённая копия скачана файлом');
     return null;
@@ -222,7 +218,12 @@ async function writeBackupToDir(){
 function updateSaveDirStatus(){
   const el = document.getElementById('homeSaveDirStatus');
   if(!el) return;
-  if(!supportsDirPick){ el.textContent = 'Браузер не поддерживает запись в папку — используйте «Экспорт JSON».'; el.dataset.state='unsupported'; return; }
+  if(!supportsDirPick){
+    el.textContent = window.__TAURI__
+      ? 'В настольной версии используйте «Экспорт» — файл сохранится через диалог.'
+      : 'Браузер не поддерживает запись в папку — используйте «Экспорт JSON».';
+    el.dataset.state='unsupported'; return;
+  }
   if(saveDirHandle){ el.textContent = 'Папка подключена: файл shirma-backup.json обновляется автоматически.'; el.dataset.state='on'; }
   else { el.textContent = 'Папка не подключена. Выберите её, чтобы хранить резервную копию на диске.'; el.dataset.state='off'; }
 }
@@ -745,7 +746,7 @@ function initCanvasEvents(){
     if(act){
       const blockEl=act.closest('.block'); if(!blockEl) return;
       const id = act.dataset.id || blockEl.dataset.id;
-      if(act.dataset.action==='delete'){ if(confirm('Удалить блок?')) removeBlock(id); }
+      if(act.dataset.action==='delete'){ uiConfirm('Удалить блок?').then(ok=>{ if(ok) removeBlock(id); }); }
       else if(act.dataset.action==='collapse'){ collapsed.add(id); renderBlockOnly(id); save(); }
       else if(act.dataset.action==='expand'){ collapsed.delete(id); renderBlockOnly(id); save(); }
       else if(act.dataset.action==='battle'){ addBlockToBattle(findBlock(act.dataset.battleId)); }
@@ -1347,6 +1348,62 @@ const libResults = document.getElementById('libResults');
 /* ═══ Модалки: единое закрытие с возвратом фокуса на кнопку-открыватель ═══ */
 let modalOpener = null;
 function openModal(m, opener){ modalOpener = opener || null; m.hidden = false; }
+/* ═══ Универсальные диалоги вместо prompt/confirm/alert ═══ */
+function uiDialog(opts){
+  const o = Object.assign({title:'Сообщение', message:'', input:false, def:'', ok:'ОК', cancel:'Отмена'}, opts||{});
+  const modal = document.getElementById('uiModal');
+  if(!modal) return Promise.resolve(o.input ? (o.def||'') : true);
+  const titleEl = document.getElementById('uiTitle');
+  const msgEl = document.getElementById('uiMessage');
+  const inp = document.getElementById('uiInput');
+  const okBtn = document.getElementById('uiOk');
+  const cancelBtn = document.getElementById('uiCancel');
+  const closeBtn = document.getElementById('uiClose');
+  if(titleEl) titleEl.textContent = o.title;
+  if(msgEl) msgEl.textContent = o.message;
+  if(okBtn) okBtn.textContent = o.ok;
+  if(cancelBtn){ cancelBtn.textContent = o.cancel; cancelBtn.hidden = !o.cancel; }
+  if(inp){ inp.hidden = !o.input; inp.value = o.def || ''; }
+
+  return new Promise(resolve=>{
+    let done = false;
+    const finish = (val)=>{
+      if(done) return;
+      done = true;
+      document.removeEventListener('keydown', onKey, true);
+      okBtn && okBtn.removeEventListener('click', onOk);
+      cancelBtn && cancelBtn.removeEventListener('click', onCancel);
+      closeBtn && closeBtn.removeEventListener('click', onCancel);
+      closeModal(modal);
+      resolve(val);
+    };
+    const onOk = ()=> finish(o.input ? (inp ? inp.value : '') : true);
+    const onCancel = ()=> finish(o.input ? null : false);
+    const onKey = (e)=>{
+      if(e.key === 'Escape'){ e.preventDefault(); e.stopPropagation(); onCancel(); }
+      else if(e.key === 'Enter'){ e.preventDefault(); e.stopPropagation(); onOk(); }
+    };
+    okBtn && okBtn.addEventListener('click', onOk);
+    cancelBtn && cancelBtn.addEventListener('click', onCancel);
+    closeBtn && closeBtn.addEventListener('click', onCancel);
+    document.addEventListener('keydown', onKey, true);
+    openModal(modal, document.activeElement);
+    if(o.input && inp){ setTimeout(()=>{ inp.focus(); inp.select(); }, 30); }
+    else if(okBtn){ setTimeout(()=>okBtn.focus(), 30); }
+  });
+}
+function uiAlert(message, title){
+  return uiDialog({ title: title || 'Сообщение', message: String(message||''), cancel:'' }).then(()=>undefined);
+}
+function uiConfirm(message, opts){
+  return uiDialog(Object.assign({ title:'Подтверждение', message:String(message||''), cancel:'Отмена' }, opts||{}))
+    .then(v=>!!v);
+}
+function uiPrompt(message, def, opts){
+  return uiDialog(Object.assign({ title:'Введите значение', message:String(message||''), input:true, def:def||'' }, opts||{}))
+    .then(v=> (v===null || v===undefined) ? null : String(v));
+}
+
 function closeModal(m){
   if(!m || m.hidden) return;
   m.hidden = true;
@@ -1763,8 +1820,7 @@ document.getElementById('btnExport').addEventListener('click', ()=>{
   blocks.forEach(b=> collect(b.dataKey));
   maps.forEach(m=>{ collect(m.bgKey); (m.markers||[]).forEach(k=> collect(k.imgKey)); });
   const payload={ version:2, exported:Date.now(), blocks, media };
-  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='shirma-backup.json'; a.click(); URL.revokeObjectURL(a.href);
+  saveFile('shirma-backup.json', JSON.stringify(payload,null,2), 'application/json');
 });
 document.getElementById('btnImport').addEventListener('click', ()=> document.getElementById('fileInput').click());
 document.getElementById('fileInput').addEventListener('change', e=>{
@@ -1776,9 +1832,9 @@ document.getElementById('fileInput').addEventListener('change', e=>{
       let arr, media=null;
       if(Array.isArray(data)) arr=data;                                  // старый формат: просто массив блоков
       else if(data && Array.isArray(data.blocks)){ arr=data.blocks; media=data.media; } // v2: блоки + медиа
-      else { alert('Неизвестный формат файла'); return; }
+      else { uiAlert('Неизвестный формат файла'); return; }
       arr = sanitizeBlocks(arr);
-      if(!arr.length){ alert('В файле нет корректных блоков'); return; }
+      if(!arr.length){ uiAlert('В файле нет корректных блоков'); return; }
       pushUndo('импорт из файла');
       if(media && typeof media==='object'){
         Object.entries(media).forEach(([k,v])=>{
@@ -1794,12 +1850,12 @@ document.getElementById('fileInput').addEventListener('change', e=>{
         if(data.battle!==undefined){ try{ localStorage.setItem('shirma_battle_v1', JSON.stringify(data.battle)); extra=true; }catch(e){} }
         if(extra){ toast('Восстановлены сессии/карта/бой — применяю…'); setTimeout(()=>location.reload(), 700); }
       }
-    }catch(err){ alert('Ошибка чтения файла'); }
+    }catch(err){ uiAlert('Ошибка чтения файла'); }
   };
   r.readAsText(f); e.target.value='';
 });
 document.getElementById('btnReset').addEventListener('click', ()=>{
-  if(confirm('Перезаписать все данные демо-версией?')){ pushUndo('сброс к демо-данным'); seed(); }
+  uiConfirm('Перезаписать все данные демо-версией?').then(ok=>{ if(ok){ pushUndo('сброс к демо-данным'); seed(); } });
 });
 
 /* ═══ Shop ═══ */
@@ -2623,10 +2679,10 @@ function renderMapTabs(){
     if(e.target.closest('.mt-del')) return;
     activeMapId=el.dataset.mid; saveMap(); renderMap();
   }));
-  box.querySelectorAll('[data-md]').forEach(btn=> btn.addEventListener('click', e=>{
+  box.querySelectorAll('[data-md]').forEach(btn=> btn.addEventListener('click', async e=>{
     e.stopPropagation();
     const id=btn.dataset.md; if(maps.length<=1){ toast('Карта одна — удалять не будем'); return; }
-    if(!confirm('Удалить эту карту?')) return;
+    if(!(await uiConfirm('Удалить эту карту?'))) return;
     const m=maps.find(x=>x.id===id);
     if(m&&m.bgKey){ idbDel(m.bgKey); delete mediaCache[m.bgKey]; }
     maps=maps.filter(x=>x.id!==id);
@@ -2672,7 +2728,7 @@ function createMapFromDataUrl(data, name){
 }
 /* Карта по ссылке */
 async function mapAddFromUrl(){
-  const url = prompt('Ссылка на изображение карты (https://…):','');
+  const url = await uiPrompt('Ссылка на изображение карты (https://…):','');
   if(!url) return;
   try{
     toast('Загружаю карту…');
@@ -2763,16 +2819,16 @@ function addMapMarker(){
   const btn=document.getElementById('mapAddMarker'); if(btn) btn.classList.toggle('active', !!mapPlaceOn);
   if(mapPlaceOn) toast('Кликните по карте, чтобы поставить маркер');
 }
-function placeMarkerAt(x,y){
+async function placeMarkerAt(x,y){
   const m=curMap(); if(!m) return;
-  const label=prompt('Подпись маркера:','Маркер'); if(label===null) return;
+  const label=await uiPrompt('Подпись маркера:','Маркер'); if(label===null) return;
   m.markers.push({ id:'k'+Math.random().toString(36).slice(2,7), x:x, y:y,
     label:(label.trim()||'Маркер').slice(0,40), color:'#7fb3e6' });
   saveMap(); renderMap();
 }
-function renameMap(id){
+async function renameMap(id){
   const m=maps.find(x=>x.id===id); if(!m) return;
-  const t=prompt('Название карты:',m.name); if(t===null) return;
+  const t=await uiPrompt('Название карты:',m.name); if(t===null) return;
   m.name=(t.trim()||'Карта').slice(0,40); saveMap(); renderMap();
 }
 function mapRulerToggle(){
@@ -2800,13 +2856,12 @@ function mapSnapPNG(){
     (m.draw||[]).forEach(s=>{ if(!s.pts||s.pts.length<2) return; ctx.strokeStyle=s.color; ctx.lineWidth=s.width; ctx.lineCap='round';
       ctx.beginPath(); s.pts.forEach((p,i)=> i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.stroke(); });
     (m.markers||[]).forEach(k=>{ ctx.beginPath(); ctx.fillStyle=k.color; ctx.arc(k.x,k.y,10,0,Math.PI*2); ctx.fill(); ctx.strokeStyle='#111'; ctx.lineWidth=1; ctx.stroke(); });
-    const a=document.createElement('a'); a.href=cv.toDataURL('image/png'); a.download=(m.name||'карта')+'.png';
-    document.body.appendChild(a); a.click(); a.remove(); toast('Карта сохранена в PNG');
+    cv.toBlob(b=>{ saveFile((m.name||'карта')+'.png', b, 'image/png'); });
   }
 }
 function mapClearDraw(){
   const m=curMap(); if(!m) return;
-  if(m.draw.length && confirm('Стереть нарисованное с карты?')){ m.draw=[]; saveMap(); renderMap(); }
+  if(m.draw.length){ uiConfirm('Стереть нарисованное с карты?').then(ok=>{ if(ok){ m.draw=[]; saveMap(); renderMap(); } }); }
 }
 
 /* ── обработчики карты ── */
@@ -2902,17 +2957,17 @@ function mapClearDraw(){
       const nm=document.getElementById('markerName'); if(nm) nm.textContent=k?k.label:'';
     }
     function deselect(){ selectedMarkerId=null; renderMap(); updateMarkerCtl(); }
-    document.getElementById('markerRename')&&document.getElementById('markerRename').addEventListener('click', ()=>{
+    document.getElementById('markerRename')&&document.getElementById('markerRename').addEventListener('click', async ()=>{
       const m=curMap(); const k=m&&selectedMarkerId?m.markers.find(x=>x.id===selectedMarkerId):null; if(!k) return;
-      const t=prompt('Имя маркера:',k.label); if(t===null) return; k.label=(t.trim()||'Маркер').slice(0,40); saveMap(); renderMap(); updateMarkerCtl();
+      const t=await uiPrompt('Имя маркера:',k.label); if(t===null) return; k.label=(t.trim()||'Маркер').slice(0,40); saveMap(); renderMap(); updateMarkerCtl();
     });
     document.getElementById('markerColor')&&document.getElementById('markerColor').addEventListener('click', ()=>{
       const palette=['#7fb3e6','#c0564f','#86c48f','#c9a227','#c9a2e6','#e68a4a','#6ac4c9'];
       const m=curMap(); const k=m&&selectedMarkerId?m.markers.find(x=>x.id===selectedMarkerId):null; if(!k) return;
       const i=palette.indexOf(k.color); k.color=palette[(i+1)%palette.length]; saveMap(); renderMap(); updateMarkerCtl();
     });
-    document.getElementById('markerDel')&&document.getElementById('markerDel').addEventListener('click', ()=>{
-      const m=curMap(); if(!m||!selectedMarkerId) return; if(!confirm('Удалить маркер?')) return;
+    document.getElementById('markerDel')&&document.getElementById('markerDel').addEventListener('click', async ()=>{
+      const m=curMap(); if(!m||!selectedMarkerId) return; if(!(await uiConfirm('Удалить маркер?'))) return;
       m.markers=m.markers.filter(x=>x.id!==selectedMarkerId); selectedMarkerId=null; saveMap(); renderMap(); updateMarkerCtl();
     });
     document.getElementById('markerDone')&&document.getElementById('markerDone').addEventListener('click', deselect);
@@ -3130,9 +3185,9 @@ function bindSessionControls(){
     const s=findSession(activeSessionId); if(!s){ return; }
     s.html=ed.innerHTML; s.updated=Date.now(); scheduleSaveSessions();
   });
-  if(delBtn) delBtn.addEventListener('click', ()=>{
+  if(delBtn) delBtn.addEventListener('click', async ()=>{
     if(!activeSessionId) return;
-    if(!confirm('Удалить эту сессию?')) return;
+    if(!(await uiConfirm('Удалить эту сессию?'))) return;
     pushUndo('удаление сессии');
     sessions = sessions.filter(s=>s.id!==activeSessionId);
     persistSessions();
@@ -3166,9 +3221,9 @@ function bindSessionToolbar(){
     });
   });
   bar.querySelectorAll('[data-link]').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
+    btn.addEventListener('click', async ()=>{
       ed.focus();
-      const url=prompt('Адрес ссылки (URL):','https://'); if(!url) return;
+      const url=await uiPrompt('Адрес ссылки (URL):','https://'); if(!url) return;
       try{ document.execCommand('createLink', false, url); }catch(e){}
       afterEdit();
     });
@@ -3290,22 +3345,44 @@ function htmlToMarkdown(html){
   md=md.replace(/[ \t]+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim();
   return md;
 }
-function downloadFile(name, content, mime){
-  const blob=new Blob([content],{type:mime||'text/plain;charset=utf-8'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url; a.download=name;
+/* Сохранение файла: в браузере — скачивание, в Tauri — диалог + запись на диск */
+async function saveFile(name, content, mime){
+  const blob = (content instanceof Blob)
+    ? content
+    : new Blob([content], { type: mime || 'application/octet-stream' });
+  const T = window.__TAURI__;
+  if(T && T.dialog && T.core && typeof T.core.invoke === 'function'){
+    try{
+      const path = await T.dialog.save({ defaultPath: name });
+      if(!path) return false;
+      const bytes = Array.from(new Uint8Array(await blob.arrayBuffer()));
+      await T.core.invoke('save_file', { path, contents: bytes });
+      toast('Сохранено: ' + path);
+      return true;
+    }catch(e){
+      toast('Не удалось сохранить файл: ' + (e && e.message ? e.message : e));
+      return false;
+    }
+  }
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = name;
   document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(()=>URL.revokeObjectURL(url), 1000);
+  setTimeout(()=>URL.revokeObjectURL(url), 1500);
+  return true;
+}
+
+function downloadFile(name, content, mime){
+  saveFile(name, content, mime || 'text/plain;charset=utf-8');
 }
 function safeFileName(name){ return String(name||'session').replace(/[\/\\:*?"<>|]+/g,'_').slice(0,80); }
 function exportSessionMd(){
-  const s=findSession(activeSessionId); if(!s){ alert('Нет активной сессии'); return; }
+  const s=findSession(activeSessionId); if(!s){ uiAlert('Нет активной сессии'); return; }
   const md='# '+(s.title||'Сессия')+'\n\n'+htmlToMarkdown(hydrateSessionHtml(s.html||''));
   downloadFile(safeFileName(s.title)+'.md', md, 'text/markdown;charset=utf-8');
 }
 function exportSessionPdf(){
-  const s=findSession(activeSessionId); if(!s){ alert('Нет активной сессии'); return; }
+  const s=findSession(activeSessionId); if(!s){ uiAlert('Нет активной сессии'); return; }
   const bodyHtml=hydrateSessionHtml(s.html||'');
   const html = `<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8"><title>${escapeHtml(s.title||'Сессия')}</title>
     <style>
@@ -3316,6 +3393,11 @@ function exportSessionPdf(){
       code{background:#f4f4f4;padding:1px 4px;border-radius:3px}
       a{color:#1155cc} img{max-width:100%}
     </style></head><body><h1>${escapeHtml(s.title||'Сессия')}</h1>${bodyHtml}</body></html>`;
+  if(window.__TAURI__ && window.__TAURI__.dialog){
+    saveFile(safeFileName(s.title||'Сессия')+'.html', html, 'text/html;charset=utf-8');
+    toast('Файл сохранён — откройте его в браузере и напечатайте в PDF');
+    return;
+  }
   const frame=document.createElement('iframe');
   frame.style.cssText='position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden';
   document.body.appendChild(frame);
@@ -3323,7 +3405,7 @@ function exportSessionPdf(){
   doc.open(); doc.write(html); doc.close();
   setTimeout(()=>{
     try{ frame.contentWindow.focus(); frame.contentWindow.print(); }
-    catch(e){ alert('Не удалось открыть печать: '+e.message); }
+    catch(e){ uiAlert('Не удалось открыть печать: '+e.message); }
     setTimeout(()=>frame.remove(), 1500);
   }, 400);
 }

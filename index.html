@@ -138,6 +138,7 @@
         <section class="home-card home-updates">
           <h2>Обновления</h2>
           <ul>
+            <li><span class="upd-date">04.11.2026</span><span>Сборки: все диалоги (удаление, переименование, ввод ссылки) переведены на встроенные окна, экспорт сохраняет файлы через системный диалог — работает и в браузере, и в настольном приложении.</span></li>
             <li><span class="upd-date">04.11.2026</span><span>Бой: кнопки добавления и очистки работают без системных окон, броски костей переехали на панель боя, добавлены навигация с клавиатуры и быстрые статусы (S, 1–9).</span></li>
             <li><span class="upd-date">04.11.2026</span><span>Правила DMG: 14 конспектов разделов и 8 авторских таблиц по мотивам книги — в «Правилах» и «Таблицах».</span></li>
             <li><span class="upd-date">04.11.2026</span><span>Магические предметы SRD 5.1 (CC-BY-4.0): 361 предмет с механикой на русском — в магазине и поиске.</span></li>
@@ -356,6 +357,24 @@
       </select>
     </div>
     <div class="modal-results" id="shopResults"></div>
+  </div>
+</div>
+
+<!-- Универсальное окно: сообщение / подтверждение / ввод -->
+<div class="modal" id="uiModal" hidden>
+  <div class="modal-box ui-box">
+    <div class="modal-head">
+      <strong id="uiTitle">Сообщение</strong>
+      <button class="modal-close" id="uiClose">✕</button>
+    </div>
+    <div class="ui-body">
+      <div id="uiMessage" class="ui-msg"></div>
+      <input id="uiInput" class="ui-input" type="text" hidden>
+    </div>
+    <div class="ui-actions">
+      <button id="uiCancel">Отмена</button>
+      <button id="uiOk">ОК</button>
+    </div>
   </div>
 </div>
 

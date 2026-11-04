@@ -933,3 +933,13 @@ select{background:var(--panel2); color:var(--text); border:1px solid var(--line)
   #battleClear.armed{color:var(--danger); border-color:var(--danger)}
   .battle-toolbar .dicebar{border:none; background:transparent; padding:0; gap:5px}
   .battle-toolbar .dicebar .db-label{font-size:12px}
+
+  /* ── Универсальные диалоги (работают и в нативной сборке) ── */
+  .ui-box{max-width:460px}
+  .ui-body{padding:14px 16px 4px; display:flex; flex-direction:column; gap:10px}
+  .ui-msg{font-size:14px; line-height:1.45; color:var(--text)}
+  .ui-input{padding:7px 10px; border:1px solid var(--line); border-radius:8px; background:var(--panel2); color:var(--text); font-size:14px}
+  .ui-input:focus{outline:2px solid var(--accent); outline-offset:1px}
+  .ui-actions{display:flex; justify-content:flex-end; gap:8px; padding:10px 16px 14px}
+  .ui-actions button{min-width:90px}
+  #uiOk{background:linear-gradient(180deg,var(--sel),var(--sel2)); color:var(--sel-text); border-color:#c9a227}
