@@ -3461,6 +3461,25 @@ function downloadFile(name, content, mime){
   saveFile(name, content, mime || 'text/plain;charset=utf-8');
 }
 function safeFileName(name){ return String(name||'session').replace(/[\/\\:*?"<>|]+/g,'_').slice(0,80); }
+
+/* Внешние ссылки: в нативном приложении вебвью не открывает target="_blank" сам */
+function openExternalLink(url){
+  const T = window.__TAURI__;
+  if(T && T.core && typeof T.core.invoke === 'function'){
+    T.core.invoke('open_external', { url }).catch(err=>{
+      toast('Не удалось открыть ссылку: ' + (err && err.message ? err.message : err));
+    });
+    return true;
+  }
+  return false;
+}
+document.addEventListener('click', e=>{
+  const a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+  if(!a) return;
+  const href = a.getAttribute('href') || '';
+  if(!/^https?:\/\//i.test(href)) return;
+  if(openExternalLink(a.href)) e.preventDefault();
+});
 function exportSessionMd(){
   const s=findSession(activeSessionId); if(!s){ uiAlert('Нет активной сессии'); return; }
   const md='# '+(s.title||'Сессия')+'\n\n'+htmlToMarkdown(hydrateSessionHtml(s.html||''));
