@@ -1286,6 +1286,23 @@ function booksLibMerged(){
       v:'—', w: meta.trim(), src: it.src });
   });
 })();
+/* предметы SRD (CC-BY-4.0) — в магазин */
+(function mergeSrdShop(){
+  const srd = window.SRD_ITEMS;
+  if(!srd || !Array.isArray(srd.items) || !Array.isArray(window.SHOP)) return;
+  const existing = new Set(window.SHOP.map(i=>i.n));
+  srd.items.forEach(it=>{
+    if(existing.has(it.n)) return;
+    existing.add(it.n);
+    window.SHOP.push({
+      n: it.n, c: 'Магические предметы (SRD)',
+      v: '—',
+      w: [it.type, it.rarity, it.att ? 'настройка' : ''].filter(Boolean).join(' · '),
+      d: it.d || '', src: 'SRD'
+    });
+  });
+})();
+
 /* правила книг — в «Правила» */
 (function mergeBooksRules(){
   (BOOKS.rules||[]).forEach(r=>{
