@@ -21,6 +21,7 @@ FILES=(
   icons.js
   vendor/fonts.css
   vendor/fonts-extra.css
+  logo.png
   logo.svg
   icon.svg
   hex.svg

@@ -54,6 +54,13 @@ jobs:
             d.version=process.env.V;
             fs.writeFileSync(p, JSON.stringify(d,null,2)+'\n');
           "
+          node -e "
+            const fs=require('fs');
+            const v=process.env.V;
+            const p='index.html';
+            const s=fs.readFileSync(p,'utf8');
+            fs.writeFileSync(p, s.replace(/<span id=\"appVersion\">[^<]*<\/span>/, '<span id=\"appVersion\">'+v+'</span>'));
+          "
           echo "Версия приложения: $V"
 
       - name: Собрать веб-файлы в dist
@@ -65,7 +72,7 @@ jobs:
 
       - name: Сгенерировать иконки
         shell: bash
-        run: tauri icon icon.svg --output src-tauri/icons
+        run: tauri icon app-icon.png --output src-tauri/icons
 
       - name: Собрать установщики
         run: tauri build --target ${{ matrix.target }}
