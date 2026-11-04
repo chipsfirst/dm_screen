@@ -950,6 +950,37 @@ function currentTheme(){
   });
 })();
 
+/* ═══ Масштаб интерфейса (шрифт всей ширмы) ═══ */
+const ZOOM_KEY = 'shirma_ui_zoom_v1';
+function uiZoomGet(){
+  let v = 1;
+  try{ v = parseFloat(localStorage.getItem(ZOOM_KEY)) || 1; }catch(e){}
+  return Math.min(1.6, Math.max(0.8, v));
+}
+function uiZoomApply(v){
+  const z = Math.min(1.6, Math.max(0.8, Math.round(v*100)/100));
+  document.documentElement.style.zoom = String(z);
+  try{ localStorage.setItem(ZOOM_KEY, String(z)); }catch(e){}
+  const b=document.getElementById('btnFontPlus'), m=document.getElementById('btnFontMinus');
+  if(m) m.disabled = z<=0.8;
+  if(b) b.disabled = z>=1.6;
+  if(currentTab==='map'){ try{ renderMap(); }catch(e){} }
+  return z;
+}
+(function(){
+  uiZoomApply(uiZoomGet());
+  const plus=document.getElementById('btnFontPlus');
+  const minus=document.getElementById('btnFontMinus');
+  if(plus) plus.addEventListener('click', ()=> uiZoomApply(uiZoomGet()+0.05));
+  if(minus) minus.addEventListener('click', ()=> uiZoomApply(uiZoomGet()-0.05));
+  document.addEventListener('keydown', e=>{
+    if(!(e.ctrlKey||e.metaKey)) return;
+    if(e.key==='='||e.key==='+'){ e.preventDefault(); uiZoomApply(uiZoomGet()+0.05); }
+    else if(e.key==='-'){ e.preventDefault(); uiZoomApply(uiZoomGet()-0.05); }
+    else if(e.key==='0'){ e.preventDefault(); uiZoomApply(1); }
+  });
+})();
+
 /* ═══ Полноэкранный режим ═══ */
 (function(){
   const btn=document.getElementById('btnFullscreen');
@@ -3471,7 +3502,7 @@ function renderBattle(){
   }
   const sorted = battleSorted();
   list.innerHTML = sorted.map(p=>`
-    <div class="battle-card ${p.side==='opp'?'opp':''}${p.collapsed?' collapsed':''}" data-bid="${p.id}" tabindex="0">
+    <div class="battle-card ${p.side==='opp'?'opp':''}${p.collapsed?' collapsed':''}${p.id===battleSelId?' sel':''}" data-bid="${p.id}" tabindex="0">
       <span class="bt-chev" title="Свернуть/развернуть">▾</span>
       <div class="bt-side">${gi(p.side==='opp'?'monsters':'character')}</div>
       <input class="bt-name" data-field="name" data-bid="${p.id}" value="${escapeHtml(p.name)}" spellcheck="false" aria-label="Имя">
@@ -3628,6 +3659,7 @@ function battleAdd(side, preset){
   const name = (typed || (side==='opp' ? 'Противник' : 'Персонаж')).slice(0,60);
   const rec = { id:uniq(), name, side, ac:'', hp:'', hpMax:'', init:'', atk:'', acts:[], applied:[], statuses:[] };
   battleParts.push(rec);
+  battleSelId = rec.id;
   if(inp) inp.value = '';
   saveBattle(); renderBattle();
   battleLogPush(`«${name}» добавлен в бой`);
@@ -3640,6 +3672,7 @@ function battleAdd(side, preset){
 }
 /* ── Быстрые статусы и клавиатура в бою ── */
 let paletteBid = null;
+let battleSelId = null;
 
 function toggleStatus(bid, name){
   const p = battleParts.find(x=>x.id===bid);
@@ -3677,9 +3710,7 @@ function paletteIsOpen(){
 }
 
 function bindBattleKeyboard(){
-  const list = document.getElementById('battleList');
   const pal = document.getElementById('battleStatusPalette');
-
   if(pal){
     pal.addEventListener('click', e=>{
       const b = e.target.closest('[data-pst]');
@@ -3689,55 +3720,53 @@ function bindBattleKeyboard(){
     });
   }
 
-  if(list){
-    list.addEventListener('keydown', e=>{
-      const card = e.target.closest('.battle-card');
-      if(!card) return;
-      const onCard = e.target === card;
-
-      if(e.key === 'ArrowDown' || e.key === 'ArrowUp'){
-        if(!onCard) return;
-        e.preventDefault();
-        const cards = [...list.querySelectorAll('.battle-card')];
-        const i = cards.indexOf(card);
-        const j = e.key === 'ArrowDown' ? Math.min(cards.length-1, i+1) : Math.max(0, i-1);
-        if(cards[j]) cards[j].focus();
-        return;
-      }
-      if(e.key === 'Enter' && onCard){
-        e.preventDefault();
-        const p = battleParts.find(x=>x.id===card.dataset.bid);
-        if(p){
-          p.collapsed = !p.collapsed; saveBattle(); renderBattle();
-          const c = document.querySelector(`.battle-card[data-bid="${p.id}"]`);
-          if(c) c.focus();
-        }
-        return;
-      }
-      if((e.key === 's' || e.key === 'S' || e.key === 'ы' || e.key === 'Ы') && onCard){
-        e.preventDefault();
-        renderStatusPalette(card.dataset.bid);
-        return;
-      }
-      if(e.key === 'Delete' && onCard && e.shiftKey){
-        e.preventDefault();
-        const gone = battleParts.find(x=>x.id===card.dataset.bid);
-        battleParts = battleParts.filter(x=>x.id!==card.dataset.bid);
-        saveBattle(); renderBattle();
-        if(gone) battleLogPush(`«${gone.name}» убран из боя`);
-        return;
-      }
-    });
-  }
-
   document.addEventListener('keydown', e=>{
-    if(e.key === 'Escape' && paletteIsOpen()){ closeStatusPalette(); return; }
-    if(!paletteIsOpen()) return;
+    if(currentTab !== 'battle') return;
     const tag = (e.target && e.target.tagName || '').toLowerCase();
-    if(tag === 'input' || tag === 'textarea' || tag === 'select') return;
-    if(/^[1-9]$/.test(e.key)){
+    const typing = tag==='input' || tag==='textarea' || tag==='select' || (e.target && e.target.isContentEditable);
+
+    if(e.key === 'Escape' && paletteIsOpen()){ closeStatusPalette(); return; }
+    if(typing) return;
+
+    if(paletteIsOpen() && /^[1-9]$/.test(e.key)){
       const st = BATTLE_STATUSES[+e.key - 1];
       if(st && paletteBid){ e.preventDefault(); toggleStatus(paletteBid, st); renderStatusPalette(paletteBid); }
+      return;
+    }
+
+    if(e.key === 'ArrowDown' || e.key === 'ArrowUp'){
+      const list = battleSorted();
+      if(!list.length) return;
+      e.preventDefault();
+      let i = list.findIndex(p=>p.id===battleSelId);
+      if(i < 0) i = e.key === 'ArrowDown' ? -1 : list.length;
+      const j = e.key === 'ArrowDown' ? Math.min(list.length-1, i+1) : Math.max(0, i-1);
+      battleSelId = list[j].id;
+      renderBattle();
+      const card = document.querySelector(`.battle-card[data-bid="${battleSelId}"]`);
+      if(card) card.scrollIntoView({ block:'nearest' });
+      return;
+    }
+
+    const sel = battleSelId ? battleParts.find(p=>p.id===battleSelId) : null;
+    if(!sel) return;
+
+    if(e.key === 'Enter'){
+      e.preventDefault();
+      sel.collapsed = !sel.collapsed; saveBattle(); renderBattle();
+      return;
+    }
+    if(e.key === 's' || e.key === 'S' || e.key === 'ы' || e.key === 'Ы'){
+      e.preventDefault();
+      renderStatusPalette(sel.id);
+      return;
+    }
+    if(e.key === 'Delete' && e.shiftKey){
+      e.preventDefault();
+      const gone = sel;
+      battleParts = battleParts.filter(x=>x.id!==sel.id);
+      battleSelId = null; saveBattle(); renderBattle();
+      battleLogPush(`«${gone.name}» убран из боя`);
     }
   });
 }
@@ -3783,6 +3812,7 @@ function bindBattle(){
     });
     list.addEventListener('click', e=>{
       const card = e.target.closest('.battle-card');
+      if(card){ battleSelId = card.dataset.bid; }
       if(card && !e.target.closest('input,button,select,textarea,label,[contenteditable]')){
         const p = battleParts.find(x=>x.id===card.dataset.bid);
         if(p){ p.collapsed = !p.collapsed; saveBattle(); renderBattle(); }

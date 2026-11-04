@@ -943,3 +943,7 @@ select{background:var(--panel2); color:var(--text); border:1px solid var(--line)
   .ui-actions{display:flex; justify-content:flex-end; gap:8px; padding:10px 16px 14px}
   .ui-actions button{min-width:90px}
   #uiOk{background:linear-gradient(180deg,var(--sel),var(--sel2)); color:var(--sel-text); border-color:#c9a227}
+
+  /* ── Масштаб интерфейса ── */
+  #fontGroup button{font-weight:700; font-size:12px; padding:3px 7px; min-width:30px}
+  .battle-card.sel{outline:2px solid var(--accent); outline-offset:2px}
