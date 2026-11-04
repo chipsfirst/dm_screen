@@ -253,8 +253,10 @@
         </select>
         <span class="hint" id="mapTypeHint">изображение, до 8 МБ · PNG/JPG/WebP</span>
       </div>
-      <div id="mapTabs" class="map-tabs"></div>
-      <div class="map-canvas" id="mapCanvas"></div>
+      <div class="map-layout">
+        <aside class="map-rail" id="mapTabs" aria-label="Список карт"></aside>
+        <div class="map-canvas" id="mapCanvas"></div>
+      </div>
       <div class="map-panel" id="tokenPanel" hidden>
         <div class="mp-head"><strong id="tokenPanelTitle">Токен</strong><button class="mp-close" id="tokenClose" title="Закрыть">✕</button></div>
         <label>Имя<input type="text" id="tokenName" maxlength="40"></label>

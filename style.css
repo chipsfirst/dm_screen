@@ -160,19 +160,15 @@
   .map-stage{position:relative; margin:0 auto}
   .map-zoom{position:absolute; top:0; left:0; transform-origin:0 0;
     background-color:#f4f2ec;
-    background-image:url("hex.svg");
-    background-repeat:repeat;
-    background-size:34.641px 60px;
     box-shadow:0 6px 22px rgba(0,0,0,.28);
     outline:1px solid rgba(0,0,0,.18);
   }
-  /* сетка карты по умолчанию: клетка в размер маркера (18px), заливает всё пространство */
-  .map-zoom{
-    background-image:
-      linear-gradient(rgba(200,210,220,.18) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(200,210,220,.18) 1px, transparent 1px);
-    background-size:18px 18px;
+  .map-zoom.shape-hex{
+    background-image:url("hex.svg");
+    background-repeat:repeat;
+    background-size:var(--cell,34.641px) var(--cell-h,60px);
   }
+
   .map-zoom.shape-square{
     background-color:#f6f3ea;
     background-image:
@@ -181,7 +177,7 @@
     background-size:var(--cell,40px) var(--cell,40px);
     background-repeat:repeat;
   }
-  .map-canvas.no-grid .map-zoom:not(.shape-square){background-image:none}
+
   .map-grid{position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:2;
     background-image:
       linear-gradient(rgba(200,210,220,.28) 1px, transparent 1px),
@@ -891,3 +887,19 @@ select{background:var(--panel2); color:var(--text); border:1px solid var(--line)
   .map-toolbar input[type=number]{width:54px}
   .map-toolbar .map-chk{font-size:12px; gap:4px}
   .map-toolbar .hint{font-size:12px}
+
+  /* ── Боковая панель карт ── */
+  .map-layout{display:flex; flex:1; min-height:0; align-items:stretch}
+  .map-rail{
+    flex:0 0 128px; width:128px; border-right:1px solid var(--line);
+    background:var(--panel); overflow-y:auto; padding:8px; display:flex; flex-direction:column; gap:6px;
+  }
+  .map-rail .map-tab{
+    width:100%; display:flex; flex-direction:column; align-items:stretch; gap:4px;
+    padding:5px; border-radius:8px; cursor:pointer;
+  }
+  .map-rail .mt-thumb{width:100%; height:46px; border-radius:5px}
+  .map-rail .mt-row{display:flex; align-items:center; justify-content:space-between; gap:4px; min-width:0}
+  .map-rail .mt-name{font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .map-rail .map-tab.add{font-size:18px; padding:6px 0; text-align:center}
+  .map-rail .mt-del{flex:0 0 auto}

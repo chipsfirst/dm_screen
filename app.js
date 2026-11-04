@@ -1966,6 +1966,7 @@ function renderMap(){
   wrapper.style.width=W+'px'; wrapper.style.height=H+'px';
   wrapper.style.position='relative';
   wrapper.style.setProperty('--cell', Math.round(mapCellPx(m))+'px');
+  wrapper.style.setProperty('--cell-h', Math.round(mapCellPx(m)*1.732)+'px');
   stage.appendChild(wrapper);
   mc.appendChild(stage);
   if(mapGridOn){
@@ -2540,8 +2541,8 @@ function renderMapTabs(){
   };
   box.innerHTML = maps.map(m=>`<span class="map-tab ${m.id===activeMapId?'active':''}" data-mid="${m.id}" title="${escapeHtml(m.name)}">
     ${thumb(m)}
-    <span class="mt-name">${escapeHtml(m.name)}</span>
-    <button class="mt-del" data-md="${m.id}" title="Удалить карту" aria-label="Удалить карту">✕</button>
+    <span class="mt-row"><span class="mt-name">${escapeHtml(m.name)}</span>
+      <button class="mt-del" data-md="${m.id}" title="Удалить карту" aria-label="Удалить карту">✕</button></span>
   </span>`).join('') + `<button class="map-tab add" id="mapAddTab" title="Добавить карту">＋</button>`;
   box.querySelectorAll('[data-mid]').forEach(el=> el.addEventListener('click', e=>{
     if(e.target.closest('.mt-del')) return;
