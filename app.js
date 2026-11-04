@@ -1303,12 +1303,12 @@ function booksLibMerged(){
   });
 })();
 
-/* правила книг — в «Правила» */
-(function mergeBooksRules(){
+/* правила книг — в «Правила» (вызывается после объявления RULES_FOR_LIB) */
+function mergeBooksRules(){
   (BOOKS.rules||[]).forEach(r=>{
     RULES_FOR_LIB.push({ title: r.n + ' · ' + (r.sec||''), text: r.text + '\n\nИсточник: ' + (r.src||'DMG') });
   });
-})();
+}
 /* таблицы книг — в «Случайные таблицы» */
 (function mergeBooksTables(){
   Object.entries(BOOKS.tables||{}).forEach(([name, t])=>{
@@ -1337,6 +1337,7 @@ function ensureLibrary(){
   return libLoadingPromise;
 }
 const RULES_FOR_LIB = BASE_RULES || [];
+mergeBooksRules();
 const libModal = document.getElementById('libModal');
 const libSearch = document.getElementById('libSearch');
 const libKind = document.getElementById('libKind');

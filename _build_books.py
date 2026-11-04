@@ -163,7 +163,10 @@ def main():
                               if i["r"] in ["варьируется", "обычный", "необычный", "редкий",
                                             "очень редкий", "легендарный", "артефакт"] else 9, i["n"]))
 
-    body = json.dumps({"source": "Arcana Unleashed (AU)", "spells": spells, "items": items},
+    import _dmg_notes as DMG
+    body = json.dumps({"source": "Arcana Unleashed (AU) + конспекты DMG",
+                       "spells": spells, "items": items,
+                       "rules": DMG.RULES, "tables": DMG.TABLES},
                       ensure_ascii=False, separators=(", ", ": "))
     js = ("// Справочник по книге «Arcana Unleashed» (AU): индекс заклинаний и магических предметов.\n"
           "// Только фактические данные (уровень, школа, компоненты, классы, редкость, настройка).\n"
