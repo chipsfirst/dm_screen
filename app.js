@@ -1962,11 +1962,12 @@ function renderMap(){
   stage.className='map-stage';
   stage.style.width=W+'px'; stage.style.height=H+'px';
   const wrapper=document.createElement('div');
-  wrapper.className='map-zoom'+(m.shape==='square'?' shape-square':'');
+  wrapper.className='map-zoom'+(m.shape==='square'?' shape-square':' shape-hex');
   wrapper.style.width=W+'px'; wrapper.style.height=H+'px';
   wrapper.style.position='relative';
-  wrapper.style.setProperty('--cell', Math.round(mapCellPx(m))+'px');
-  wrapper.style.setProperty('--cell-h', Math.round(mapCellPx(m)*1.732)+'px');
+  const cellPx = mapCellPx(m);
+  wrapper.style.setProperty('--cell', cellPx.toFixed(2)+'px');
+  wrapper.style.setProperty('--cell-h', (cellPx*1.73205).toFixed(2)+'px');
   stage.appendChild(wrapper);
   mc.appendChild(stage);
   if(mapGridOn){
