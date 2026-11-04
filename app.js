@@ -959,16 +959,21 @@ function uiZoomGet(){
 }
 function uiZoomApply(v){
   const z = Math.min(1.6, Math.max(0.8, Math.round(v*100)/100));
-  document.documentElement.style.zoom = String(z);
+  const target = document.body || document.documentElement;
+  target.style.zoom = String(z);
   try{ localStorage.setItem(ZOOM_KEY, String(z)); }catch(e){}
   const b=document.getElementById('btnFontPlus'), m=document.getElementById('btnFontMinus');
   if(m) m.disabled = z<=0.8;
   if(b) b.disabled = z>=1.6;
-  if(currentTab==='map'){ try{ renderMap(); }catch(e){} }
+  // перерисовываем карту отложенно: на старте currentTab ещё не объявлен
+  setTimeout(()=>{ try{
+    const vm=document.getElementById('view-map');
+    if(vm && !vm.hidden) renderMap();
+  }catch(e){} }, 0);
   return z;
 }
 (function(){
-  uiZoomApply(uiZoomGet());
+  try{ uiZoomApply(uiZoomGet()); }catch(e){ /* масштаб не должен ломать запуск */ }
   const plus=document.getElementById('btnFontPlus');
   const minus=document.getElementById('btnFontMinus');
   if(plus) plus.addEventListener('click', ()=> uiZoomApply(uiZoomGet()+0.05));
@@ -1842,6 +1847,9 @@ function doRoll(die,count,modLabel){
   document.getElementById('rollLog').textContent = label;
   rollHistory.push(`${die}${cnt>1?`×${cnt}`:''} = ${sum}${label}`);
   if(rollHistory.length>8) rollHistory.shift();
+  try{
+    battleLogPush(`Бросок: ${die}${cnt>1?`×${cnt}`:''} = ${sum}${label}`);
+  }catch(e){}
 }
 function doOneD20(){ return 1+Math.floor(Math.random()*20); }
 document.getElementById('btnExport').addEventListener('click', ()=>{
@@ -1979,6 +1987,45 @@ function showTab(name){
 document.querySelectorAll('.tab').forEach(t=> t.addEventListener('click', ()=> showTab(t.dataset.tab)));
 
 /* ════════════ Карты ════════════ */
+/* Быстрое переключение вкладок: Alt+1…6, Alt+←/→ */
+/* Номер цифровой клавиши независимо от раскладки и модификаторов (macOS Option+1 = «¡») */
+function digitFromEvent(e){
+  const code = e.code || '';
+  let m = /^Digit([0-9])$/.exec(code) || /^Numpad([0-9])$/.exec(code);
+  if(m) return +m[1];
+  if(e.keyCode >= 48 && e.keyCode <= 57) return e.keyCode - 48;   // запасной путь
+  const k = String(e.key || '');
+  if(/^[0-9]$/.test(k)) return +k;
+  const map = { '¡':'1','™':'2','£':'3','¢':'4','∞':'5','§':'6','¶':'7','•':'8','ª':'9','º':'0',
+                '!':'1','@':'2','#':'3','$':'4','%':'5','^':'6','&':'7','*':'8','(':'9',')':'0' };
+  return map[k] || 0;
+}
+
+const TAB_ORDER = ['home','sessions','chars','monsters','map','battle'];
+document.addEventListener('keydown', e=>{
+  const tag = (e.target && e.target.tagName || '').toLowerCase();
+  if(tag==='input' || tag==='textarea' || tag==='select' || (e.target && e.target.isContentEditable)) return;
+  if(e.altKey && e.ctrlKey) return;                  // Ctrl+Alt+цифра — карты
+
+  const byAlt = e.altKey && !e.metaKey;
+  const byCtrl = e.ctrlKey && !e.altKey && !e.metaKey;
+  if(!byAlt && !byCtrl) return;
+
+  const d = digitFromEvent(e);
+  if(d >= 1 && d <= 6){
+    e.preventDefault();
+    showTab(TAB_ORDER[d - 1]);
+    return;
+  }
+  if(byAlt && (e.key==='ArrowLeft' || e.key==='ArrowRight')){
+    e.preventDefault();
+    const i = TAB_ORDER.indexOf(currentTab);
+    const n = TAB_ORDER.length;
+    const j = e.key==='ArrowRight' ? (i+1+n)%n : (i-1+n)%n;
+    showTab(TAB_ORDER[j]);
+  }
+});
+
 const STORE_MAP = KEYS.map;
 const MAP_MAX_BYTES = 8*1024*1024;      // лимит размера файла карты
 const MAP_ALLOWED = ['image/png','image/jpeg','image/webp'];
@@ -2682,16 +2729,23 @@ document.addEventListener('keydown', e=>{
   if(currentTab!=='map') return;
   const tag=(e.target && e.target.tagName || '').toLowerCase();
   if(tag==='input'||tag==='textarea'||tag==='select'||(e.target && e.target.isContentEditable)) return;
-  if(e.altKey && /^[1-9]$/.test(e.key)){
-    const idx=+e.key-1;
-    if(maps[idx]){ e.preventDefault(); activeMapId=maps[idx].id; saveMap(); renderMap(); }
+  if(e.altKey && e.ctrlKey){
+    const d = digitFromEvent(e);
+    if(d >= 1 && d <= 9 && maps[d-1]){
+      e.preventDefault(); activeMapId=maps[d-1].id; saveMap(); renderMap();
+    }
     return;
   }
-  if(!e.altKey && !e.metaKey && !e.ctrlKey && (e.key==='[' || e.key===']')){
-    if(!maps.length) return;
-    const i=Math.max(0, maps.findIndex(m=>m.id===activeMapId));
-    const j=e.key===']' ? (i+1)%maps.length : (i-1+maps.length)%maps.length;
-    e.preventDefault(); activeMapId=maps[j].id; saveMap(); renderMap();
+  if(!e.altKey && !e.metaKey && !e.ctrlKey){
+    const code = e.code || '';
+    const isNext = code==='BracketRight' || e.key===']' || e.key==='ъ';
+    const isPrev = code==='BracketLeft'  || e.key==='[' || e.key==='х';
+    if(isNext || isPrev){
+      if(!maps.length) return;
+      const i=Math.max(0, maps.findIndex(m=>m.id===activeMapId));
+      const j=isNext ? (i+1)%maps.length : (i-1+maps.length)%maps.length;
+      e.preventDefault(); activeMapId=maps[j].id; saveMap(); renderMap();
+    }
   }
 });
 
@@ -3569,6 +3623,63 @@ function applyBattleDamage(inp){
   if(dmg>0) toast(`«${p.name}» получил ${dmg} урона → ХП ${p.hp}`);
   if(dmg>0) battleLogPush(`«${p.name}» получил ${dmg} урона → ХП ${p.hp}`);
 }
+/* Урон/лечение по выделенной карточке одной суммой */
+function applyAmountTo(p, delta){
+  if(!p) return;
+  const hasHp = !(p.hp==='' || p.hp==null) || (p.hpMax!=='' && +p.hpMax>0);
+  ensureHpMax(p);
+  const woundBefore = woundState(p);
+  const cur = (p.hp==='' || p.hp==null) ? 0 : (+p.hp || 0);
+  const maxHp = (+p.hpMax > 0) ? +p.hpMax : 9999;
+  p.hp = Math.max(0, Math.min(maxHp, cur + delta));
+  saveBattle();
+  const hpInput = document.querySelector(`.battle-list [data-bid="${p.id}"][data-field="hp"]`);
+  if(hpInput) hpInput.value = p.hp;
+  refreshBattleState(p);
+  logWoundChange(p, woundBefore);
+  if(delta < 0){
+    battleLogPush(`«${p.name}» получил ${-delta} урона → ХП ${p.hp}`);
+    toast(`«${p.name}»: −${-delta} → ХП ${p.hp}`);
+  } else {
+    battleLogPush(`«${p.name}» вылечен на ${delta} → ХП ${p.hp}`);
+    toast(`«${p.name}»: +${delta} → ХП ${p.hp}`);
+  }
+  renderBattle();
+  if(!hasHp) toast('Подсказка: укажите ХП в карточке, чтобы видеть полоску здоровья');
+}
+
+/* Диалог быстрого урона: число, 2d6+3 или +5 для лечения */
+function battleDamageDialog(){
+  closeStatusPalette();
+  const p = battleParts.find(x=>x.id===battleSelId);
+  if(!p){ toast('Сначала выберите карточку (↑↓)'); return; }
+  uiPrompt(`Урон по «${p.name}» (можно 2d6+3, «+5» — лечение):`, '').then(v=>{
+    if(v===null) return;
+    const raw = String(v).trim();
+    if(!raw) return;
+    let amount = null, heal = false;
+
+    if(/^\+\s*\d+$/.test(raw)){ heal = true; amount = parseInt(raw.replace(/\D/g,''),10); }
+    else if(/^-?\s*\d+$/.test(raw)){
+      const n = parseInt(raw.replace(/\s/g,''),10);
+      if(n < 0){ heal = true; amount = -n; } else { amount = n; }
+    } else {
+      const m = /^(\d+)\s*d\s*(\d+)\s*(?:([+-])\s*(\d+))?$/i.exec(raw.replace(/\s+/g,''));
+      if(m){
+        const n = Math.min(100, +m[1]), d = Math.min(1000, +m[2]);
+        let total = 0;
+        for(let i=0;i<n;i++) total += 1 + Math.floor(Math.random()*d);
+        total += (m[3] === '-' ? -1 : 1) * (+m[4] || 0);
+        amount = Math.max(0, total);
+        battleLogPush(`Бросок урона: ${raw} = ${amount}`);
+        toast(`${raw} → ${amount}`);
+      }
+    }
+    if(amount === null || !isFinite(amount)){ uiAlert('Не понял значение: «'+raw+'»'); return; }
+    applyAmountTo(p, heal ? amount : -amount);
+  });
+}
+
 const BATTLE_STATUSES = ['Концентрация','Ослеплён','Оглох','Очарован','Испуган','Отравлен','Парализован','Окаменел','Схвачен','Опутан','Сбит с ног','Ошеломлён','Без сознания','Невидимый','Недееспособен','Истощён','Ускорен','Замедлен'];
 function ensureHpMax(p){
   if(p && (p.hpMax==='' || p.hpMax==null || +p.hpMax<=0) && p.hp!=='' && p.hp!=null){
@@ -3715,13 +3826,15 @@ function bindBattleKeyboard(){
     pal.addEventListener('click', e=>{
       const b = e.target.closest('[data-pst]');
       if(!b) return;
-      if(paletteBid) toggleStatus(paletteBid, b.dataset.pst);
-      renderStatusPalette(paletteBid);
+      const bid = paletteBid;
+      if(bid) toggleStatus(bid, b.dataset.pst);
+      closeStatusPalette();
     });
   }
 
   document.addEventListener('keydown', e=>{
     if(currentTab !== 'battle') return;
+    if(e.altKey || e.ctrlKey || e.metaKey) return;   // служебные сочетания — не наши
     const tag = (e.target && e.target.tagName || '').toLowerCase();
     const typing = tag==='input' || tag==='textarea' || tag==='select' || (e.target && e.target.isContentEditable);
 
@@ -3730,7 +3843,8 @@ function bindBattleKeyboard(){
 
     if(paletteIsOpen() && /^[1-9]$/.test(e.key)){
       const st = BATTLE_STATUSES[+e.key - 1];
-      if(st && paletteBid){ e.preventDefault(); toggleStatus(paletteBid, st); renderStatusPalette(paletteBid); }
+      const bid = paletteBid;
+      if(st && bid){ e.preventDefault(); toggleStatus(bid, st); closeStatusPalette(); }
       return;
     }
 
@@ -3759,6 +3873,11 @@ function bindBattleKeyboard(){
     if(e.key === 's' || e.key === 'S' || e.key === 'ы' || e.key === 'Ы'){
       e.preventDefault();
       renderStatusPalette(sel.id);
+      return;
+    }
+    if(e.key === 'd' || e.key === 'D' || e.key === 'в' || e.key === 'В'){
+      e.preventDefault();
+      battleDamageDialog();
       return;
     }
     if(e.key === 'Delete' && e.shiftKey){

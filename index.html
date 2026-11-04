@@ -41,12 +41,12 @@
       </div>
       <div class="main-head">
         <div class="tabbar">
-          <button class="tab active" data-tab="home"><span class="gi" data-gi="home"></span> Главная</button>
-          <button class="tab" data-tab="sessions"><span class="gi" data-gi="sessions"></span> Сессии</button>
-          <button class="tab" data-tab="chars"><span class="gi" data-gi="character"></span> Ширма</button>
-          <button class="tab" data-tab="monsters"><span class="gi" data-gi="monsters"></span> Монстры</button>
-          <button class="tab" data-tab="map"><span class="gi" data-gi="map"></span> Карта</button>
-          <button class="tab" data-tab="battle"><span class="gi" data-gi="battle"></span> Бой</button>
+          <button class="tab active" data-tab="home" title="Главная (Alt+1)"><span class="gi" data-gi="home"></span> Главная</button>
+          <button class="tab" data-tab="sessions" title="Сессии (Alt+2)"><span class="gi" data-gi="sessions"></span> Сессии</button>
+          <button class="tab" data-tab="chars" title="Ширма (Alt+3)"><span class="gi" data-gi="character"></span> Ширма</button>
+          <button class="tab" data-tab="monsters" title="Монстры (Alt+4)"><span class="gi" data-gi="monsters"></span> Монстры</button>
+          <button class="tab" data-tab="map" title="Карта (Alt+5)"><span class="gi" data-gi="map"></span> Карта</button>
+          <button class="tab" data-tab="battle" title="Бой (Alt+6)"><span class="gi" data-gi="battle"></span> Бой</button>
         </div>
         <div class="actions">
           <span class="acts-group" id="fontGroup">
@@ -142,6 +142,7 @@
         <section class="home-card home-updates">
           <h2>Обновления</h2>
           <ul>
+            <li><span class="upd-date">04.11.2026</span><span>Навигация: Alt+1…6 — вкладки, Alt+←/→ — соседняя вкладка, Ctrl+Alt+1…9 — карты; броски костей пишутся в журнал боя.</span></li>
             <li><span class="upd-date">04.11.2026</span><span>Кнопки А−/А+ для масштаба интерфейса (Ctrl+±/0), клавиатура боя работает независимо от фокуса: ↑↓ выбор, Enter свернуть, S — статусы, 1–9 — включить.</span></li>
             <li><span class="upd-date">04.11.2026</span><span>Сборки: все диалоги (удаление, переименование, ввод ссылки) переведены на встроенные окна, экспорт сохраняет файлы через системный диалог — работает и в браузере, и в настольном приложении.</span></li>
             <li><span class="upd-date">04.11.2026</span><span>Бой: кнопки добавления и очистки работают без системных окон, броски костей переехали на панель боя, добавлены навигация с клавиатуры и быстрые статусы (S, 1–9).</span></li>
@@ -288,7 +289,7 @@
           <span class="acts-sep"></span>
           <button id="battleClear" title="Убрать всех участников">✕ Очистить</button>
           <button id="battleStatesBtn" title="Эффекты состояний и реакции монстров"><span class="gi" data-gi="effects"></span> Состояния</button>
-          <span class="hint bt-hint">↑↓ выбор · Enter свернуть · S статусы · 1–9</span>
+          <span class="bt-hint" tabindex="0" data-tip="↑↓ — выбор карточки, Enter — свернуть/развернуть, S — статусы, D — урон, Shift+Del — убрать">↑↓ · Enter · S · D</span>
           <div id="battleStatusPalette" class="bt-palette" hidden aria-label="Быстрые статусы"></div>
         </div>
         <div class="battle-body">
@@ -307,6 +308,7 @@
             <span class="af-hint">Автор: Ролёвки от Вовки</span>
             <span class="af-hint" title="Иконки: Lorc, Delapouite — game-icons.net, CC BY 3.0">Иконки: game-icons.net</span>
             <span class="af-hint" title="Магические предметы SRD 5.1 — Wizards of the Coast, CC-BY-4.0">SRD 5.1 · CC-BY-4.0</span>
+            <a class="af-link" href="https://boosty.to/vovkaroleplay" target="_blank" rel="noopener">Поддержать</a>
             <a class="af-link" href="https://github.com/chipsfirst/dm_screen" target="_blank" rel="noopener">Репозиторий на GitHub ↗</a>
           </span>
         </footer>
