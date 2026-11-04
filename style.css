@@ -174,12 +174,14 @@
     background-size:18px 18px;
   }
   .map-zoom.shape-square{
+    background-color:#f6f3ea;
     background-image:
-      linear-gradient(rgba(90,90,90,.20) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(90,90,90,.20) 1px, transparent 1px);
-    background-size:var(--cell,34.641px) var(--cell,34.641px);
+      linear-gradient(rgba(80,86,96,.38) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(80,86,96,.38) 1px, transparent 1px);
+    background-size:var(--cell,40px) var(--cell,40px);
+    background-repeat:repeat;
   }
-  .map-canvas.no-grid .map-zoom{background-image:none}
+  .map-canvas.no-grid .map-zoom:not(.shape-square){background-image:none}
   .map-grid{position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:2;
     background-image:
       linear-gradient(rgba(200,210,220,.28) 1px, transparent 1px),
@@ -880,3 +882,12 @@ select{background:var(--panel2); color:var(--text); border:1px solid var(--line)
 
   /* панель токена позиционируется внутри вкладки «Карта» */
   #view-map{position:relative}
+
+  /* компактный тулбар карты */
+  .map-toolbar{padding:6px 12px; gap:6px}
+  .map-toolbar button{padding:4px 9px; font-size:12.5px; border-radius:7px; line-height:1.25}
+  .map-toolbar button .gi{width:14px; height:14px}
+  .map-toolbar select, .map-toolbar input[type=number]{padding:3px 6px; font-size:12.5px; border-radius:7px}
+  .map-toolbar input[type=number]{width:54px}
+  .map-toolbar .map-chk{font-size:12px; gap:4px}
+  .map-toolbar .hint{font-size:12px}
