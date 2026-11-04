@@ -24,3 +24,12 @@ data/translation_cache.json
 
 # Промежуточные данные справочника книг
 data/books/
+
+# Сборка установщиков
+dist/
+src-tauri/target/
+src-tauri/gen/
+src-tauri/icons/
+
+# Портативные сборки
+build/

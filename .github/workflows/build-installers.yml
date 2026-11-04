@@ -1,0 +1,60 @@
+name: Сборка установщиков
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: ${{ matrix.label }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-14
+            target: aarch64-apple-darwin
+            label: macOS (Apple Silicon)
+          - os: macos-14
+            target: x86_64-apple-darwin
+            label: macOS (Intel)
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            label: Windows (x64)
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Собрать веб-файлы в dist
+        shell: bash
+        run: bash packaging/pack_web.sh dist
+
+      - name: Установить Tauri CLI
+        run: npm install -g @tauri-apps/cli@^2
+
+      - name: Сгенерировать иконки
+        shell: bash
+        run: tauri icon icon.svg --output src-tauri/icons
+
+      - name: Собрать установщики
+        run: tauri build --target ${{ matrix.target }}
+
+      - name: Загрузить артефакты
+        uses: actions/upload-artifact@v4
+        with:
+          name: installers-${{ matrix.target }}
+          if-no-files-found: error
+          path: |
+            src-tauri/target/${{ matrix.target }}/release/bundle/**

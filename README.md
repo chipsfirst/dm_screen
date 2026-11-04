@@ -64,6 +64,46 @@
 
 Никакого сервера, Node.js или Python не требуется.
 
+## Установка и сборка
+
+**Портативная версия (без установки)**
+
+```bash
+bash packaging/make_portable.sh
+```
+
+Получится `build/ShirmaMaster-portable.zip`: папка с приложением и лаунчерами
+`start-macos.command` / `start-windows.bat`. Лаунчер поднимает локальный сервер
+на `127.0.0.1` и открывает браузер — так надёжно работают `localStorage` и
+`IndexedDB` (карты, картинки, резервные копии), в отличие от запуска через `file://`.
+
+**Установщики (macOS + Windows)**
+
+Проект Tauri v2 лежит в `src-tauri/`, веб-файлы собираются скриптом
+`packaging/pack_web.sh` в `dist/`. Сборка идёт в GitHub Actions
+(`.github/workflows/build-installers.yml`) на трёх платформах:
+
+* macOS Apple Silicon → `.app` + `.dmg`
+* macOS Intel → `.app` + `.dmg`
+* Windows x64 → `.msi` + `.exe` (NSIS)
+
+Запуск: вкладка **Actions → «Сборка установщиков» → Run workflow**, либо пуш тега
+`v*`. Готовые файлы появятся в артефактах сборки.
+
+Локальная сборка требует Rust и Node (в текущем окружении их нет):
+
+```bash
+bash packaging/pack_web.sh dist
+npm install -g @tauri-apps/cli@^2
+tauri icon icon.svg --output src-tauri/icons
+tauri build
+```
+
+**Про данные**: установщик и портативный лаунчер работают на `http://127.0.0.1`,
+поэтому старые данные из версии на `file://` сами не переедут — перенесите их
+через «Экспорт» → «Импорт». Сборки без подписи Apple: при первом запуске
+macOS попросит правый клик → «Открыть» (или нужна нотаризация с Apple Developer ID).
+
 ## Структура проекта
 
 ```
