@@ -71,14 +71,16 @@ icons.js            — path-данные иконок (game-icons.net, CC BY 3.
 icons/              — исходные SVG иконок
 app-data.js         — статические данные (образцы, правила, случайные таблицы)
 library-data.js     — локальная база заклинаний и предметов (формируется сборщиком)
-bestiary-data.js    — бестиарий (формируется _merge_bestiary.py; базово 510 существ)
+bestiary-data.js    — бестиарий, 677 монстров полностью по-русски (имена, типы, языки, действия; _merge_bestiary.py + _translate_bestiary_ru.py + _fix_bestiary_types.py + _polish_bestiary.py)
 shop-data.js        — магазин (205 предметов PHB и артефактов, формируется сборщиком)
 shop-catalog-data.js — каталог лавок из PDF «D&D Shop Catalog V-1.8» (682 позиции, генерируется _build_shop_catalog.py)
 data/               — исходные JSON для сборщиков
 _build_library.py   — (опц.) сборщик library-data.js из исходных JSON
 _build_bestiary.py  — (опц.) сборщик bestiary-data.js из monsters2024.json
 _merge_bestiary.py  — (опц.) сборка полного бестиария: data/monsters2024.json + data/bestiary/*.json (5e.tools); разворачивает _copy-алиасы и переводит размеры/типы/навыки/языки
-_translate_bestiary.py — (опц.) перевод оставшейся прозы (действия/черты) и имён через конфигурируемый API перевода
+_translate_bestiary_ru.py — перевод бестиария: словарь терминов + машинный перевод прозы (кэш data/translation_cache.json), режим --fix для повторной правки глоссарием
+_fix_bestiary_types.py — пересборка поля type из английских источников (род, подтип, мировоззрение)
+_polish_bestiary.py — финальная чистка полей (согласование размера, обрезанные хвосты строк)
 _build_shop_catalog.py — сборщик shop-catalog-data.js: разбор _tmp/catalog.txt (текст PDF) + словарь перевода _shop_ru.py
 data/bestiary/      — сюда кладутся файлы bestiary-*.json из репозитория 5etools-src
 _spell_descs_ru.py  — (опц.) словарь русских описаний заклинаний
