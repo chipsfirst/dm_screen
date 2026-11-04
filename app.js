@@ -1365,13 +1365,19 @@ function closeModal(m){
 
 /* ═══ Bestiary (ленивая загрузка тяжёлого bestiary-data.js) ═══ */
 let bestiaryLoadingPromise = null;
+function syncHomeBestiaryCount(){
+  const el=document.getElementById('homeBestiaryCount'); if(!el) return;
+  const n=(window.BESTIARY && window.BESTIARY.length) || 0;
+  if(n) el.textContent = String(n);
+}
+
 function ensureBestiary(){
-  if(window.BESTIARY && window.BESTIARY.length) return Promise.resolve();
+  if(window.BESTIARY && window.BESTIARY.length){ syncHomeBestiaryCount(); return Promise.resolve(); }
   if(bestiaryLoadingPromise) return bestiaryLoadingPromise;
   bestiaryLoadingPromise = new Promise((resolve, reject)=>{
     const s=document.createElement('script');
     s.src='bestiary-data.js';
-    s.onload=()=>resolve();
+    s.onload=()=>{ syncHomeBestiaryCount(); resolve(); };
     s.onerror=()=>{ bestiaryLoadingPromise=null; reject(new Error('не удалось загрузить bestiary-data.js')); };
     document.head.appendChild(s);
   });
