@@ -7,6 +7,8 @@
 <title>Ширма мастера — D&D 5.5</title>
 <link rel="icon" href="logo.svg" type="image/svg+xml">
 <link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="vendor/fonts.css">
+<link rel="stylesheet" href="vendor/fonts-extra.css">
 <link rel="stylesheet" href="style.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -15,6 +17,9 @@
 <body>
 <div class="app">
   <!-- Main -->
+  <div class="roll-popup" id="rollPopup" hidden aria-live="polite">
+    <b></b><span></span>
+  </div>
   <main class="main">
     <div class="topbar">
       <img class="site-logo" src="logo.svg" alt="Ролёвки от Вовки">
@@ -49,6 +54,7 @@
           <button class="tab" data-tab="battle" title="Бой (Alt+6)"><span class="gi" data-gi="battle"></span> Бой</button>
         </div>
         <div class="actions">
+          <button id="btnKeys" title="Горячие клавиши" aria-label="Горячие клавиши">?</button>
           <span class="acts-group" id="fontGroup">
             <button id="btnFontMinus" title="Уменьшить шрифт (Ctrl+−)" aria-label="Уменьшить шрифт">А−</button>
             <button id="btnFontPlus" title="Увеличить шрифт (Ctrl++)" aria-label="Увеличить шрифт">А+</button>
@@ -142,7 +148,8 @@
         <section class="home-card home-updates">
           <h2>Обновления</h2>
           <ul>
-            <li><span class="upd-date">04.11.2026</span><span>Пресеты создания монстров: 8 заготовок (от миньона до босса) с КД, ХП, характеристиками и приёмами; бестиарий проверен — восстановлены обрезанные действия, переведены названия приёмов.</span></li>
+            <li><span class="upd-date">04.11.2026</span><span>Бой: раунды и очередь хода (⚄ Инициатива, «Следующий ▸», клавиша N), проверка концентрации при уроне; окно горячих клавиш «?»; поиск по действиям монстров; магазин запоминает фильтр; журнал боя входит в резервную копию.</span></li>
+<li><span class="upd-date">04.11.2026</span><span>Пресеты создания монстров: 8 заготовок (от миньона до босса) с КД, ХП, характеристиками и приёмами; бестиарий проверен — восстановлены обрезанные действия, переведены названия приёмов.</span></li>
 <li><span class="upd-date">04.11.2026</span><span>Навигация: Alt+1…6 — вкладки, Alt+←/→ — соседняя вкладка, Ctrl+Alt+1…9 — карты; броски костей пишутся в журнал боя.</span></li>
             <li><span class="upd-date">04.11.2026</span><span>Кнопки А−/А+ для масштаба интерфейса (Ctrl+±/0), клавиатура боя работает независимо от фокуса: ↑↓ выбор, Enter свернуть, S — статусы, 1–9 — включить.</span></li>
             <li><span class="upd-date">04.11.2026</span><span>Сборки: все диалоги (удаление, переименование, ввод ссылки) переведены на встроенные окна, экспорт сохраняет файлы через системный диалог — работает и в браузере, и в настольном приложении.</span></li>
@@ -284,10 +291,11 @@
     <div class="tabview" id="view-battle" hidden>
       <div class="battle-wrap">
         <div class="battle-toolbar" id="battleToolbar">
-          <input id="battleQuickName" class="bt-quick" placeholder="Имя участника" aria-label="Имя участника" spellcheck="false">
           <button id="battleAddOpp" title="Добавить противника"><span class="gi" data-gi="monsters"></span> Противник</button>
           <button id="battleAddChar" title="Добавить персонажа"><span class="gi" data-gi="character"></span> Персонаж</button>
           <span class="acts-sep"></span>
+          <span class="bt-round" id="battleRound" title="Текущий раунд">Раунд 1</span>
+          <button id="battleNextTurn" title="Следующий ход (N)">Следующий ▸</button>
           <button id="battleClear" title="Убрать всех участников">✕ Очистить</button>
           <button id="battleStatesBtn" title="Эффекты состояний и реакции монстров"><span class="gi" data-gi="effects"></span> Состояния</button>
           <span class="bt-hint" tabindex="0" data-tip="↑↓ — выбор карточки, Enter — свернуть/развернуть, S — статусы, D — урон, Shift+Del — убрать">↑↓ · Enter · S · D</span>
@@ -309,6 +317,7 @@
             <span class="af-hint">Автор: Ролёвки от Вовки</span>
             <span class="af-hint" title="Иконки: Lorc, Delapouite — game-icons.net, CC BY 3.0">Иконки: game-icons.net</span>
             <span class="af-hint" title="Магические предметы SRD 5.1 — Wizards of the Coast, CC-BY-4.0">SRD 5.1 · CC-BY-4.0</span>
+            <span class="af-hint af-ver">Ширма мастера <span id="appVersion">1.0.5</span> · <a class="af-link" href="https://github.com/chipsfirst/dm_screen/releases" target="_blank" rel="noopener">что нового</a></span>
             <a class="af-link" href="https://boosty.to/vovkaroleplay" target="_blank" rel="noopener">Поддержать</a>
             <a class="af-link" href="https://github.com/chipsfirst/dm_screen" target="_blank" rel="noopener">Репозиторий на GitHub ↗</a>
           </span>
@@ -382,6 +391,45 @@
     <div class="ui-actions">
       <button id="uiCancel">Отмена</button>
       <button id="uiOk">ОК</button>
+    </div>
+  </div>
+</div>
+
+<!-- Горячие клавиши -->
+<div class="modal" id="keysModal" hidden>
+  <div class="modal-box modal-keys">
+    <div class="modal-head">
+      <strong><span class="gi" data-gi="note"></span> Горячие клавиши</strong>
+      <button class="modal-close" id="keysClose">✕</button>
+    </div>
+
+    <div class="keys-body">
+    <div class="keys-group-title">Навигация</div>
+    <div class="keys-list">
+      <div class="keys-row"><span class="keys-label">Вкладки</span><span class="keys-combo"><kbd>Alt</kbd><i>+</i><kbd>1</kbd><i>…</i><kbd>6</kbd></span></div>
+      <div class="keys-row"><span class="keys-label">Соседняя вкладка</span><span class="keys-combo"><kbd>Alt</kbd><i>+</i><kbd>←</kbd><i>/</i><kbd>→</kbd></span></div>
+      <div class="keys-row"><span class="keys-label">Карты: следующая и предыдущая</span><span class="keys-combo"><kbd>[</kbd><i>/</i><kbd>]</kbd></span></div>
+    </div>
+
+    <div class="keys-group-title">Интерфейс</div>
+    <div class="keys-list">
+      <div class="keys-row"><span class="keys-label">Поиск по приложению</span><span class="keys-combo"><kbd>Ctrl</kbd><i>/</i><kbd>⌘</kbd><i>+</i><kbd>K</kbd></span></div>
+      <div class="keys-row"><span class="keys-label">Масштаб интерфейса</span><span class="keys-combo"><kbd>Ctrl</kbd><i>/</i><kbd>⌘</kbd><i>+</i><kbd>+</kbd><i>/</i><kbd>−</kbd><i>/</i><kbd>0</kbd></span></div>
+      <div class="keys-row"><span class="keys-label">Отменить изменение</span><span class="keys-combo"><kbd>Ctrl</kbd><i>/</i><kbd>⌘</kbd><i>+</i><kbd>Z</kbd></span></div>
+      <div class="keys-row"><span class="keys-label">Это окно</span><span class="keys-combo"><kbd>?</kbd></span></div>
+    </div>
+
+    <div class="keys-group-title">Бой</div>
+    <div class="keys-list">
+      <div class="keys-row"><span class="keys-label">Выбрать карточку</span><span class="keys-combo"><kbd>↑</kbd><i>/</i><kbd>↓</kbd></span></div>
+      <div class="keys-row"><span class="keys-label">Свернуть или развернуть</span><span class="keys-combo"><kbd>Enter</kbd></span></div>
+      <div class="keys-row"><span class="keys-label">Статусы</span><span class="keys-combo"><kbd>S</kbd></span></div>
+      <div class="keys-row"><span class="keys-label">Статус по номеру в палитре</span><span class="keys-combo"><kbd>1</kbd><i>…</i><kbd>9</kbd></span></div>
+      <div class="keys-row"><span class="keys-label">Диалог урона</span><span class="keys-combo"><kbd>D</kbd></span></div>
+      <div class="keys-row"><span class="keys-label">Следующий ход</span><span class="keys-combo"><kbd>N</kbd></span></div>
+      <div class="keys-row"><span class="keys-label">Убрать из боя</span><span class="keys-combo"><kbd>Shift</kbd><i>+</i><kbd>Del</kbd></span></div>
+      <div class="keys-row"><span class="keys-label">Закрыть окно</span><span class="keys-combo"><kbd>Esc</kbd></span></div>
+    </div>
     </div>
   </div>
 </div>

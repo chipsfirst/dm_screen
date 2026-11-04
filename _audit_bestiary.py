@@ -145,6 +145,14 @@ def main():
             print(f"    … ещё {len(items)-5}")
         print()
 
+    if "--ci" in sys.argv:
+        blocking = ("empty_field", "markup", "latin", "truncated", "double_space", "fewer_actions")
+        bad = {k: len(problems[k]) for k in blocking if problems[k]}
+        if bad:
+            print("ПРОВЕРКА НЕ ПРОЙДЕНА:", bad)
+            sys.exit(1)
+        print("ПРОВЕРКА ПРОЙДЕНА")
+
     if "--json" in sys.argv:
         out = Path(sys.argv[sys.argv.index("--json") + 1])
         out.write_text(json.dumps(problems, ensure_ascii=False, indent=1), encoding="utf-8")

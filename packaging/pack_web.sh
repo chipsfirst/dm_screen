@@ -19,6 +19,8 @@ FILES=(
   books-data.js
   srd-data.js
   icons.js
+  vendor/fonts.css
+  vendor/fonts-extra.css
   logo.svg
   icon.svg
   hex.svg
@@ -30,8 +32,14 @@ for f in "${FILES[@]}"; do
     echo "Нет файла: $f" >&2
     exit 1
   fi
-  cp "$f" "$OUT/"
+  mkdir -p "$OUT/$(dirname "$f")"
+  cp "$f" "$OUT/$f"
 done
+
+mkdir -p "$OUT/vendor"
+if [ -d vendor/fonts ]; then
+  cp -R vendor/fonts "$OUT/vendor/fonts"
+fi
 
 if [ -d icons ]; then
   cp -R icons "$OUT/icons"

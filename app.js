@@ -186,11 +186,14 @@ function buildBackupPayload(){
   const collect=k=>{ if(k && mediaCache[k]) media[k]=mediaCache[k]; };
   (typeof blocks!=='undefined'?blocks:[]).forEach(b=> collect(b.dataKey));
   (typeof maps!=='undefined'?maps:[]).forEach(m=>{ collect(m.bgKey); (m.markers||[]).forEach(k=> collect(k.imgKey)); });
-  let sessions=null, map=null, battle=null;
+  let sessions=null, map=null, battle=null, battleLogData=null;
   try{ sessions = JSON.parse(localStorage.getItem('shirma_sessions_v1')||'null'); }catch(e){}
   try{ map = JSON.parse(localStorage.getItem('shirma_map_v1')||'null'); }catch(e){}
   try{ battle = JSON.parse(localStorage.getItem('shirma_battle_v1')||'null'); }catch(e){}
-  return { version:3, exported:Date.now(), blocks, media, sessions, map, battle };
+  try{ battleLogData = JSON.parse(localStorage.getItem('shirma_battle_log_v1')||'null'); }catch(e){}
+  let turn = null;
+  try{ turn = JSON.parse(localStorage.getItem('shirma_battle_turn_v1')||'null'); }catch(e){}
+  return { version:4, exported:Date.now(), blocks, media, sessions, map, battle, battleLog: battleLogData, battleTurn: turn };
 }
 function scheduleDirSave(){
   if(!saveDirHandle) return;
@@ -432,12 +435,18 @@ function statsInput(b){
   </div>`).join('')+`</div>`;
 }
 
+function autoTextareaStyle(text){
+  const lines = String(text || '').split('\n');
+  const est = lines.reduce((n, line)=> n + Math.max(1, Math.ceil(line.length / 70)), 0);
+  const h = Math.max(72, Math.min(460, est * 21 + 14));
+  return `min-height:${h}px; height:${h}px`;
+}
 function bodyHtml(b){
   if(b.type==='mob' && b.mdata){
     return `<div class="block-body">${mobStatBlockHtml(b)}
       <div class="card-notes">
         <div class="hint">Текстовая заметка к статблоку:</div>
-        <textarea data-field="text" data-id="${b.id}" style="min-height:60px">${escapeHtml(b.text)}</textarea>
+        <textarea data-field="text" data-id="${b.id}" style="${autoTextareaStyle(b.text)}">${escapeHtml(b.text)}</textarea>
       </div></div>
       <div class="block-foot">
         <button data-action="collapse">Свернуть</button>
@@ -449,7 +458,10 @@ function bodyHtml(b){
       </div>`;
   }
   if(b.type==='pc' || b.type==='mob'){
-    const props = `<div class="props">`+Object.entries(b.props).map(([k,v])=>`<div class="prop"><span class="lbl">${escapeHtml(k)}</span><input class="v" data-prop-key="${escapeHtml(k)}" data-prop-id="${b.id}" value="${escapeHtml(String(v))}"></div>`).join('')+`</div>`;
+    const props = `<div class="props">`+Object.entries(b.props).map(([k,v])=>{
+      const w = Math.min(30, Math.max(3, String(v==null?'':v).length + 1));
+      return `<div class="prop"><span class="lbl">${escapeHtml(k)}</span><input class="v" data-prop-key="${escapeHtml(k)}" data-prop-id="${b.id}" value="${escapeHtml(String(v))}" style="width:${w}ch"></div>`;
+    }).join('')+`</div>`;
     const left = `<div class="card-col-left">
       ${props}
       ${b.type==='pc'?hpRowHtml(b):''}
@@ -465,7 +477,7 @@ function bodyHtml(b){
           </div>`
         : ''}
       ${b.type==='pc'?resourcesHtml(b):''}
-      <textarea data-field="text" data-id="${b.id}" placeholder="Заметки…">${escapeHtml(b.text)}</textarea>
+      <textarea data-field="text" data-id="${b.id}" placeholder="Заметки…" style="${autoTextareaStyle(b.text)}">${escapeHtml(b.text)}</textarea>
     </div>`;
     return `<div class="block-body"><div class="card-cols">${left}${right}</div></div>
       <div class="block-foot">
@@ -492,7 +504,7 @@ function bodyHtml(b){
       </div>`;
     }
   }
-  inner += `<textarea data-field="text" data-id="${b.id}">${escapeHtml(b.text)}</textarea>`;
+  inner += `<textarea data-field="text" data-id="${b.id}" style="${autoTextareaStyle(b.text)}">${escapeHtml(b.text)}</textarea>`;
   return `<div class="block-body">${inner}</div>
     <div class="block-foot">
       <button data-action="collapse">Свернуть</button>
@@ -611,7 +623,9 @@ function mobStatBlockHtml(b){
       <div class="mob-ab-v">${a.v}</div>
       <div class="mob-ab-m">${a.m>=0?'+'+a.m:a.m}${a.s&&a.s!==(a.m>=0?'+'+a.m:a.m)?' ('+a.s+')':''}</div>
     </div>`).join('');
-  const actsHtml = actsGroupsHtml(d);
+  const actsHtml = (d.acts && d.acts.length)
+    ? actsGroupsHtml(d)
+    : '<div class="mob-section"><div class="mob-sec-title">Действия</div><div class="mob-act muted">В источнике нет описания действий — допишите их в заметке ниже.</div></div>';
   return `<div class="card-cols">
       <div class="card-col-left">
         <div class="mob-type">${escapeHtml(d.type||'')}</div>
@@ -1929,6 +1943,25 @@ document.getElementById('btnRoll').addEventListener('click', ()=>{
  if(btnRollShort) btnRollShort.addEventListener('click', ()=>{
    doRoll(currentDie, parseInt(document.getElementById('dieCount').value)||1, null);
  });
+/* Всплывающее значение броска */
+let rollPopupTimer = null;
+function showRollPopup(total, detail){
+  const pop = document.getElementById('rollPopup');
+  if(!pop) return;
+  const b = pop.querySelector('b');
+  const sp = pop.querySelector('span');
+  if(b) b.textContent = String(total);
+  if(sp) sp.textContent = detail || '';
+  pop.hidden = false;
+  pop.classList.remove('show');
+  void pop.offsetWidth;
+  pop.classList.add('show');
+  if(rollPopupTimer) clearTimeout(rollPopupTimer);
+  rollPopupTimer = setTimeout(()=>{
+    pop.classList.remove('show');
+    setTimeout(()=>{ pop.hidden = true; }, 220);
+  }, 1400);
+}
 function doRoll(die,count,modLabel){
   const n=parseInt(die.slice(1)); const cnt=count||1;
   const rolls=Array.from({length:cnt},()=>1+Math.floor(Math.random()*n));
@@ -1936,6 +1969,14 @@ function doRoll(die,count,modLabel){
   const label= ` (${rolls.join('+')})` + (modLabel?` ${modLabel}`:'');
   document.getElementById('rollResult').textContent = `${die}${cnt>1?`×${cnt}`:''} ➜ ${sum}`;
   document.getElementById('rollLog').textContent = label;
+
+  const detail = [
+    `${die}${cnt>1?`×${cnt}`:''}`,
+    cnt>1 ? `(${rolls.join(' + ')})` : '',
+    modLabel ? String(modLabel) : ''
+  ].filter(Boolean).join(' ');
+  showRollPopup(sum, detail);
+
   rollHistory.push(`${die}${cnt>1?`×${cnt}`:''} = ${sum}${label}`);
   if(rollHistory.length>8) rollHistory.shift();
   try{
@@ -1978,6 +2019,8 @@ document.getElementById('fileInput').addEventListener('change', e=>{
         if(data.sessions!==undefined){ try{ localStorage.setItem('shirma_sessions_v1', JSON.stringify(data.sessions)); extra=true; }catch(e){} }
         if(data.map!==undefined){ try{ localStorage.setItem('shirma_map_v1', JSON.stringify(data.map)); extra=true; }catch(e){} }
         if(data.battle!==undefined){ try{ localStorage.setItem('shirma_battle_v1', JSON.stringify(data.battle)); extra=true; }catch(e){} }
+        if(Array.isArray(data.battleLog)){ try{ localStorage.setItem('shirma_battle_log_v1', JSON.stringify(data.battleLog.slice(0,200))); battleLog=data.battleLog.slice(0,200); extra=true; }catch(e){} }
+        if(data.battleTurn && typeof data.battleTurn==='object'){ try{ localStorage.setItem('shirma_battle_turn_v1', JSON.stringify(data.battleTurn)); battleTurn=data.battleTurn; extra=true; }catch(e){} }
         if(extra){ toast('Восстановлены сессии/карта/бой — применяю…'); setTimeout(()=>location.reload(), 700); }
       }
     }catch(err){ uiAlert('Ошибка чтения файла'); }
@@ -2036,6 +2079,21 @@ shopModal.addEventListener('click', e=>{ if(e.target===shopModal) closeModal(sho
 const shopSearchDebounced = debounce(renderShop, 180);
 shopSearch.addEventListener('input', ()=> shopSearchDebounced());
 shopCat.addEventListener('change', renderShop);
+const SHOP_FILTER_KEY = 'shirma_shop_filter_v1';
+function saveShopFilter(){
+  try{ localStorage.setItem(SHOP_FILTER_KEY, JSON.stringify({ q: shopSearch.value, cat: shopCat.value })); }catch(err){}
+}
+document.addEventListener('input', e=>{ if(e.target===shopSearch) saveShopFilter(); });
+document.addEventListener('change', e=>{ if(e.target===shopCat) saveShopFilter(); });
+setTimeout(()=>{
+  try{
+    const f = JSON.parse(localStorage.getItem(SHOP_FILTER_KEY)||'null');
+    if(!f) return;
+    if(f.q) shopSearch.value = f.q;
+    if(f.cat && Array.from(shopCat.options).some(o=>o.value===f.cat)) shopCat.value = f.cat;
+    if(f.q || f.cat) renderShop();
+  }catch(err){}
+}, 600);
 
 /* ═══ Tabs ═══ */
 let currentTab = 'chars';
@@ -3166,10 +3224,26 @@ document.getElementById('btnTables').addEventListener('click', ()=>{
 });
 document.getElementById('tablesClose').addEventListener('click', ()=> closeModal(tablesModal));
 tablesModal.addEventListener('click', e=>{ if(e.target===tablesModal) closeModal(tablesModal); });
+/* Окно горячих клавиш */
+(function(){
+  const modal = document.getElementById('keysModal');
+  const btn = document.getElementById('btnKeys');
+  if(!modal) return;
+  if(btn) btn.addEventListener('click', ()=> openModal(modal, btn));
+  const close = document.getElementById('keysClose');
+  if(close) close.addEventListener('click', ()=> closeModal(modal));
+  modal.addEventListener('click', e=>{ if(e.target===modal) closeModal(modal); });
+  document.addEventListener('keydown', e=>{
+    if(e.key!=='?' || e.ctrlKey || e.metaKey || e.altKey) return;
+    const t=e.target;
+    if(t && (t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.isContentEditable)) return;
+    e.preventDefault(); openModal(modal, btn);
+  });
+})();
 /* Esc закрывает любое открытое окно */
 window.addEventListener('keydown', e=>{
   if(e.key!=='Escape') return;
-  [libModal, bestModal, shopModal, tablesModal, goModalOrNull()].forEach(m=> closeModal(m));
+  [libModal, bestModal, shopModal, tablesModal, goModalOrNull(), document.getElementById('keysModal'), document.getElementById('mobPresetModal')].forEach(m=> closeModal(m));
 });
 /* ═══ Глобальный поиск (Ctrl+K / Cmd+K) ═══ */
 let goModalRef = document.getElementById('goModal');
@@ -3185,7 +3259,11 @@ function renderGo(qRaw){
   const LIMIT=60, rows=[];
   const hit = t => normalizeLib(t).includes(q);
   const push = r => { if(rows.length<LIMIT) rows.push(r); };
-  blocks.forEach(b=>{ if(hit((b.title||'')+' '+(b.text||'')+' '+Object.values(b.props||{}).join(' '))) push({kind:'block',label:b.title||'Блок',meta:TYPE_LABEL[b.type]||'',b}); });
+  blocks.forEach(b=>{
+    const actsText = (b.mdata && Array.isArray(b.mdata.acts)) ? b.mdata.acts.map(a=>a.text).join(' ') : '';
+    if(hit((b.title||'')+' '+(b.text||'')+' '+actsText+' '+Object.values(b.props||{}).join(' ')))
+      push({kind:'block',label:b.title||'Блок',meta:TYPE_LABEL[b.type]||'',b});
+  });
   (bestAll||[]).forEach(m=>{ if(hit((m.n||'')+' '+(m.en||'')+' '+(m.type||''))) push({kind:'monster',label:(m.n||''),meta:m.type||'',mon:m}); });
   ((LIB&&LIB.spells)||[]).forEach(sp=>{ if(hit((sp.n||'')+' '+(sp.sc||'')+' '+(sp.cls||''))) push({kind:'spell',label:sp.n,meta:(sp.l!==undefined?('Ур.'+sp.l+' · '):'')+(sp.sc||''),sp}); });
   ((LIB&&LIB.items)||[]).forEach(it=>{ if(hit(it.n||'')) push({kind:'item',label:it.n,meta:it.t||'',it}); });
@@ -3609,6 +3687,15 @@ function exportSessionPdf(){
 const STORE_BATTLE = 'shirma_battle_v1';
 const STORE_BATTLE_LOG = 'shirma_battle_log_v1';
 let battleParts = [];   // {id,name,side:'opp'|'char',ac,hp,init}
+let battleTurn = { round: 1, turnId: null };
+const STORE_BATTLE_TURN = 'shirma_battle_turn_v1';
+function loadBattleTurn(){
+  try{
+    const d = JSON.parse(localStorage.getItem(STORE_BATTLE_TURN)||'null');
+    if(d && typeof d==='object') battleTurn = { round: Math.max(1, Math.round(+d.round)||1), turnId: d.turnId || null };
+  }catch(e){}
+}
+function saveBattleTurn(){ try{ localStorage.setItem(STORE_BATTLE_TURN, JSON.stringify(battleTurn)); }catch(e){} }
 let battleLog = [];     // {t:ms, text}
 function saveBattleLog(){ try{ localStorage.setItem(STORE_BATTLE_LOG, JSON.stringify(battleLog.slice(0,200))); }catch(e){} }
 function loadBattleLog(){ try{ const d=JSON.parse(localStorage.getItem(STORE_BATTLE_LOG)||'[]'); battleLog=Array.isArray(d)?d.slice(0,200):[]; }catch(e){ battleLog=[]; } }
@@ -3658,6 +3745,9 @@ function battleSorted(){
   });
 }
 function renderBattle(){
+  const nextBtn = document.getElementById('battleNextTurn');
+  if(nextBtn) nextBtn.addEventListener('click', battleNextTurn);
+
   const list = document.getElementById('battleList');
   if(!list) return;
   if(!battleParts.length){
@@ -3666,7 +3756,7 @@ function renderBattle(){
   }
   const sorted = battleSorted();
   list.innerHTML = sorted.map(p=>`
-    <div class="battle-card ${p.side==='opp'?'opp':''}${p.collapsed?' collapsed':''}${p.id===battleSelId?' sel':''}" data-bid="${p.id}" tabindex="0">
+    <div class="battle-card ${p.side==='opp'?'opp':''}${p.collapsed?' collapsed':''}${p.id===battleSelId?' sel':''}${p.id===battleTurn.turnId?' turn':''}" data-bid="${p.id}" tabindex="0">
       <span class="bt-chev" title="Свернуть/развернуть">▾</span>
       <div class="bt-side">${gi(p.side==='opp'?'monsters':'character')}</div>
       <input class="bt-name" data-field="name" data-bid="${p.id}" value="${escapeHtml(p.name)}" spellcheck="false" aria-label="Имя">
@@ -3714,6 +3804,24 @@ function renderBattle(){
       ${(p.applied && p.applied.length) ? `<div class="bt-applied">${p.applied.map((t,i)=>`
         <span class="bt-chip">${escapeHtml(t)}<button class="bt-chip-del" data-achip="${p.id}" data-ai="${i}" title="Убрать">✕</button></span>`).join('')}</div>` : ''}
     </div>`).join('');
+  renderBattleTurn();
+}
+function renderBattleTurn(){
+  const label = document.getElementById('battleRound');
+  if(!label) return;
+  const cur = battleParts.find(p=>p.id===battleTurn.turnId);
+  label.textContent = 'Раунд ' + battleTurn.round + (cur ? ' · ' + cur.name : '');
+  label.title = cur ? ('Сейчас ходит: ' + cur.name) : 'Текущий раунд';
+}
+function battleNextTurn(){
+  if(!battleParts.length){ toast('В бою никого нет'); return; }
+  const sorted = battleSorted();
+  let i = sorted.findIndex(p=>p.id===battleTurn.turnId);
+  i = i < 0 ? 0 : i + 1;
+  if(i >= sorted.length){ i = 0; battleTurn.round += 1; }
+  battleTurn.turnId = sorted[i].id;
+  saveBattleTurn(); renderBattle();
+  battleLogPush('Раунд ' + battleTurn.round + ' · ход: ' + sorted[i].name);
 }
 function applyBattleDamage(inp){
   const p = battleParts.find(x=>x.id===inp.dataset.bid);
@@ -3732,6 +3840,7 @@ function applyBattleDamage(inp){
   logWoundChange(p, woundBefore);
   if(dmg>0) toast(`«${p.name}» получил ${dmg} урона → ХП ${p.hp}`);
   if(dmg>0) battleLogPush(`«${p.name}» получил ${dmg} урона → ХП ${p.hp}`);
+  if(dmg>0) checkConcentration(p, dmg);
 }
 /* Урон/лечение по выделенной карточке одной суммой */
 function applyAmountTo(p, delta){
@@ -3750,6 +3859,7 @@ function applyAmountTo(p, delta){
   if(delta < 0){
     battleLogPush(`«${p.name}» получил ${-delta} урона → ХП ${p.hp}`);
     toast(`«${p.name}»: −${-delta} → ХП ${p.hp}`);
+    checkConcentration(p, -delta);
   } else {
     battleLogPush(`«${p.name}» вылечен на ${delta} → ХП ${p.hp}`);
     toast(`«${p.name}»: +${delta} → ХП ${p.hp}`);
@@ -3867,21 +3977,21 @@ function addBlockToBattle(b){
     : (p['Инициат'] ?? p['Иниц'] ?? '');
   const acts = side==='opp' ? ((md.acts||[]).map(a=>({tag:String(a.tag||''),text:String(a.text||'')}))) : [];
   const hpNum = numField(hp);
-  battleParts.push({ id:uniq(), name:String(name).slice(0,60), side,
+  battleParts.push({ srcId: b.id, id:uniq(), name:String(name).slice(0,60), side,
     ac: numField(ac), hp: hpNum, hpMax: hpNum, init: numField(init), atk: '', acts, applied: [], statuses: [] });
   saveBattle(); renderBattle();
   toast('«'+name+'» добавлен(а) в бой');
   showTab('battle');
 }
 function battleAdd(side, preset){
-  const inp = document.getElementById('battleQuickName');
-  const raw = (preset !== undefined && preset !== null) ? preset : (inp ? inp.value : '');
-  const typed = String(raw || '').trim();
-  const name = (typed || (side==='opp' ? 'Противник' : 'Персонаж')).slice(0,60);
+  const base = (preset !== undefined && preset !== null && String(preset).trim())
+    ? String(preset).trim()
+    : (side==='opp' ? 'Противник' : 'Персонаж');
+  const same = battleParts.filter(p => p.name === base || p.name.indexOf(base + ' ') === 0).length;
+  const name = (same ? base + ' ' + (same + 1) : base).slice(0,60);
   const rec = { id:uniq(), name, side, ac:'', hp:'', hpMax:'', init:'', atk:'', acts:[], applied:[], statuses:[] };
   battleParts.push(rec);
   battleSelId = rec.id;
-  if(inp) inp.value = '';
   saveBattle(); renderBattle();
   battleLogPush(`«${name}» добавлен в бой`);
   const card = document.querySelector(`.battle-card[data-bid="${rec.id}"]`);
@@ -3951,6 +4061,10 @@ function bindBattleKeyboard(){
     if(e.key === 'Escape' && paletteIsOpen()){ closeStatusPalette(); return; }
     if(typing) return;
 
+    if(e.key === 'n' || e.key === 'N' || e.key === 'т' || e.key === 'Т'){
+      e.preventDefault(); battleNextTurn(); return;
+    }
+
     if(paletteIsOpen() && /^[1-9]$/.test(e.key)){
       const st = BATTLE_STATUSES[+e.key - 1];
       const bid = paletteBid;
@@ -4000,6 +4114,50 @@ function bindBattleKeyboard(){
   });
 }
 
+/* Модификатор Телосложения участника: из карточки-источника, если она есть */
+function conModOf(p){
+  try{
+    const b = (p && p.srcId && typeof findBlock==='function') ? findBlock(p.srcId) : null;
+    if(b && Array.isArray(b.stats) && b.stats.length >= 3){
+      const v = +b.stats[2];
+      if(isFinite(v)) return Math.floor((v-10)/2);
+    }
+  }catch(e){}
+  return 0;
+}
+/* ХП на нуле → концентрация снимается без броска */
+function dropConcentrationIfDown(p){
+  if(!p || p.hp==='' || p.hp==null) return false;
+  if((+p.hp || 0) > 0) return false;
+  const arr = p.statuses || [];
+  const i = arr.indexOf('Концентрация');
+  if(i < 0) return false;
+  arr.splice(i, 1);
+  saveBattle();
+  battleLogPush(`«${p.name}»: ХП 0 — концентрация снята`);
+  return true;
+}
+function checkConcentration(p, dmg){
+  if(!p || !(p.statuses||[]).includes('Концентрация') || !(dmg>0)) return;
+  if(p.hp!=='' && (+p.hp || 0) <= 0){
+    if(dropConcentrationIfDown(p)) renderBattle();
+    return;
+  }
+  const dc = Math.max(10, Math.floor(dmg/2));
+  const mod = conModOf(p);
+  const roll = 1 + Math.floor(Math.random()*20);
+  const total = roll + mod;
+  const ok = total >= dc;
+  const modTxt = mod ? (' ' + (mod>0?'+':'') + mod) : '';
+  battleLogPush(`«${p.name}»: концентрация Сл ${dc} — бросок ${roll}${modTxt} = ${total}, ${ok?'успех':'провал'}`);
+  if(ok) toast(`Концентрация удержана: ${total} ≥ ${dc}`);
+  else toast(`Концентрация сорвана: ${total} < ${dc}`);
+  if(!ok){
+    p.statuses = (p.statuses||[]).filter(x=>x!=='Концентрация');
+    saveBattle();
+  }
+  renderBattle();
+}
 function bindBattle(){
   const addOpp = document.getElementById('battleAddOpp');
   const addChar = document.getElementById('battleAddChar');
@@ -4017,7 +4175,7 @@ function bindBattle(){
         return;
       }
       clearTimeout(timer); disarm();
-      battleParts=[]; saveBattle(); renderBattle(); battleLogPush('Бой очищен');
+      battleParts=[]; battleTurn={round:1, turnId:null}; saveBattle(); saveBattleTurn(); renderBattle(); battleLogPush('Бой очищен');
     });
   }
   const list = document.getElementById('battleList');
@@ -4030,7 +4188,7 @@ function bindBattle(){
       const f = inp.dataset.field;
       if(f==='name'){ p.name = inp.value.slice(0,60); }
       else { p[f] = numField(inp.value); }
-      if(f==='hp'){ ensureHpMax(p); refreshBattleState(p); }
+      if(f==='hp'){ ensureHpMax(p); if(dropConcentrationIfDown(p)) renderBattle(); refreshBattleState(p); }
       saveBattle();
       if(f==='init'){
         const order = battleSorted().map(x=>x.id);
@@ -4095,6 +4253,7 @@ function bindBattle(){
         battleLogPush(dmgBtn.dataset.dmgOp==='inc'
           ? `«${p.name}» получил 1 урон → ХП ${p.hp}`
           : `«${p.name}» вылечен на 1 → ХП ${p.hp}`);
+        if(dmgBtn.dataset.dmgOp==='inc' && p.hp===0 && dropConcentrationIfDown(p)) renderBattle();
         return;
       }
       const hpBtn = e.target.closest('[data-hp-op]');
@@ -4111,6 +4270,7 @@ function bindBattle(){
         refreshBattleState(p);
         logWoundChange(p, woundBefore);
         battleLogPush(`«${p.name}»: ХП ${nv}`);
+        if(dropConcentrationIfDown(p)) renderBattle();
         return;
       }
       const atkBtn = e.target.closest('[data-attack]');
@@ -4167,6 +4327,7 @@ function bindBattle(){
     });
   }
   loadBattle();
+  loadBattleTurn();
   loadBattleLog();
   renderBattleLog();
   const logClear = document.getElementById('battleLogClear');
