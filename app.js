@@ -1850,8 +1850,7 @@ function loadMap(){
       draw: []
     }];
   } else { maps = []; }
-  if(!maps.length){ maps=[{ id:'m'+Date.now().toString(36), name:'Карта 1', bgKey:null, bg:null,
-      baseW:800, baseH:600, zoom:1, scrollX:0, scrollY:0, markers:[], draw:[] }]; }
+  if(!maps.length){ maps=[defaultScreenMap()]; }
   if(!activeMapId) activeMapId = maps[0].id;
   return true;
 }
@@ -1864,6 +1863,7 @@ function normMap(m){
     zoom: (+m.zoom>0? +m.zoom : 1),
     scrollX:+m.scrollX||0, scrollY:+m.scrollY||0,
     shape: m.shape==='square'? 'square' : 'hex',
+    auto: !!m.auto,
     snap: !!m.snap,
     cellPx: Math.max(12, Math.min(160, +m.cellPx || 34.641)),
     feetPerCell: Math.max(1, Math.min(60, +m.feetPerCell || 5)),
@@ -1891,6 +1891,23 @@ function normMarker(t){
 }
 function normStroke(s){ return { color:s.color||'#c9a227', width:+s.width||2,
   pts: Array.isArray(s.pts)? s.pts.map(p=>[+p[0],+p[1]]) : [] }; }
+
+/* Размер видимой области под карту (с учётом отступов .map-canvas) */
+function mapViewportSize(){
+  const mc=document.getElementById('mapCanvas');
+  const pad=24;
+  const w=Math.max(320, (mc && mc.clientWidth ? mc.clientWidth : window.innerWidth) - pad);
+  const h=Math.max(240, (mc && mc.clientHeight ? mc.clientHeight : window.innerHeight-140) - pad);
+  return { w:Math.round(w), h:Math.round(h) };
+}
+/* Карта по умолчанию: квадратная сетка на всё доступное пространство */
+function defaultScreenMap(name){
+  const v=mapViewportSize();
+  return { id:'m'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),
+    name:name||'Карта 1', bgKey:null, bg:null, auto:true, shape:'square', snap:false,
+    cellPx:40, feetPerCell:5, baseW:v.w, baseH:v.h,
+    zoom:1, scrollX:0, scrollY:0, markers:[], draw:[], fog:[], zones:[] };
+}
 
 function saveMap(){ try{ localStorage.setItem(STORE_MAP, JSON.stringify(maps)); }catch(e){} }
 
@@ -1934,6 +1951,9 @@ function renderMap(){
   mc.classList.toggle('no-grid', !mapGridOn);
   mc.style.setProperty('--grid-step', mapGridStep+'px');
   m.zoom = 1;
+  if(m.auto){                                  // полноэкранная карта тянется за окном
+    const v=mapViewportSize(); m.baseW=v.w; m.baseH=v.h;
+  }
   // карта вписывается в видимую область: дальше её краёв прокрутки нет
   const z = mapFitScale(mc, m);
   const W = Math.max(1, Math.round(m.baseW * z));
@@ -2486,6 +2506,14 @@ function markerColor(){
   const palette=['#c9a227','#7fb3e6','#c0564f','#86c48f','#c9a2e6','#e68a4a'];
   return palette[(m.draw&&m.draw.length) % palette.length];
 }
+/* Создать квадратную карту на весь экран */
+function addFullScreenMap(){
+  const m=normMap(defaultScreenMap('Карта '+(maps.length+1)));
+  m.auto=true; m.shape='square';
+  maps.push(m); activeMapId=m.id; saveMap(); renderMap();
+  toast('Квадратная карта на весь экран добавлена');
+}
+
 /* Быстрое переключение карт: Alt+1…9, а также «[» и «]» */
 document.addEventListener('keydown', e=>{
   if(currentTab!=='map') return;
@@ -2531,6 +2559,8 @@ function renderMapTabs(){
   }));
   const addTab=document.getElementById('mapAddTab');
   if(addTab) addTab.addEventListener('click', ()=> document.getElementById('mapFileInput').click());
+  const fullBtn=document.getElementById('mapFull');
+  if(fullBtn && !fullBtn.dataset.bound){ fullBtn.dataset.bound='1'; fullBtn.addEventListener('click', addFullScreenMap); }
   const urlBtn=document.getElementById('mapFromUrl');
   if(urlBtn && !urlBtn.dataset.bound){ urlBtn.dataset.bound='1'; urlBtn.addEventListener('click', mapAddFromUrl); }
   if(!window.__mapPasteBound){
