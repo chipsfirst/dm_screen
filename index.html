@@ -138,6 +138,7 @@
         <section class="home-card home-updates">
           <h2>Обновления</h2>
           <ul>
+            <li><span class="upd-date">04.11.2026</span><span>Бой: кнопки добавления и очистки работают без системных окон, броски костей переехали на панель боя, добавлены навигация с клавиатуры и быстрые статусы (S, 1–9).</span></li>
             <li><span class="upd-date">04.11.2026</span><span>Правила DMG: 14 конспектов разделов и 8 авторских таблиц по мотивам книги — в «Правилах» и «Таблицах».</span></li>
             <li><span class="upd-date">04.11.2026</span><span>Магические предметы SRD 5.1 (CC-BY-4.0): 361 предмет с механикой на русском — в магазине и поиске.</span></li>
             <li><span class="upd-date">04.11.2026</span><span>Справочник «Arcana Unleashed»: 33 заклинания и 52 магических предмета на русском (уровень, школа, компоненты, классы, редкость, настройка) — в библиотеке и магазине.</span></li>
@@ -274,14 +275,15 @@
     </div>
     <div class="tabview" id="view-battle" hidden>
       <div class="battle-wrap">
-        <div class="battle-toolbar">
-          <span class="hint">Порядок по инициативе (убывание). КД, ХП и Инициативу можно менять прямо в карточках.</span>
-          <span class="acts-sep"></span>
+        <div class="battle-toolbar" id="battleToolbar">
+          <input id="battleQuickName" class="bt-quick" placeholder="Имя участника" aria-label="Имя участника" spellcheck="false">
           <button id="battleAddOpp" title="Добавить противника"><span class="gi" data-gi="monsters"></span> Противник</button>
           <button id="battleAddChar" title="Добавить персонажа"><span class="gi" data-gi="character"></span> Персонаж</button>
           <span class="acts-sep"></span>
           <button id="battleClear" title="Убрать всех участников">✕ Очистить</button>
           <button id="battleStatesBtn" title="Эффекты состояний и реакции монстров"><span class="gi" data-gi="effects"></span> Состояния</button>
+          <span class="hint bt-hint">↑↓ выбор · Enter свернуть · S статусы · 1–9</span>
+          <div id="battleStatusPalette" class="bt-palette" hidden aria-label="Быстрые статусы"></div>
         </div>
         <div class="battle-body">
           <div id="battleList" class="battle-list"></div>
