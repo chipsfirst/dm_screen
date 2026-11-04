@@ -110,6 +110,17 @@ tauri icon icon.svg --output src-tauri/icons
 tauri build
 ```
 
+**Демо на GitHub Pages**
+
+При каждом пуше в `main` workflow `.github/workflows/pages.yml` собирает
+`dist/` и публикует статическую версию. Включить один раз:
+**Settings → Pages → Source: GitHub Actions**. Адрес:
+`https://<владелец>.github.io/dm_screen/`.
+
+Демо работает на HTTPS: `localStorage`, `IndexedDB` и File System Access API
+доступны, данные посетителей хранятся в их браузере. Первый запуск показывает
+демо-данные приложения.
+
 **Про данные**: установщик и портативный лаунчер работают на `http://127.0.0.1`,
 поэтому старые данные из версии на `file://` сами не переедут — перенесите их
 через «Экспорт» → «Импорт». Сборки без подписи Apple: при первом запуске

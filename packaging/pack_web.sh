@@ -40,4 +40,6 @@ else
   exit 1
 fi
 
+touch "$OUT/.nojekyll"
+
 echo "Готово: $OUT ($(du -sh "$OUT" | cut -f1))"
