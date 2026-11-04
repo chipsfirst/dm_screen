@@ -1322,6 +1322,7 @@ function mergeBooksRules(){
 })();
 
 /* ═══ Local library search (ленивая загрузка library-data.js) ═══ */
+const DATA_VER = '20261104b';
 let LIB = null;
 let libLoadingPromise = null;
 function ensureLibrary(){
@@ -1329,7 +1330,7 @@ function ensureLibrary(){
   if(libLoadingPromise) return libLoadingPromise;
   libLoadingPromise = new Promise((resolve, reject)=>{
     const s=document.createElement('script');
-    s.src='library-data.js';
+    s.src='library-data.js?v='+DATA_VER;
     s.onload=()=>{ LIB=window.LIBRARY || { spells:[], items:[] }; booksLibMerged(); resolve(); };
     s.onerror=()=>{ libLoadingPromise=null; reject(new Error('не удалось загрузить library-data.js')); };
     document.head.appendChild(s);
@@ -1377,7 +1378,7 @@ function ensureBestiary(){
   if(bestiaryLoadingPromise) return bestiaryLoadingPromise;
   bestiaryLoadingPromise = new Promise((resolve, reject)=>{
     const s=document.createElement('script');
-    s.src='bestiary-data.js';
+    s.src='bestiary-data.js?v='+DATA_VER;
     s.onload=()=>{ syncHomeBestiaryCount(); resolve(); };
     s.onerror=()=>{ bestiaryLoadingPromise=null; reject(new Error('не удалось загрузить bestiary-data.js')); };
     document.head.appendChild(s);
