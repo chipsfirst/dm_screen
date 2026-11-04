@@ -441,7 +441,7 @@ function bodyHtml(b){
       <div class="block-foot">
         <button data-action="collapse">Свернуть</button>
         <button data-action="expand">Развернуть</button>
-        ${(b.type==='pc'||b.type==='mob')?`<button data-action="battle" data-battle-id="${b.id}" title="Добавить в вкладку «Бой»">${gi('battle')} В бой</button>`:''}
+        ${(b.type==='pc'||b.type==='mob')?`<button data-action="battle" data-battle-id="${b.id}" title="Добавить в вкладку «Бой»">${gi('battle')} В бой</button><button data-action="map" data-map-id="${b.id}" title="Поставить на карту">${gi('map')} На карту</button>`:''}
         <span class="size-info">Ширина: <input class="resize-input" type="number" min="200" max="1600" step="20" value="${b.w||820}" data-width="${b.id}" title="Ширина блока, px"></span>
         <span class="hint" style="margin-left:auto">редактируйте заголовок и текст прямо здесь</span>
         <button class="del" data-action="delete">Удалить блок</button>
@@ -471,7 +471,7 @@ function bodyHtml(b){
         <button data-action="collapse">Свернуть</button>
         <button data-action="expand">Развернуть</button>
         ${b.type==='pc'?`<button data-action="rollAll" data-roll-id="${b.id}" title="Бросить d20 по всем характеристикам">Бросок всех</button>`:''}
-        ${(b.type==='pc'||b.type==='mob')?`<button data-action="battle" data-battle-id="${b.id}" title="Добавить в вкладку «Бой»">${gi('battle')} В бой</button>`:''}
+        ${(b.type==='pc'||b.type==='mob')?`<button data-action="battle" data-battle-id="${b.id}" title="Добавить в вкладку «Бой»">${gi('battle')} В бой</button><button data-action="map" data-map-id="${b.id}" title="Поставить на карту">${gi('map')} На карту</button>`:''}
         <span class="size-info">Ширина: <input class="resize-input" type="number" min="200" max="1600" step="20" value="${b.w||820}" data-width="${b.id}" title="Ширина блока, px"></span>
         <span class="hint" style="margin-left:auto">редактируйте заголовок и текст прямо здесь</span>
         <button class="del" data-action="delete">Удалить блок</button>
@@ -497,7 +497,7 @@ function bodyHtml(b){
       <button data-action="collapse">Свернуть</button>
       <button data-action="expand">Развернуть</button>
       ${b.type==='pc'?`<button data-action="rollAll" data-roll-id="${b.id}" title="Бросить d20 по всем характеристикам">Бросок всех</button>`:''}
-      ${(b.type==='pc'||b.type==='mob')?`<button data-action="battle" data-battle-id="${b.id}" title="Добавить в вкладку «Бой»">${gi('battle')} В бой</button>`:''}
+      ${(b.type==='pc'||b.type==='mob')?`<button data-action="battle" data-battle-id="${b.id}" title="Добавить в вкладку «Бой»">${gi('battle')} В бой</button><button data-action="map" data-map-id="${b.id}" title="Поставить на карту">${gi('map')} На карту</button>`:''}
       <span class="size-info">Ширина: <input class="resize-input" type="number" min="200" max="1600" step="20" value="${b.w||820}" data-width="${b.id}" title="Ширина блока, px"></span>
       <span class="hint" style="margin-left:auto">редактируйте заголовок и текст прямо здесь</span>
       <button class="del" data-action="delete">Удалить блок</button>
@@ -748,6 +748,7 @@ function initCanvasEvents(){
       else if(act.dataset.action==='collapse'){ collapsed.add(id); renderBlockOnly(id); save(); }
       else if(act.dataset.action==='expand'){ collapsed.delete(id); renderBlockOnly(id); save(); }
       else if(act.dataset.action==='battle'){ addBlockToBattle(findBlock(act.dataset.battleId)); }
+      else if(act.dataset.action==='map'){ addBlockToMap(findBlock(act.dataset.mapId)); }
       return;
     }
     const resBtn = t.closest('[data-res-op]');
@@ -1365,6 +1366,7 @@ function renderBestMonster(m){
     <div style="margin:8px 0">
       <button data-best-add="${m.id}" title="Добавить монстра как блок на ширму">＋ Добавить на ширму</button>
       <button data-best-token="${m.id}" title="Добавить токен на карту боя с инициативой и ХП">⬤ На карту боя</button>
+      <button data-best-map="${m.id}" title="Поставить маркер монстра на карту">${gi('map')} На карту</button>
       <span class="hint" style="margin-left:8px">Блок — во вкладке «Монстры», токен — на карте боя</span>
     </div>
     <div class="best-meta">
@@ -1411,7 +1413,33 @@ function renderBestMonster(m){
       if(mon) addMarkerFromMonster(mon);
     });
   });
+  bestResults.querySelectorAll('[data-best-map]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const id=+btn.dataset.bestMap;
+      const mon = bestAll.find(x=>x.id===id);
+      if(mon) addMarkerFromMonster(mon);
+    });
+  });
 }
+/* Персонаж или монстр с ширмы → маркер на карте */
+function addBlockToMap(b){
+  if(!b) return;
+  const mp=curMap();
+  if(mp){
+    const n=(mp.markers||[]).length;
+    mp.markers.push({
+      id:'k'+Math.random().toString(36).slice(2,7),
+      x: Math.min(mp.baseW-18, Math.max(18, mp.baseW/2 + (n%5)*26)),
+      y: Math.min(mp.baseH-18, Math.max(18, mp.baseH/2 + (n%5)*26)),
+      label: String(b.title||'Участник').slice(0,40),
+      color: b.type==='mob' ? '#c0564f' : '#7fb3e6'
+    });
+    saveMap();
+  }
+  if(currentTab!=='map') showTab('map'); else renderMap();
+  toast('«'+(b.title||'Участник')+'» на карте');
+}
+
 /* Монстр из бестиария → маркер на карте */
 function addMarkerFromMonster(m){
   if(!m || m.id==null) return;
@@ -1820,6 +1848,16 @@ function normStroke(s){ return { color:s.color||'#c9a227', width:+s.width||2,
 
 function saveMap(){ try{ localStorage.setItem(STORE_MAP, JSON.stringify(maps)); }catch(e){} }
 
+/* При изменении окна карта пересчитывает вписывание (с задержкой) */
+let mapResizeTimer = null;
+window.addEventListener('resize', ()=>{
+  if(currentTab!=='map') return;
+  clearTimeout(mapResizeTimer);
+  mapResizeTimer = setTimeout(()=>{ const m=curMap(); if(!m) return;
+    const mc=document.getElementById('mapCanvas'); if(mc){ m.scrollX=mc.scrollLeft; m.scrollY=mc.scrollTop; }
+    renderMap(); }, 160);
+});
+
 function mapZoom(delta){
   // зум отключён
   return;
@@ -1849,16 +1887,20 @@ function renderMap(){
   mc.classList.toggle('locked', !!mapLocked);
   mc.classList.toggle('no-grid', !mapGridOn);
   mc.style.setProperty('--grid-step', mapGridStep+'px');
-  mc.scrollLeft = m.scrollX||0; mc.scrollTop = m.scrollY||0;
   m.zoom = 1;
-  const z = 1;
+  // карта вписывается в видимую область: дальше её краёв прокрутки нет
+  const z = mapFitScale(mc, m);
+  const W = Math.max(1, Math.round(m.baseW * z));
+  const H = Math.max(1, Math.round(m.baseH * z));
+  const stage=document.createElement('div');
+  stage.className='map-stage';
+  stage.style.width=W+'px'; stage.style.height=H+'px';
   const wrapper=document.createElement('div');
   wrapper.className='map-zoom';
-  wrapper.style.transform='scale('+z+')';
-  wrapper.style.transformOrigin='0 0';
-  wrapper.style.width=m.baseW+'px';
-  wrapper.style.height=m.baseH+'px';
-  mc.appendChild(wrapper);
+  wrapper.style.width=W+'px'; wrapper.style.height=H+'px';
+  wrapper.style.position='relative';
+  stage.appendChild(wrapper);
+  mc.appendChild(stage);
   if(mapGridOn){
     const grid=document.createElement('div');
     grid.className='map-grid';
@@ -1882,9 +1924,10 @@ function renderMap(){
     const img=document.createElement('img');
     img.className='map-bg';
     img.src=bgSrc; img.draggable=false;
-    img.onload=()=>{ m.baseW=img.naturalWidth||m.baseW; m.baseH=img.naturalHeight||m.baseH;
-      wrapper.style.width=m.baseW+'px'; wrapper.style.height=m.baseH+'px';
-      fitCanvas(wrapper,m); };   // размеры обновляются после загрузки
+    img.onload=()=>{   // размеры карты уточняются один раз, без цикла перерисовок
+      const nw=img.naturalWidth||m.baseW, nh=img.naturalHeight||m.baseH;
+      if(nw!==m.baseW || nh!==m.baseH){ m.baseW=nw; m.baseH=nh; saveMap(); renderMap(); }
+    };
     wrapper.appendChild(img);
   } else { mc.classList.remove('has-bg'); }
 
@@ -1922,28 +1965,47 @@ function renderMap(){
   const cv=document.createElement('canvas');
   cv.className='map-draw';
   wrapper.appendChild(cv);
-  fitCanvas(wrapper,m);
+  fitCanvas(wrapper,m,z);
   let ctx=cv.getContext('2d');
-  drawStrokes(ctx,cv,m);
-  bindDraw(cv,wrapper,m);
+  drawStrokes(ctx,cv,m,z);
+  bindDraw(cv,wrapper,m,z);
   updateMapLockBtn();
   updateMapPenBtn();
-  // прокрутка после рендера
-  requestAnimationFrame(()=>{ mc.scrollLeft=m.scrollX||0; mc.scrollTop=m.scrollY||0; });
+  // прокрутка после рендера — в пределах краёв карты
+  requestAnimationFrame(()=>{
+    mc.scrollLeft=m.scrollX||0; mc.scrollTop=m.scrollY||0;
+    clampMapScroll(mc); m.scrollX=mc.scrollLeft; m.scrollY=mc.scrollTop;
+  });
 }
 function percent(v,total){ return (total>0? (v/total*100) : 0).toFixed(2); }
-function fitCanvas(wrapper,m){
+/* Масштаб вписывания карты в видимую область (не крупнее 1:1) */
+function mapFitScale(mc, m){
+  const pad = 24;                                  // отступы сцены (padding .map-canvas)
+  const availW = Math.max(120, (mc.clientWidth || 0) - pad);
+  const availH = Math.max(120, (mc.clientHeight || 0) - pad);
+  const s = Math.min(availW / Math.max(1, m.baseW), availH / Math.max(1, m.baseH), 1);
+  return Math.max(0.05, Math.round(s * 1000) / 1000);
+}
+/* Не даём уехать за края карты */
+function clampMapScroll(mc){
+  if(!mc) return;
+  const maxX = Math.max(0, mc.scrollWidth - mc.clientWidth);
+  const maxY = Math.max(0, mc.scrollHeight - mc.clientHeight);
+  mc.scrollLeft = Math.max(0, Math.min(maxX, mc.scrollLeft || 0));
+  mc.scrollTop = Math.max(0, Math.min(maxY, mc.scrollTop || 0));
+}
+function fitCanvas(wrapper,m,z){
   const cv=wrapper.querySelector('canvas.map-draw'); if(!cv) return;
   const dpr=window.devicePixelRatio||1;
   cv.style.width='100%'; cv.style.height='100%';
-  cv.width=Math.round(m.baseW*dpr); cv.height=Math.round(m.baseH*dpr);
+  cv.width=Math.round(m.baseW*(z||1)*dpr); cv.height=Math.round(m.baseH*(z||1)*dpr);
 }
-function drawStrokes(ctx,cv,m){
+function drawStrokes(ctx,cv,m,z){
   if(!ctx) return;
   const dpr=window.devicePixelRatio||1;
   ctx.clearRect(0,0,cv.width,cv.height);
   ctx.save();
-  ctx.scale(dpr,dpr);
+  ctx.scale(dpr*(z||1), dpr*(z||1));
   ctx.lineCap='round'; ctx.lineJoin='round';
   (m.draw||[]).forEach(s=>{
     if(!s.pts || s.pts.length<2) return;
@@ -1954,7 +2016,7 @@ function drawStrokes(ctx,cv,m){
   });
   ctx.restore();
 }
-function bindDraw(cv,wrapper,m){
+function bindDraw(cv,wrapper,m,z){
   const dpr=window.devicePixelRatio||1;
   let drawing=false, curStroke=null, ctx=cv.getContext('2d');
   function toBase(e){
@@ -2030,6 +2092,64 @@ function mapAddFromFile(file){
   };
   reader.readAsDataURL(file);
 }
+/* ═══ Выбор персонажа/монстра для карты ═══ */
+const mapPickModal = document.getElementById('mapPickModal');
+const mapPickSearch = document.getElementById('mapPickSearch');
+const mapPickResults = document.getElementById('mapPickResults');
+
+function renderMapPicker(){
+  if(!mapPickResults) return;
+  const q = normalizeLib(mapPickSearch ? mapPickSearch.value : '');
+  const rows = [];
+  const party = (blocks||[]).filter(b=>b.type==='pc'||b.type==='mob');
+  party.forEach(b=>{
+    const kind = b.type==='mob' ? 'Монстр' : 'Персонаж';
+    if(q && !normalizeLib((b.title||'')+' '+kind).includes(q)) return;
+    rows.push(`<div class="lib-row" data-pick-block="${b.id}">
+      <span class="lib-kind k-item">${escapeHtml(kind)}</span>
+      <div class="lib-main"><div class="lib-title">${escapeHtml(b.title||'Без имени')}</div>
+        <div class="lib-meta">с ширмы</div></div>
+      <span class="lib-add">＋</span></div>`);
+  });
+  (bestAll||[]).slice(0, 600).forEach(m=>{
+    if(q && !normalizeLib((m.n||'')+' '+(m.en||'')+' монстр').includes(q)) return;
+    rows.push(`<div class="lib-row" data-pick-best="${m.id}">
+      <span class="lib-kind k-rule">${escapeHtml(shortCr(m.cr))}</span>
+      <div class="lib-main"><div class="lib-title">${escapeHtml(m.n)}</div>
+        <div class="lib-meta">Бестиарий · ${escapeHtml(m.type||'')}</div></div>
+      <span class="lib-add">＋</span></div>`);
+  });
+  mapPickResults.innerHTML = rows.length ? rows.join('') : '<div class="lib-empty">Ничего не найдено.</div>';
+  mapPickResults.querySelectorAll('[data-pick-block]').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      const b = (blocks||[]).find(x=>x.id===el.dataset.pickBlock);
+      if(b) addBlockToMap(b);
+      closeModal(mapPickModal);
+    });
+  });
+  mapPickResults.querySelectorAll('[data-pick-best]').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      const m = (bestAll||[]).find(x=>x.id==el.dataset.pickBest);
+      if(m) addMarkerFromMonster(m);
+      closeModal(mapPickModal);
+    });
+  });
+}
+function openMapPicker(){
+  if(!mapPickModal) return;
+  openModal(mapPickModal, document.getElementById('mapAddToken'));
+  if(mapPickSearch) mapPickSearch.value='';
+  if(bestAll && bestAll.length){ renderMapPicker(); }
+  else if(window.BESTIARY && window.BESTIARY.length){ bestAll = window.BESTIARY.slice(); renderMapPicker(); }
+  else { renderMapPicker(); ensureBestiary().then(()=>{ bestAll = (window.BESTIARY||[]).slice(); renderMapPicker(); }).catch(()=>{}); }
+}
+if(mapPickModal){
+  document.getElementById('mapAddToken')?.addEventListener('click', openMapPicker);
+  document.getElementById('mapPickClose')?.addEventListener('click', ()=> closeModal(mapPickModal));
+  mapPickModal.addEventListener('click', e=>{ if(e.target===mapPickModal) closeModal(mapPickModal); });
+  mapPickSearch?.addEventListener('input', debounce(renderMapPicker, 120));
+}
+
 function addMapMarker(){
   // включить/выключить режим расстановки маркеров кликом
   mapPlaceOn = !mapPlaceOn;
@@ -2130,6 +2250,7 @@ function mapClearDraw(){
         const dx=ev.clientX-sx, dy=ev.clientY-sy;
         if(dx||dy) moved=true;
         mc.scrollLeft=sl-dx; mc.scrollTop=st-dy;
+        clampMapScroll(mc);
       }, ()=>{
         if(moved){ const m=curMap(); if(m){ m.scrollX=mc.scrollLeft; m.scrollY=mc.scrollTop; saveMap(); } }
       });
@@ -2143,7 +2264,7 @@ function mapClearDraw(){
         const m=curMap(); if(!m) return;
         const w=MC.querySelector('.map-zoom'); if(!w) return;
         const r=w.getBoundingClientRect();
-        const z=m.zoom||1;
+        const z=mapFitScale(MC, m);
         const x=(e.clientX-r.left)/z, y=(e.clientY-r.top)/z;
         if(x<0||y<0||x>m.baseW||y>m.baseH) return;
         if(mapRulerOn){

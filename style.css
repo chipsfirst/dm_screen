@@ -150,17 +150,22 @@
   .map-toolbar{display:flex; gap:8px; align-items:center; padding:8px 18px; border-bottom:1px solid var(--line); flex-wrap:wrap; background:var(--panel)}
   .map-canvas{
     flex:1; position:relative; overflow:auto;
+    background-color:var(--bg);
+    min-height:0; padding:12px;
+  }
+  .map-canvas.has-bg{background-color:var(--bg)}
+  .map-canvas.locked{overflow:hidden}
+  #mapLock.locked{background:linear-gradient(180deg,var(--sel),var(--sel2)); color:var(--sel-text); border-color:#c9a227}
+  /* сцена — реальный размер карты с учётом вписывания; ею ограничена прокрутка */
+  .map-stage{position:relative; margin:0 auto}
+  .map-zoom{position:absolute; top:0; left:0; transform-origin:0 0;
     background-color:#f4f2ec;
     background-image:url("hex.svg");
     background-repeat:repeat;
     background-size:34.641px 60px;
-    background-attachment:local;
-    min-height:0;
+    box-shadow:0 6px 22px rgba(0,0,0,.28);
+    outline:1px solid rgba(0,0,0,.18);
   }
-  .map-canvas.has-bg{background-color:#f4f2ec}
-  .map-canvas.locked{overflow:hidden}
-  #mapLock.locked{background:linear-gradient(180deg,var(--sel),var(--sel2)); color:var(--sel-text); border-color:#c9a227}
-  .map-zoom{position:absolute; top:0; left:0; transform-origin:0 0}
   /* сетка карты по умолчанию: клетка в размер маркера (18px), заливает всё пространство */
   .map-zoom{
     background-image:
@@ -182,7 +187,7 @@
   .map-title:hover{background:#fff}
   .map-ruler{position:absolute; top:0; left:0; width:100%; height:100%; z-index:6; pointer-events:none}
   #mapRuler.active{background:linear-gradient(180deg,var(--sel),var(--sel2)); color:var(--sel-text); border-color:#c9a227}
-  .map-bg{position:absolute; top:0; left:0; width:800px; height:600px; object-fit:contain; pointer-events:none; display:block}
+  .map-bg{position:absolute; top:0; left:0; width:100%; height:100%; object-fit:fill; pointer-events:none; display:block}
   .map-canvas.has-bg .map-bg{z-index:1}
   .map-empty{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:var(--muted); text-align:center; padding:20px}
   .map-token{
