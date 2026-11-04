@@ -377,7 +377,7 @@ function render(){
     + (searchFilter?' · результаты поиска':(activeParentId===null?'':(' / '+(findBlock(activeParentId)?.title||'корень'))));
 
   if(!list.length){
-    canvas.innerHTML = `<div class="canvas-watermark">${searchFilter?'Ничего не найдено.':(blocksTab==='monsters'?'Здесь будут монстры. Добавьте их через «Бестиарий» → «＋ Добавить на ширму».':'Добавьте первого персонажа — «＋ ПК» в правом меню.')}</div>`;
+    canvas.innerHTML = `<div class="canvas-watermark">${searchFilter?'Ничего не найдено.':(blocksTab==='monsters'?'Здесь будут монстры: «＋ Создать монстра» — пресет или пустая карточка, «Бестиарий» — готовые из книг.':'Добавьте первого персонажа — «＋ ПК» в правом меню.')}</div>`;
   } else {
     const safeCard = b => { try { return blockCard(b); } catch(e){
       return `<div class="block" data-id="${b.id}"><div class="block-head"><div class="ttl-note"><span>${escapeHtml(b.title||'Блок')}</span></div></div><div class="block-body"><div class="hint">Ошибка отображения блока: ${escapeHtml(String((e&&e.message)||e))}</div></div></div>`;
@@ -1103,7 +1103,14 @@ document.getElementById('addPc').addEventListener('click', ()=> addBlock('pc'));
   const note = document.getElementById('addNoteTop');
   if(note) note.addEventListener('click', ()=> addBlock('note'));
   const cm = document.getElementById('createMobTop');
-  if(cm) cm.addEventListener('click', ()=> addBlock('mob'));
+  if(cm) cm.addEventListener('click', ()=>{
+    renderMobPresets();
+    openModal(document.getElementById('mobPresetModal'), cm);
+  });
+  const closePresets = document.getElementById('mobPresetClose');
+  const presetModal = document.getElementById('mobPresetModal');
+  if(closePresets) closePresets.addEventListener('click', ()=> closeModal(presetModal));
+  if(presetModal) presetModal.addEventListener('click', e=>{ if(e.target===presetModal) closeModal(presetModal); });
   const am = document.getElementById('addMobTop');
   if(am) am.addEventListener('click', ()=>{ const b=document.getElementById('btnBestiary'); if(b) b.click(); });
   document.querySelectorAll('[data-menu-target]').forEach(b=>{
@@ -1288,6 +1295,90 @@ function addBlock(type){
   }
   save(); render();
 }
+/* ═══ Пресеты создания монстров ═══ */
+const MOB_PRESETS = [
+  { name:'Миньон', cr:'1/8', ac:'13', hp:'7 (2d6)', sp:'30 фт', init:'+2 (12)',
+    stats:[8,14,10,10,12,8], attack:'+3',
+    text:'Мультиатака. Одна атака.\nАтака. Бросок атаки +3, досягаемость 5 фт, одна цель. Попадание: 4 (1d6 + 1) рубящего урона.',
+    hint:'CR 1/8 · слабый, гибнет за один-два удара' },
+  { name:'Стражник', cr:'1/2', ac:'14 (кольчужная рубаха, щит)', hp:'22 (4d8 + 4)', sp:'30 фт', init:'+1 (11)',
+    stats:[13,12,12,10,11,10], attack:'+3',
+    text:'Мультиатака. Одна атака.\nКопьё. Бросок атаки +3, досягаемость 5 фт или дальность 20/60 фт, одна цель. Попадание: 6 (1d8 + 2) колющего урона.',
+    hint:'CR 1/2 · охрана, патруль, городская стража' },
+  { name:'Зверь', cr:'1', ac:'12 (природная броня)', hp:'26 (4d8 + 8)', sp:'40 фт', init:'+2 (12)',
+    stats:[14,14,14,3,12,6], attack:'+4',
+    text:'Черты\nОстрые чувства. Преимущество на проверки Восприятия (слух или запах).\n\nДействия\nМультиатака. Одна атака.\nУкус. Бросок атаки +4, досягаемость 5 фт, одна цель. Попадание: 7 (1d10 + 2) колющего урона.',
+    hint:'CR 1 · волк, рысь, крупный хищник' },
+  { name:'Рядовой боец', cr:'2', ac:'15 (шкурный доспех, щит)', hp:'45 (7d8 + 14)', sp:'30 фт', init:'+1 (11)',
+    stats:[15,12,14,10,11,10], attack:'+4',
+    text:'Мультиатака. Две атаки оружием.\nТопор. Бросок атаки +4, досягаемость 5 фт, одна цель. Попадание: 11 (2d8 + 2) рубящего урона.',
+    hint:'CR 2 · наёмник, орк, бандит-ветеран' },
+  { name:'Нежить', cr:'3', ac:'13 (природная броня)', hp:'45 (7d8 + 14)', sp:'30 фт', init:'+0 (10)',
+    stats:[14,10,14,8,10,6], attack:'+4',
+    text:'Черты\nНежить. Иммунитет к яду и состоянию «отравлен»; не нужно дышать.\n\nДействия\nМультиатака. Две атаки когтями.\nКоготь. Бросок атаки +4, досягаемость 5 фт, одна цель. Попадание: 9 (1d8 + 4) рубящего урона плюс 4 (1d8) некротического урона.',
+    hint:'CR 3 · скелет-воин, зомби-ветеран, упырь' },
+  { name:'Заклинатель', cr:'4', ac:'12 (15 с доспехами мага)', hp:'60 (11d8 + 11)', sp:'30 фт', init:'+2 (12)',
+    stats:[8,14,12,17,12,10], attack:'+5',
+    text:'Черты\nСотворение заклинаний. Заклинательная характеристика — Интеллект, Сл спасброска 14, +6 к атаке заклинаниями.\n\nДействия\nМультиатака. Две атаки посохом или одно заклинание.\nПосох. Бросок атаки +5, досягаемость 5 фт, одна цель. Попадание: 8 (2d6 + 1) дробящего урона.\nОгненный снаряд (1/день). Дальность 120 фт, одна цель, 10 (3d6) огненного урона при провале спасброска Ловкости Сл 14, половина при успехе.',
+    hint:'CR 4 · маг-наёмник, культист-заклинатель' },
+  { name:'Элита', cr:'5', ac:'16 (кольчуга, щит)', hp:'90 (12d8 + 36)', sp:'30 фт', init:'+2 (12)',
+    stats:[17,14,16,12,12,10], attack:'+6',
+    text:'Черты\nПарирование. Реакция: +3 к КД против одной рукопашной атаки.\n\nДействия\nМультиатака. Две атаки длинным мечом.\nДлинный меч. Бросок атаки +6, досягаемость 5 фт, одна цель. Попадание: 13 (2d8 + 4) рубящего урона.',
+    hint:'CR 5 · рыцарь, капитан, телохранитель босса' },
+  { name:'Босс', cr:'10', ac:'17 (природная броня)', hp:'150 (20d8 + 60)', sp:'40 фт', init:'+3 (13)',
+    stats:[19,16,17,14,14,16], attack:'+8',
+    text:'Черты\nЛегендарное сопротивление (3/день). Может заменить провал спасброска успехом.\n\nДействия\nМультиатака. Две атаки когтями и одна атака хвостом.\nКоготь. Бросок атаки +8, досягаемость 10 фт, одна цель. Попадание: 16 (2d10 + 5) рубящего урона.\n\nЛегендарные действия (3 за раунд)\nОбрушиться. Совершает одну атаку когтями.\nРёв. Спасбросок Мудрости Сл 15, существа в 30 фт: при провале «испуган» до конца своего следующего хода.\nМанёвр. Перемещается на половину скорости, не вызывая атак по возможности.',
+    hint:'CR 10 · главный злодей с легендарными действиями' },
+];
+
+function mobPresetCard(p, i){
+  return `<button class="preset-card" data-preset="${i}">
+    <span class="preset-head"><span class="preset-name">${escapeHtml(p.name)}</span><span class="preset-cr">CR ${escapeHtml(p.cr)}</span></span>
+    <span class="preset-meta">КД ${escapeHtml(p.ac)} · ХП ${escapeHtml(p.hp)} · Скорость ${escapeHtml(p.sp)}</span>
+    <span class="preset-hint">${escapeHtml(p.hint)}</span>
+  </button>`;
+}
+
+function renderMobPresets(){
+  const list = document.getElementById('mobPresetList');
+  if(!list) return;
+  list.innerHTML = MOB_PRESETS.map(mobPresetCard).join('') +
+    `<button class="preset-card preset-empty" data-preset="blank">
+      <span class="preset-head"><span class="preset-name">Пустой монстр</span><span class="preset-cr">—</span></span>
+      <span class="preset-meta">Пустая карточка с полями</span>
+      <span class="preset-hint">Заполнить вручную</span>
+    </button>`;
+  list.querySelectorAll('[data-preset]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const modal = document.getElementById('mobPresetModal');
+      closeModal(modal);
+      const key = btn.dataset.preset;
+      if(key === 'blank'){ addBlock('mob'); return; }
+      addPresetBlock(MOB_PRESETS[+key]);
+    });
+  });
+}
+
+function addPresetBlock(p){
+  prepareCanvasForAdd();
+  const b = makeBlock('mob', p.name);
+  Object.assign(b, freeCascadePos());
+  b.props = { 'Опасн.': p.cr, 'КД': p.ac, 'ХП': p.hp, 'Скорость': p.sp, 'Иниц.': p.init };
+  b.stats = p.stats.slice();
+  b.attack = p.attack;
+  b.text = p.text;
+  blocks.push(b);
+  save();
+  if(currentTab !== 'monsters') showTab('monsters'); else render();
+  setTimeout(()=>{
+    const el = document.querySelector('#canvas [data-id="'+b.id+'"]');
+    if(el) el.scrollIntoView({ behavior:'smooth', block:'start' });
+    const t = el && el.querySelector('.block-title');
+    if(t){ t.focus(); const r=document.createRange(); r.selectNodeContents(t); const sel=window.getSelection(); sel.removeAllRanges(); sel.addRange(r); }
+  }, 40);
+  toast('Пресет «'+p.name+'» добавлен — поправьте название и числа');
+}
+
 const renderSearchDebounced = debounce(render, 180);
 const searchEl=document.getElementById('search');
 if(searchEl) searchEl.addEventListener('input', e=>{ searchFilter=e.target.value.trim(); renderSearchDebounced(); });
