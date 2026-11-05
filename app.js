@@ -2185,7 +2185,7 @@ const MUSIC_KEY = 'shirma_music_v1';
 const MUSIC_DB = 'shirma_audio_v1';
 const MUSIC_STORE = 'audio';
 const MUSIC_ALL = '__all';
-const MUSIC_MAX_BYTES = 80*1024*1024;
+const MUSIC_MAX_BYTES = 200*1024*1024;   // предел одного трека, МБ
 
 const music = {
   tracks: {},          // id -> {id,key,title,artist,dur,size,added}
@@ -2483,7 +2483,7 @@ function musicRenderTracks(){
   if(!list.length){
     el.innerHTML = '<div class="music-empty">'
       + (all
-        ? 'Пока нет треков. Нажмите <b>«Добавить треки»</b> или перетащите аудиофайлы сюда.<br>Файлы хранятся локально и никуда не отправляются.'
+        ? 'Пока нет треков. Нажмите <b>«Добавить треки»</b> или перетащите аудиофайлы сюда.<br>Аудио до '+Math.round(MUSIC_MAX_BYTES/1024/1024)+' МБ на файл, хранится локально и никуда не отправляется.'
         : 'В этом плейлисте пусто. <b>«＋ Из библиотеки»</b> — добавить готовые треки, или перетащите файлы сюда.')
       + '</div>';
     return;
@@ -2552,17 +2552,27 @@ function musicProbeDuration(id, blob){
   }catch(e){ if(url){ try{ URL.revokeObjectURL(url); }catch(e2){} } }
 }
 function musicAddFiles(fileList, listId){
-  const files = Array.from(fileList||[]).filter(musicIsAudioFile);
-  if(!files.length){ toast('Выберите аудиофайлы'); return Promise.resolve(0); }
+  const all = Array.from(fileList||[]);
+  const files = all.filter(musicIsAudioFile);
+  const notAudio = all.length - files.length;
+  if(!files.length){
+    toast(all.length ? 'Это не аудиофайлы: нужны mp3, ogg, wav, m4a, flac, aac или opus' : 'Выберите аудиофайлы');
+    return Promise.resolve(0);
+  }
   const target = listId || music.currentList;
   const list = target === MUSIC_ALL ? null : musicList(target);
-  let added = 0, skipped = 0;
+  const limitMb = Math.round(MUSIC_MAX_BYTES/1024/1024);
+  let added = 0, skipped = 0, tooBig = 0, failed = 0, tooBigName = '';
   return files.reduce((chain, f)=> chain.then(()=>{
-    if(f.size > MUSIC_MAX_BYTES){ skipped++; return; }
+    if(f.size > MUSIC_MAX_BYTES){
+      tooBig++; skipped++;
+      if(!tooBigName) tooBigName = String(f.name||'файл');
+      return;
+    }
     const id = 'tr_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
     const key = 'audio_'+id;
     return musicPut(key, f).then(ok=>{
-      if(!ok){ skipped++; return; }
+      if(!ok){ failed++; skipped++; return; }
       const title = (String(f.name||'Трек').replace(/\.[a-z0-9]{2,5}$/i,'') || 'Трек').slice(0,160);
       music.tracks[id] = { id, key, title, artist:'', dur:0, size:+f.size||0, added:Date.now() };
       if(list) list.trackIds.push(id);
@@ -2571,8 +2581,12 @@ function musicAddFiles(fileList, listId){
     });
   }), Promise.resolve()).then(()=>{
     musicSave(); musicRenderAll();
-    if(added) toast('Добавлено треков: '+added+(skipped?', пропущено: '+skipped:''));
-    else if(skipped) toast('Не удалось добавить файлы: '+skipped);
+    const parts = [];
+    if(added) parts.push('Добавлено треков: '+added);
+    if(tooBig) parts.push((tooBig===1 ? '«'+tooBigName+'» больше ' : tooBig+' файла больше ')+limitMb+' МБ — пропущено');
+    if(failed) parts.push('не удалось сохранить: '+failed+' (возможно, мало места)');
+    if(notAudio) parts.push('не аудио: '+notAudio);
+    toast(parts.length ? parts.join('; ') : 'Ничего не добавлено');
     return added;
   });
 }
