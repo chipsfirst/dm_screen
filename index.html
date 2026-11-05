@@ -23,6 +23,14 @@
   <main class="main">
     <div class="topbar">
       <img class="site-logo" src="logo.png" alt="Ролёвки от Вовки">
+      <div class="musicbar" id="musicBar" aria-label="Музыкальный плеер">
+        <button id="mbPrev" class="mb-btn mb-nav" title="Предыдущий трек (Ctrl+Shift+←)" aria-label="Предыдущий трек">|◀</button>
+        <button id="mbPlay" class="mb-btn mb-play" title="Играть или пауза (Ctrl+Space)" aria-label="Играть или пауза">▶</button>
+        <button id="mbNext" class="mb-btn mb-nav" title="Следующий трек (Ctrl+Shift+→)" aria-label="Следующий трек">▶|</button>
+        <button id="mbTitle" class="mb-title" title="Открыть вкладку «Музыка»"><span class="mb-note gi" data-gi="music"></span><span class="mb-title-text" id="mbTitleText">Треки не добавлены</span></button>
+        <button id="mbMute" class="mb-btn" title="Звук вкл/выкл (Ctrl+M). Громкость — во вкладке «Музыка»" aria-label="Выключить звук">♪</button>
+        <audio id="musicAudio" preload="metadata"></audio>
+      </div>
       <div class="dicebar">
         <span class="db-label">Кости:</span>
         <select id="dieSel" class="die-sel" aria-label="Кость: число граней">
@@ -52,6 +60,7 @@
           <button class="tab" data-tab="monsters" title="Монстры (Alt+4)"><span class="gi" data-gi="monsters"></span> Монстры</button>
           <button class="tab" data-tab="map" title="Карта (Alt+5)"><span class="gi" data-gi="map"></span> Карта</button>
           <button class="tab" data-tab="battle" title="Бой (Alt+6)"><span class="gi" data-gi="battle"></span> Бой</button>
+          <button class="tab" data-tab="music" title="Музыка (Alt+7)"><span class="gi" data-gi="music"></span> Музыка</button>
         </div>
         <div class="actions">
           <button id="btnKeys" title="Горячие клавиши" aria-label="Горячие клавиши">?</button>
@@ -116,6 +125,7 @@
                 <li><b>Бестиарий</b> — <span id="homeBestiaryCount">677</span> монстров D&amp;D 5e с поиском и добавлением на ширму.</li>
                 <li><b>База</b> — заклинания и снаряжение PHB 2024.</li>
                 <li><b>Магазин</b> — предметы и артефакты с ценами.</li>
+                <li><b>Музыка</b> — плейлисты и сцены, мини-плеер в верхней панели.</li>
                 <li><b>Эффекты</b> — таблицы эффектов по типам монстров.</li>
                 <li><b>Таблицы</b> — случайные таблицы для импровизации.</li>
                 <li><b>Кости</b> — d4…d100 и свои грани, несколько бросков сразу.</li>
@@ -148,6 +158,7 @@
         <section class="home-card home-updates">
           <h2>Обновления</h2>
           <ul>
+            <li><span class="upd-date">05.11.2026</span><span>Музыка: вкладка «Музыка» с плейлистами и сценами, мини-плеер в верхней панели для быстрого переключения треков (Ctrl+Space, Ctrl+Shift+←/→, Ctrl+M), Alt+7 — переход на вкладку. Аудио хранится локально.</span></li>
             <li><span class="upd-date">04.11.2026</span><span>Новое лого — огненный d20 в наушниках; в тёмной теме золотые рамки у карточек, блоков и модалок, фиолетовые кнопки заменены на светло-золотые.</span></li>
             <li><span class="upd-date">04.11.2026</span><span>Бой: раунды и очередь хода (⚄ Инициатива, «Следующий ▸», клавиша N), проверка концентрации при уроне; окно горячих клавиш «?»; поиск по действиям монстров; магазин запоминает фильтр; журнал боя входит в резервную копию.</span></li>
 <li><span class="upd-date">04.11.2026</span><span>Пресеты создания монстров: 8 заготовок (от миньона до босса) с КД, ХП, характеристиками и приёмами; бестиарий проверен — восстановлены обрезанные действия, переведены названия приёмов.</span></li>
@@ -311,6 +322,46 @@
         </div>
 </div>
       </div>
+    <div class="tabview" id="view-music" hidden>
+      <div class="view-toolbar music-toolbar">
+        <button id="musicImport" title="Добавить аудиофайлы (mp3, ogg, wav, m4a, flac)"><span class="gi" data-gi="import"></span> Добавить треки</button>
+        <input type="file" id="musicFileInput" accept="audio/*,.mp3,.ogg,.oga,.wav,.m4a,.flac,.aac,.opus" multiple class="hidden" aria-label="Аудиофайлы">
+        <button id="musicNewList" title="Новый плейлист или сцена">＋ Плейлист</button>
+        <span class="acts-sep"></span>
+        <button id="musicPlayAll" title="Играть выбранный плейлист">▶ Играть</button>
+        <label class="music-vol-wrap" title="Громкость музыки">
+          <span class="music-vol-ico" aria-hidden="true">♪</span>
+          <input type="range" id="mbVol" class="music-vol" min="0" max="100" step="1" value="80" aria-label="Громкость музыки">
+        </label>
+        <label class="music-chk" title="Перемешать треки"><input type="checkbox" id="musicShuffle"> случайно</label>
+        <select id="musicRepeat" title="Повтор после последнего трека">
+          <option value="off">Повтор: нет</option>
+          <option value="all">Повтор: список</option>
+          <option value="one">Повтор: трек</option>
+        </select>
+        <span class="hint music-hint" id="musicStorage">Локально, без интернета</span>
+      </div>
+      <div class="music-layout">
+        <aside class="music-side">
+          <div class="music-side-head">Плейлисты и сцены</div>
+          <div id="musicLists" class="music-lists"></div>
+          <div class="music-side-foot hint">Перетащите файлы в список — они добавятся в плейлист.</div>
+        </aside>
+        <section class="music-main">
+          <div class="music-main-head">
+            <h3 id="musicListTitle">Все треки</h3>
+            <span class="hint" id="musicListCount"></span>
+            <span class="music-main-actions">
+              <button id="musicAddFromLib" title="Добавить треки из библиотеки в плейлист">＋ Из библиотеки</button>
+              <button id="musicRename" title="Переименовать плейлист">✎ Имя</button>
+              <button id="musicDelete" class="del" title="Удалить плейлист"><span class="gi" data-gi="trash"></span></button>
+            </span>
+          </div>
+          <div id="musicTracks" class="music-tracks"></div>
+        </section>
+      </div>
+      <input type="file" id="musicDropInput" class="hidden" multiple aria-label="Добавить файлы в плейлист">
+    </div>
         <footer class="app-footer">
           <span class="af-title">Ширма мастера для D&amp;D 5.5</span>
           <span class="af-count"><span id="footerCount">0</span> блоков</span>
@@ -318,12 +369,28 @@
             <span class="af-hint">Автор: Ролёвки от Вовки</span>
             <span class="af-hint" title="Иконки: Lorc, Delapouite — game-icons.net, CC BY 3.0">Иконки: game-icons.net</span>
             <span class="af-hint" title="Магические предметы SRD 5.1 — Wizards of the Coast, CC-BY-4.0">SRD 5.1 · CC-BY-4.0</span>
-            <span class="af-hint af-ver">Ширма мастера <span id="appVersion">1.0.7</span> · <a class="af-link" href="https://github.com/chipsfirst/dm_screen/releases" target="_blank" rel="noopener">что нового</a></span>
+            <span class="af-hint af-ver">Ширма мастера <span id="appVersion">1.0.8</span> · <a class="af-link" href="https://github.com/chipsfirst/dm_screen/releases" target="_blank" rel="noopener">что нового</a></span>
             <a class="af-link" href="https://boosty.to/vovkaroleplay" target="_blank" rel="noopener">Поддержать</a>
             <a class="af-link" href="https://github.com/chipsfirst/dm_screen" target="_blank" rel="noopener">Репозиторий на GitHub ↗</a>
           </span>
         </footer>
     </main>
+</div>
+
+<!-- Треки библиотеки для плейлиста -->
+<div class="modal" id="musicPickModal" hidden>
+  <div class="modal-box">
+    <div class="modal-head">
+      <strong><span class="gi" data-gi="music"></span> Треки библиотеки</strong>
+      <button class="modal-close" id="musicPickClose">✕</button>
+    </div>
+    <div class="modal-search"><input id="musicPickSearch" type="search" placeholder="Поиск по названию…" aria-label="Поиск трека"></div>
+    <div class="modal-results" id="musicPickList"></div>
+    <div class="music-pick-foot">
+      <button id="musicPickAdd">Добавить выбранные</button>
+      <span class="hint">Отметьте треки, которые войдут в плейлист.</span>
+    </div>
+  </div>
 </div>
 
 <!-- Library search modal -->
@@ -407,7 +474,7 @@
     <div class="keys-body">
     <div class="keys-group-title">Навигация</div>
     <div class="keys-list">
-      <div class="keys-row"><span class="keys-label">Вкладки</span><span class="keys-combo"><kbd>Alt</kbd><i>+</i><kbd>1</kbd><i>…</i><kbd>6</kbd></span></div>
+      <div class="keys-row"><span class="keys-label">Вкладки</span><span class="keys-combo"><kbd>Alt</kbd><i>+</i><kbd>1</kbd><i>…</i><kbd>7</kbd></span></div>
       <div class="keys-row"><span class="keys-label">Соседняя вкладка</span><span class="keys-combo"><kbd>Alt</kbd><i>+</i><kbd>←</kbd><i>/</i><kbd>→</kbd></span></div>
       <div class="keys-row"><span class="keys-label">Карты: следующая и предыдущая</span><span class="keys-combo"><kbd>[</kbd><i>/</i><kbd>]</kbd></span></div>
     </div>
@@ -418,6 +485,13 @@
       <div class="keys-row"><span class="keys-label">Масштаб интерфейса</span><span class="keys-combo"><kbd>Ctrl</kbd><i>/</i><kbd>⌘</kbd><i>+</i><kbd>+</kbd><i>/</i><kbd>−</kbd><i>/</i><kbd>0</kbd></span></div>
       <div class="keys-row"><span class="keys-label">Отменить изменение</span><span class="keys-combo"><kbd>Ctrl</kbd><i>/</i><kbd>⌘</kbd><i>+</i><kbd>Z</kbd></span></div>
       <div class="keys-row"><span class="keys-label">Это окно</span><span class="keys-combo"><kbd>?</kbd></span></div>
+    </div>
+
+    <div class="keys-group-title">Музыка</div>
+    <div class="keys-list">
+      <div class="keys-row"><span class="keys-label">Играть / пауза</span><span class="keys-combo"><kbd>Ctrl</kbd><i>+</i><kbd>Space</kbd></span></div>
+      <div class="keys-row"><span class="keys-label">Предыдущий / следующий трек</span><span class="keys-combo"><kbd>Ctrl</kbd><i>+</i><kbd>Shift</kbd><i>+</i><kbd>←</kbd><i>/</i><kbd>→</kbd></span></div>
+      <div class="keys-row"><span class="keys-label">Звук вкл / выкл</span><span class="keys-combo"><kbd>Ctrl</kbd><i>+</i><kbd>M</kbd></span></div>
     </div>
 
     <div class="keys-group-title">Бой</div>

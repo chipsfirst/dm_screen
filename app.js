@@ -2105,6 +2105,7 @@ const tabs = {
   sessions: document.getElementById('view-sessions'),
   map: document.getElementById('view-map'),
   battle: document.getElementById('view-battle'),
+  music: document.getElementById('view-music'),
 };
 function showTab(name){
   currentTab = name;
@@ -2115,6 +2116,7 @@ function showTab(name){
   tabs.sessions.hidden = true;
   tabs.map.hidden = true;
   tabs.battle.hidden = true;
+  if(tabs.music) tabs.music.hidden = true;
   if(name==='home'){
     tabs.home.hidden = false;
   } else if(name==='chars'||name==='monsters'){
@@ -2130,6 +2132,9 @@ function showTab(name){
   } else if(name==='battle'){
     tabs.battle.hidden = false;
     renderBattle();
+  } else if(name==='music'){
+    if(tabs.music) tabs.music.hidden = false;
+    musicRenderAll();
   }
   save();
 }
@@ -2150,7 +2155,7 @@ function digitFromEvent(e){
   return map[k] || 0;
 }
 
-const TAB_ORDER = ['home','sessions','chars','monsters','map','battle'];
+const TAB_ORDER = ['home','sessions','chars','monsters','map','battle','music'];
 document.addEventListener('keydown', e=>{
   const tag = (e.target && e.target.tagName || '').toLowerCase();
   if(tag==='input' || tag==='textarea' || tag==='select' || (e.target && e.target.isContentEditable)) return;
@@ -2161,7 +2166,7 @@ document.addEventListener('keydown', e=>{
   if(!byAlt && !byCtrl) return;
 
   const d = digitFromEvent(e);
-  if(d >= 1 && d <= 6){
+  if(d >= 1 && d <= TAB_ORDER.length){
     e.preventDefault();
     showTab(TAB_ORDER[d - 1]);
     return;
@@ -2174,6 +2179,633 @@ document.addEventListener('keydown', e=>{
     showTab(TAB_ORDER[j]);
   }
 });
+
+/* ════════════ Музыка ════════════ */
+const MUSIC_KEY = 'shirma_music_v1';
+const MUSIC_DB = 'shirma_audio_v1';
+const MUSIC_STORE = 'audio';
+const MUSIC_ALL = '__all';
+const MUSIC_MAX_BYTES = 80*1024*1024;
+
+const music = {
+  tracks: {},          // id -> {id,key,title,artist,dur,size,added}
+  lists: [],           // [{id,name,trackIds:[]}]
+  currentList: MUSIC_ALL,
+  currentId: null,
+  queue: [],
+  queueIndex: -1,
+  volume: 0.8,
+  muted: false,
+  shuffle: false,
+  repeat: 'off',
+};
+
+const musicAudio = document.getElementById('musicAudio');
+let musicDBPromise = null;
+let musicObjectUrl = null;
+let musicPickSelection = new Set();
+let musicStorageAt = 0;
+
+/* Аудио лежит в отдельной базе: файлы крупные, в резервную копию и localStorage им нельзя */
+function openMusicDB(){
+  if(musicDBPromise) return musicDBPromise;
+  musicDBPromise = new Promise((resolve)=>{
+    try{
+      const req = indexedDB.open(MUSIC_DB, 1);
+      req.onupgradeneeded = ()=>{ const db=req.result; if(!db.objectStoreNames.contains(MUSIC_STORE)) db.createObjectStore(MUSIC_STORE); };
+      req.onsuccess = ()=> resolve(req.result);
+      req.onerror = ()=> resolve(null);
+    }catch(e){ resolve(null); }
+  });
+  return musicDBPromise;
+}
+function musicPut(key, blob){
+  return openMusicDB().then(db=> new Promise(resolve=>{
+    if(!db){ resolve(false); return; }
+    try{
+      const tx = db.transaction(MUSIC_STORE,'readwrite');
+      tx.objectStore(MUSIC_STORE).put(blob, key);
+      tx.oncomplete = ()=> resolve(true);
+      tx.onerror = ()=> resolve(false);
+      tx.onabort = ()=> resolve(false);
+    }catch(e){ resolve(false); }
+  }));
+}
+function musicGet(key){
+  return openMusicDB().then(db=> new Promise(resolve=>{
+    if(!db){ resolve(null); return; }
+    try{
+      const tx = db.transaction(MUSIC_STORE,'readonly');
+      const req = tx.objectStore(MUSIC_STORE).get(key);
+      req.onsuccess = ()=> resolve(req.result || null);
+      req.onerror = ()=> resolve(null);
+    }catch(e){ resolve(null); }
+  }));
+}
+function musicDel(key){
+  return openMusicDB().then(db=> new Promise(resolve=>{
+    if(!db){ resolve(false); return; }
+    try{
+      const tx = db.transaction(MUSIC_STORE,'readwrite');
+      tx.objectStore(MUSIC_STORE).delete(key);
+      tx.oncomplete = ()=> resolve(true);
+      tx.onerror = ()=> resolve(false);
+    }catch(e){ resolve(false); }
+  }));
+}
+
+function musicLoad(){
+  let raw = null;
+  try{ raw = JSON.parse(localStorage.getItem(MUSIC_KEY)||'null'); }catch(e){ raw = null; }
+  if(!raw || typeof raw !== 'object') return;
+  if(raw.tracks && typeof raw.tracks === 'object'){
+    Object.keys(raw.tracks).forEach(id=>{
+      const t = raw.tracks[id];
+      if(!t || typeof t !== 'object') return;
+      music.tracks[id] = {
+        id: String(t.id||id),
+        key: String(t.key||('audio_'+id)),
+        title: String(t.title||'Трек').slice(0,160),
+        artist: String(t.artist||'').slice(0,120),
+        dur: Math.max(0, +t.dur||0),
+        size: Math.max(0, +t.size||0),
+        added: +t.added||0,
+      };
+    });
+  }
+  if(Array.isArray(raw.lists)){
+    music.lists = raw.lists.slice(0,100).map(l=>({
+      id: String(l.id||('ml_'+Math.random().toString(36).slice(2,7))),
+      name: String(l.name||'Плейлист').slice(0,60),
+      trackIds: Array.isArray(l.trackIds) ? l.trackIds.map(String).filter(id=> music.tracks[id]) : [],
+    }));
+  }
+  music.currentList = (raw.currentList===MUSIC_ALL || music.lists.some(l=> l.id===raw.currentList)) ? raw.currentList : MUSIC_ALL;
+  music.currentId = (raw.currentId && music.tracks[raw.currentId]) ? raw.currentId : null;
+  music.volume = Math.min(1, Math.max(0, raw.volume==null ? 0.8 : +raw.volume));
+  music.muted = !!raw.muted;
+  music.shuffle = !!raw.shuffle;
+  music.repeat = ['off','all','one'].includes(raw.repeat) ? raw.repeat : 'off';
+}
+function musicSave(){
+  try{
+    localStorage.setItem(MUSIC_KEY, JSON.stringify({
+      tracks: music.tracks, lists: music.lists, currentList: music.currentList,
+      currentId: music.currentId, volume: music.volume, muted: music.muted,
+      shuffle: music.shuffle, repeat: music.repeat,
+    }));
+  }catch(e){}
+}
+
+function musicTrack(id){ return music.tracks[id] || null; }
+function musicList(id){ return music.lists.find(l=> l.id===id) || null; }
+function musicListName(id){
+  if(id===MUSIC_ALL) return 'Все треки';
+  const l = musicList(id);
+  return l ? l.name : 'Все треки';
+}
+function musicListTracks(id){
+  if(id===MUSIC_ALL) return Object.keys(music.tracks).map(k=> music.tracks[k]);
+  const l = musicList(id);
+  return l ? l.trackIds.map(t=> music.tracks[t]).filter(Boolean) : [];
+}
+function musicFmtTime(sec){
+  sec = Math.max(0, Math.round(+sec||0));
+  return Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0');
+}
+function musicFmtBytes(n){
+  n = +n||0;
+  if(n >= 1024*1024*1024) return (n/1024/1024/1024).toFixed(1)+' ГБ';
+  if(n >= 1024*1024) return (n/1024/1024).toFixed(1)+' МБ';
+  if(n >= 1024) return Math.round(n/1024)+' КБ';
+  return n+' Б';
+}
+
+function musicBuildQueue(listId, startId){
+  const ids = musicListTracks(listId).map(t=> t.id);
+  if(music.shuffle && ids.length > 1){
+    for(let i=ids.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const tmp=ids[i]; ids[i]=ids[j]; ids[j]=tmp; }
+    if(startId){
+      const k = ids.indexOf(startId);
+      if(k > 0){ ids.splice(k,1); ids.unshift(startId); }
+    }
+  }
+  music.queue = ids;
+  music.queueIndex = startId ? Math.max(0, ids.indexOf(startId)) : 0;
+  if(startId && music.queueIndex < 0){ music.queue.unshift(startId); music.queueIndex = 0; }
+}
+
+function musicApplyVolume(){
+  if(!musicAudio) return;
+  try{ musicAudio.volume = music.muted ? 0 : music.volume; }catch(e){}
+}
+function musicSetVolume(v){
+  music.volume = Math.max(0, Math.min(1, +v||0));
+  music.muted = music.volume <= 0;
+  musicApplyVolume(); musicSave(); musicRenderBar();
+}
+function musicToggleMute(){
+  music.muted = !music.muted;
+  musicApplyVolume(); musicSave(); musicRenderBar();
+}
+
+function musicPlay(id, listId){
+  const tr = musicTrack(id);
+  if(!tr || !musicAudio) return Promise.resolve();
+  const list = listId || music.currentList;
+  if(!music.queue.includes(id)){
+    const listIds = musicListTracks(list).map(t=> t.id);
+    if(listIds.includes(id)) musicBuildQueue(list, id);
+    else { music.queue = [id]; music.queueIndex = 0; }
+  } else {
+    music.queueIndex = music.queue.indexOf(id);
+  }
+  if(listId) music.currentList = list;
+  return musicGet(tr.key).then(blob=>{
+    if(!blob){ toast('Файл «'+tr.title+'» не найден в хранилище'); return; }
+    if(musicObjectUrl){ try{ URL.revokeObjectURL(musicObjectUrl); }catch(e){} musicObjectUrl = null; }
+    musicObjectUrl = URL.createObjectURL(blob);
+    musicAudio.src = musicObjectUrl;
+    music.currentId = id;
+    musicApplyVolume();
+    const p = musicAudio.play();
+    if(p && p.catch) p.catch(()=>{});
+    musicMediaSession(tr);
+    musicSave(); musicRenderAll();
+  }).catch(()=>{ toast('Не удалось открыть файл трека'); });
+}
+function musicToggle(){
+  if(!musicAudio) return;
+  if(music.currentId && musicTrack(music.currentId)){
+    if(!musicAudio.getAttribute('src')){ musicPlay(music.currentId, music.currentList); return; }
+    if(musicAudio.paused){ const p = musicAudio.play(); if(p && p.catch) p.catch(()=>{}); }
+    else musicAudio.pause();
+    musicRenderBar(); musicSave(); return;
+  }
+  const list = musicListTracks(music.currentList);
+  if(!list.length){ toast('Сначала добавьте треки во вкладке «Музыка»'); showTab('music'); return; }
+  musicPlay(list[0].id, music.currentList);
+}
+function musicNext(auto){
+  if(!musicAudio || !music.queue.length) return;
+  if(!music.currentId){ musicPlay(music.queue[0], music.currentList); return; }
+  let i = music.queue.indexOf(music.currentId);
+  i = i < 0 ? 0 : i + 1;
+  if(i >= music.queue.length){
+    if(music.repeat === 'all' || !auto){ i = 0; }
+    else { musicAudio.pause(); try{ musicAudio.currentTime = 0; }catch(e){} musicRenderBar(); return; }
+  }
+  musicPlay(music.queue[i], music.currentList);
+}
+function musicPrev(){
+  if(!musicAudio || !music.queue.length) return;
+  if(!music.currentId){ musicPlay(music.queue[0], music.currentList); return; }
+  if(musicAudio.currentTime > 3){ try{ musicAudio.currentTime = 0; }catch(e){} return; }
+  let i = music.queue.indexOf(music.currentId);
+  i = i <= 0 ? music.queue.length - 1 : i - 1;
+  musicPlay(music.queue[i], music.currentList);
+}
+function musicStop(){
+  if(!musicAudio) return;
+  try{ musicAudio.pause(); }catch(e){}
+  try{ musicAudio.removeAttribute('src'); musicAudio.load(); }catch(e){}
+  if(musicObjectUrl){ try{ URL.revokeObjectURL(musicObjectUrl); }catch(e){} musicObjectUrl = null; }
+}
+function musicMediaSession(tr){
+  try{
+    if(!('mediaSession' in navigator) || typeof MediaMetadata === 'undefined') return;
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: tr.title,
+      artist: tr.artist || 'Ширма мастера',
+      album: musicListName(music.currentList),
+    });
+  }catch(e){}
+}
+function musicBindMediaSession(){
+  try{
+    if(!('mediaSession' in navigator) || !navigator.mediaSession.setActionHandler) return;
+    navigator.mediaSession.setActionHandler('play', ()=> musicToggle());
+    navigator.mediaSession.setActionHandler('pause', ()=> musicToggle());
+    navigator.mediaSession.setActionHandler('previoustrack', ()=> musicPrev());
+    navigator.mediaSession.setActionHandler('nexttrack', ()=> musicNext(false));
+  }catch(e){}
+}
+
+function musicRenderBar(){
+  const titleEl = document.getElementById('mbTitleText');
+  const playBtn = document.getElementById('mbPlay');
+  const muteBtn = document.getElementById('mbMute');
+  const volEl = document.getElementById('mbVol');
+  const tr = music.currentId ? musicTrack(music.currentId) : null;
+  if(titleEl) titleEl.textContent = tr ? tr.title : 'Треки не добавлены';
+  if(playBtn){
+    const playing = !!(tr && musicAudio && !musicAudio.paused);
+    playBtn.textContent = playing ? '❚❚' : '▶';
+    playBtn.title = playing ? 'Пауза (Ctrl+Space)' : 'Играть (Ctrl+Space)';
+    playBtn.setAttribute('aria-label', playing ? 'Пауза' : 'Играть');
+  }
+  if(muteBtn) muteBtn.classList.toggle('is-off', music.muted || music.volume === 0);
+  if(volEl && document.activeElement !== volEl) volEl.value = Math.round(music.volume*100);
+  if(titleEl && document.getElementById('mbTitle')) document.getElementById('mbTitle').title = tr ? ('Играет: '+tr.title+' — открыть музыку') : 'Открыть вкладку «Музыка»';
+}
+function musicRenderLists(){
+  const el = document.getElementById('musicLists');
+  if(!el) return;
+  const items = [{ id:MUSIC_ALL, name:'Все треки', n:Object.keys(music.tracks).length }]
+    .concat(music.lists.map(l=>({ id:l.id, name:l.name, n:l.trackIds.length })));
+  el.innerHTML = items.map(it=>
+    '<button class="music-list'+(music.currentList===it.id?' active':'')+'" data-mlist="'+escapeHtml(it.id)+'" title="'+escapeHtml(it.name)+'">'
+    + '<span class="gi" data-gi="'+(it.id===MUSIC_ALL?'music':'note')+'"></span>'
+    + '<span class="music-list-name">'+escapeHtml(it.name)+'</span>'
+    + '<span class="music-list-n">'+it.n+'</span>'
+    + '</button>'
+  ).join('');
+  hydrateIcons(el);
+}
+function musicRenderTracks(){
+  const el = document.getElementById('musicTracks');
+  if(!el) return;
+  const list = musicListTracks(music.currentList);
+  const all = music.currentList === MUSIC_ALL;
+  const titleEl = document.getElementById('musicListTitle');
+  const countEl = document.getElementById('musicListCount');
+  const delBtn = document.getElementById('musicDelete');
+  const renBtn = document.getElementById('musicRename');
+  const addBtn = document.getElementById('musicAddFromLib');
+  if(titleEl) titleEl.textContent = musicListName(music.currentList);
+  if(countEl){
+    const total = list.reduce((s,t)=> s + (+t.dur||0), 0);
+    countEl.textContent = list.length ? (list.length + ' · ' + (total ? musicFmtTime(total) : '—')) : 'пусто';
+  }
+  if(delBtn) delBtn.disabled = all;
+  if(renBtn) renBtn.disabled = all;
+  if(addBtn) addBtn.disabled = all;
+  if(!list.length){
+    el.innerHTML = '<div class="music-empty">'
+      + (all
+        ? 'Пока нет треков. Нажмите <b>«Добавить треки»</b> или перетащите аудиофайлы сюда.<br>Файлы хранятся локально и никуда не отправляются.'
+        : 'В этом плейлисте пусто. <b>«＋ Из библиотеки»</b> — добавить готовые треки, или перетащите файлы сюда.')
+      + '</div>';
+    return;
+  }
+  el.innerHTML = list.map((tr, i)=>
+    '<div class="music-track'+(tr.id===music.currentId?' playing':'')+'" data-mid="'+escapeHtml(tr.id)+'">'
+    + '<span class="mt-idx" title="Играть">'+(tr.id===music.currentId?'▶':(i+1))+'</span>'
+    + '<span class="mt-main"><div class="mt-name">'+escapeHtml(tr.title)+'</div>'
+    + '<div class="mt-sub">'+escapeHtml(tr.artist || (all?'Библиотека':'Плейлист'))+'</div></span>'
+    + '<span class="mt-dur">'+(tr.dur?musicFmtTime(tr.dur):'—')+'</span>'
+    + '<span class="mt-acts">'
+    + (all?'':'<button class="mt-btn" data-mact="remove" title="Убрать из плейлиста">✕</button>')
+    + '<button class="mt-btn del" data-mact="delete" title="Удалить файл">'+gi('trash')+'</button>'
+    + '</span></div>'
+  ).join('');
+}
+function musicUpdateStorage(force){
+  const el = document.getElementById('musicStorage');
+  if(!el) return;
+  const now = Date.now();
+  if(!force && now - musicStorageAt < 5000) return;
+  musicStorageAt = now;
+  const size = Object.keys(music.tracks).reduce((s,id)=> s + (+music.tracks[id].size||0), 0);
+  el.textContent = size ? ('Аудио: '+musicFmtBytes(size)) : 'Локально, без интернета';
+  try{
+    if(navigator.storage && navigator.storage.estimate){
+      navigator.storage.estimate().then(est=>{
+        if(!est || !est.quota) return;
+        const free = Math.max(0, est.quota - (est.usage||0));
+        if(free < 500*1024*1024) el.textContent = 'Мало места: свободно '+musicFmtBytes(free);
+      }).catch(()=>{});
+    }
+  }catch(e){}
+}
+function musicRenderAll(){
+  musicRenderBar();
+  musicRenderLists();
+  musicRenderTracks();
+  musicUpdateStorage();
+}
+
+function musicIsAudioFile(f){
+  if(!f) return false;
+  if(/^audio\//.test(f.type||'')) return true;
+  return /\.(mp3|ogg|oga|wav|m4a|aac|flac|opus|weba?)$/i.test(f.name||'');
+}
+function musicProbeDuration(id, blob){
+  if(typeof Audio === 'undefined' || !blob) return;
+  let url = null;
+  try{
+    url = URL.createObjectURL(blob);
+    const a = new Audio();
+    if(typeof a.addEventListener === 'function'){
+      a.addEventListener('loadedmetadata', ()=>{
+        const tr = music.tracks[id];
+        if(tr && isFinite(a.duration) && a.duration > 0){
+          tr.dur = a.duration;
+          musicSave(); musicRenderTracks();
+        }
+        try{ URL.revokeObjectURL(url); }catch(e){}
+      });
+      a.addEventListener('error', ()=>{ try{ URL.revokeObjectURL(url); }catch(e){} });
+    } else { try{ URL.revokeObjectURL(url); }catch(e){} }
+    a.preload = 'metadata';
+    a.src = url;
+  }catch(e){ if(url){ try{ URL.revokeObjectURL(url); }catch(e2){} } }
+}
+function musicAddFiles(fileList, listId){
+  const files = Array.from(fileList||[]).filter(musicIsAudioFile);
+  if(!files.length){ toast('Выберите аудиофайлы'); return Promise.resolve(0); }
+  const target = listId || music.currentList;
+  const list = target === MUSIC_ALL ? null : musicList(target);
+  let added = 0, skipped = 0;
+  return files.reduce((chain, f)=> chain.then(()=>{
+    if(f.size > MUSIC_MAX_BYTES){ skipped++; return; }
+    const id = 'tr_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+    const key = 'audio_'+id;
+    return musicPut(key, f).then(ok=>{
+      if(!ok){ skipped++; return; }
+      const title = (String(f.name||'Трек').replace(/\.[a-z0-9]{2,5}$/i,'') || 'Трек').slice(0,160);
+      music.tracks[id] = { id, key, title, artist:'', dur:0, size:+f.size||0, added:Date.now() };
+      if(list) list.trackIds.push(id);
+      added++;
+      musicProbeDuration(id, f);
+    });
+  }), Promise.resolve()).then(()=>{
+    musicSave(); musicRenderAll();
+    if(added) toast('Добавлено треков: '+added+(skipped?', пропущено: '+skipped:''));
+    else if(skipped) toast('Не удалось добавить файлы: '+skipped);
+    return added;
+  });
+}
+
+function musicRemoveFromList(id){
+  const l = musicList(music.currentList);
+  if(!l) return;
+  l.trackIds = l.trackIds.filter(x=> x!==id);
+  music.queue = music.queue.filter(x=> x!==id);
+  musicSave(); musicRenderAll();
+}
+async function musicDeleteTrack(id){
+  const tr = musicTrack(id);
+  if(!tr) return;
+  const ok = await uiConfirm('Удалить файл «'+tr.title+'»?\nОн исчезнет из всех плейлистов и из хранилища приложения.');
+  if(!ok) return;
+  delete music.tracks[id];
+  music.lists.forEach(l=>{ l.trackIds = l.trackIds.filter(x=> x!==id); });
+  music.queue = music.queue.filter(x=> x!==id);
+  if(music.currentId === id){ musicStop(); music.currentId = null; }
+  musicDel(tr.key);
+  musicSave(); musicRenderAll();
+  toast('Трек удалён');
+}
+async function musicNewList(){
+  const name = await uiPrompt('Название плейлиста или сцены:', 'Сцена '+(music.lists.length+1));
+  if(name == null) return;
+  const nm = String(name).trim().slice(0,60);
+  if(!nm) return;
+  const id = 'ml_'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+  music.lists.push({ id, name:nm, trackIds:[] });
+  music.currentList = id;
+  musicSave(); musicRenderAll();
+  toast('Плейлист «'+nm+'» создан');
+}
+async function musicRenameList(){
+  const l = musicList(music.currentList);
+  if(!l) return;
+  const name = await uiPrompt('Новое название плейлиста:', l.name);
+  if(name == null) return;
+  const nm = String(name).trim().slice(0,60);
+  if(!nm) return;
+  l.name = nm;
+  musicSave(); musicRenderAll();
+}
+async function musicDeleteList(){
+  const l = musicList(music.currentList);
+  if(!l) return;
+  const ok = await uiConfirm('Удалить плейлист «'+l.name+'»? Файлы останутся в «Все треки».');
+  if(!ok) return;
+  music.lists = music.lists.filter(x=> x.id!==l.id);
+  music.currentList = MUSIC_ALL;
+  musicSave(); musicRenderAll();
+}
+
+function musicRenderPick(){
+  const el = document.getElementById('musicPickList');
+  if(!el) return;
+  const searchEl = document.getElementById('musicPickSearch');
+  const q = normalizeLib((searchEl && searchEl.value) || '');
+  const l = musicList(music.currentList);
+  const inList = new Set(l ? l.trackIds : []);
+  const items = Object.keys(music.tracks).map(k=> music.tracks[k])
+    .filter(t=> !inList.has(t.id))
+    .filter(t=> !q || normalizeLib(t.title).includes(q));
+  if(!items.length){
+    el.innerHTML = '<div class="lib-empty">'+(l ? 'В библиотеке нет треков для добавления.' : 'Выберите плейлист слева.')+'</div>';
+    return;
+  }
+  el.innerHTML = items.map(t=>
+    '<label class="mt-pick"><input type="checkbox" data-mpick="'+escapeHtml(t.id)+'"'+(musicPickSelection.has(t.id)?' checked':'')+'>'
+    + '<span class="mt-pick-name">'+escapeHtml(t.title)+'</span>'
+    + '<span class="mt-pick-dur">'+(t.dur?musicFmtTime(t.dur):'—')+'</span></label>'
+  ).join('');
+}
+function musicPickAddSelected(){
+  const l = musicList(music.currentList);
+  const modal = document.getElementById('musicPickModal');
+  if(!l){ closeModal(modal); return; }
+  let n = 0;
+  musicPickSelection.forEach(id=>{
+    if(music.tracks[id] && !l.trackIds.includes(id)){ l.trackIds.push(id); n++; }
+  });
+  musicPickSelection = new Set();
+  closeModal(modal);
+  musicSave(); musicRenderAll();
+  toast(n ? 'Добавлено в плейлист: '+n : 'Ничего не выбрано');
+}
+
+function musicInit(){
+  musicLoad();
+  const volEl = document.getElementById('mbVol');
+  if(volEl) volEl.value = Math.round(music.volume*100);
+  const shEl = document.getElementById('musicShuffle');
+  if(shEl) shEl.checked = music.shuffle;
+  const rpEl = document.getElementById('musicRepeat');
+  if(rpEl) rpEl.value = music.repeat;
+  musicApplyVolume();
+  musicRenderAll();
+  musicBindMediaSession();
+}
+
+(function bindMusic(){
+  const on = (id, ev, fn)=>{
+    const el = document.getElementById(id);
+    if(el) el.addEventListener(ev, fn);
+  };
+
+  on('mbPrev','click', musicPrev);
+  on('mbPlay','click', musicToggle);
+  on('mbNext','click', ()=> musicNext(false));
+  on('mbMute','click', musicToggleMute);
+  on('mbTitle','click', ()=> showTab('music'));
+  on('mbVol','input', ()=>{
+    const v = document.getElementById('mbVol');
+    musicSetVolume(v ? (+v.value||0)/100 : 0);
+  });
+
+  on('musicImport','click', ()=>{ const f = document.getElementById('musicFileInput'); if(f) f.click(); });
+  on('musicFileInput','change', e=>{
+    musicAddFiles(e.target.files);
+    e.target.value = '';
+  });
+  on('musicNewList','click', musicNewList);
+  on('musicPlayAll','click', ()=>{
+    const list = musicListTracks(music.currentList);
+    if(!list.length){ toast('В плейлисте нет треков'); return; }
+    musicBuildQueue(music.currentList, null);
+    if(music.queue.length) musicPlay(music.queue[0], music.currentList);
+  });
+  on('musicShuffle','change', e=>{
+    music.shuffle = !!e.target.checked;
+    musicBuildQueue(music.currentList, music.currentId);
+    musicSave();
+    toast(music.shuffle ? 'Треки перемешаны' : 'Треки по порядку');
+  });
+  on('musicRepeat','change', e=>{ music.repeat = e.target.value; musicSave(); });
+  on('musicRename','click', musicRenameList);
+  on('musicDelete','click', musicDeleteList);
+  on('musicAddFromLib','click', ()=>{
+    if(music.currentList === MUSIC_ALL){ toast('Выберите плейлист слева'); return; }
+    musicPickSelection = new Set();
+    const s = document.getElementById('musicPickSearch');
+    if(s) s.value = '';
+    musicRenderPick();
+    openModal(document.getElementById('musicPickModal'), document.getElementById('musicAddFromLib'));
+  });
+
+  const listsEl = document.getElementById('musicLists');
+  if(listsEl) listsEl.addEventListener('click', e=>{
+    const b = e.target && e.target.closest ? e.target.closest('[data-mlist]') : null;
+    if(!b) return;
+    music.currentList = b.dataset.mlist;
+    musicSave(); musicRenderAll();
+  });
+  const tracksEl = document.getElementById('musicTracks');
+  if(tracksEl) tracksEl.addEventListener('click', e=>{
+    const act = e.target && e.target.closest ? e.target.closest('[data-mact]') : null;
+    const row = e.target && e.target.closest ? e.target.closest('[data-mid]') : null;
+    if(!row) return;
+    const id = row.dataset.mid;
+    if(act){
+      if(act.dataset.mact === 'remove') musicRemoveFromList(id);
+      else if(act.dataset.mact === 'delete') musicDeleteTrack(id);
+      return;
+    }
+    musicPlay(id, music.currentList);
+  });
+
+  const viewMusic = document.getElementById('view-music');
+  const musicMainEl = document.querySelector('.music-main');
+  if(viewMusic){
+    viewMusic.addEventListener('dragover', e=>{
+      if(!e.dataTransfer) return;
+      e.preventDefault();
+      if(musicMainEl) musicMainEl.classList.add('dragover');
+    });
+    viewMusic.addEventListener('dragleave', ()=>{ if(musicMainEl) musicMainEl.classList.remove('dragover'); });
+    viewMusic.addEventListener('drop', e=>{
+      e.preventDefault();
+      if(musicMainEl) musicMainEl.classList.remove('dragover');
+      const files = e.dataTransfer && e.dataTransfer.files;
+      if(files && files.length) musicAddFiles(files);
+    });
+  }
+
+  const pickModal = document.getElementById('musicPickModal');
+  if(pickModal){
+    on('musicPickClose','click', ()=> closeModal(pickModal));
+    pickModal.addEventListener('click', e=>{ if(e.target === pickModal) closeModal(pickModal); });
+    on('musicPickSearch','input', musicRenderPick);
+    on('musicPickAdd','click', musicPickAddSelected);
+    const pickList = document.getElementById('musicPickList');
+    if(pickList) pickList.addEventListener('change', e=>{
+      const cb = e.target && e.target.closest ? e.target.closest('[data-mpick]') : null;
+      if(!cb) return;
+      if(cb.checked) musicPickSelection.add(cb.dataset.mpick);
+      else musicPickSelection.delete(cb.dataset.mpick);
+    });
+  }
+
+  if(musicAudio){
+    musicAudio.addEventListener('play', ()=> musicRenderBar());
+    musicAudio.addEventListener('pause', ()=> musicRenderBar());
+    musicAudio.addEventListener('ended', ()=>{
+      if(music.repeat === 'one'){
+        try{ musicAudio.currentTime = 0; }catch(e){}
+        const p = musicAudio.play();
+        if(p && p.catch) p.catch(()=>{});
+        return;
+      }
+      musicNext(true);
+    });
+  }
+
+  document.addEventListener('keydown', e=>{
+    const tag = (e.target && e.target.tagName || '').toLowerCase();
+    if(tag==='input' || tag==='textarea' || tag==='select' || (e.target && e.target.isContentEditable)) return;
+    const ctrl = e.ctrlKey && !e.altKey && !e.metaKey;
+    if(!ctrl) return;
+    const code = e.code || '';
+    if(!e.shiftKey && (code === 'Space' || e.key === ' ')){
+      e.preventDefault();
+      musicToggle();
+    } else if(e.shiftKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || code === 'ArrowLeft' || code === 'ArrowRight')){
+      e.preventDefault();
+      if(e.key === 'ArrowLeft' || code === 'ArrowLeft') musicPrev(); else musicNext(false);
+    } else if(!e.shiftKey && (code === 'KeyM' || e.key === 'm' || e.key === 'M' || e.key === 'ь' || e.key === 'Ь')){
+      e.preventDefault();
+      musicToggleMute();
+    }
+  });
+})();
 
 const STORE_MAP = KEYS.map;
 const MAP_MAX_BYTES = 8*1024*1024;      // лимит размера файла карты
@@ -4499,9 +5131,10 @@ if(monEffType) monEffType.addEventListener('change', renderMonEff);
   });
   let savedTab='home';
   try{ savedTab=localStorage.getItem(KEYS.tab)||'home'; }catch(e){}
-  if(!['home','chars','monsters','sessions','map','battle'].includes(savedTab)) savedTab='home';
+  if(!['home','chars','monsters','sessions','map','battle','music'].includes(savedTab)) savedTab='home';
   bindBattle();
   bindBattleKeyboard();
+  musicInit();
   // броски костей живут на панели боя
   { const db=document.querySelector('.topbar .dicebar');
     const tb=document.getElementById('battleToolbar');

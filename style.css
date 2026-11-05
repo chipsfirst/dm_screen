@@ -1375,3 +1375,129 @@ kbd{font-size:12px}
 .card-col-left, .card-col-right{min-width:0}
 .card-cols > .card-col-right textarea{min-height:120px}
 .block textarea{min-height:72px}
+
+/* ═══ Музыка: мини-плеер в верхней панели ═══ */
+.musicbar{
+  display:flex; align-items:center; gap:2px; min-width:0; max-width:100%;
+  padding:2px 5px; border:1px solid var(--line); border-radius:8px; background:var(--panel2);
+  flex:0 1 auto;
+}
+.musicbar #musicAudio{display:none}
+.musicbar .mb-btn{
+  background:transparent; border:1px solid transparent; border-radius:6px; color:var(--muted);
+  padding:1px 3px; min-width:20px; font-size:11px; line-height:1.3; cursor:pointer;
+  font-family:ui-monospace,Menlo,Consolas,monospace;
+}
+.musicbar .mb-btn:hover{color:var(--text); background:var(--panel); border-color:var(--line)}
+.musicbar .mb-btn:focus-visible{outline:2px solid var(--accent); outline-offset:1px}
+.musicbar .mb-nav{min-width:22px; font-size:10px; letter-spacing:-.5px}
+.musicbar .mb-play{color:var(--accent); min-width:24px; font-size:12.5px}
+.musicbar .mb-btn.is-off{opacity:.5}
+.musicbar .mb-title{
+  display:flex; align-items:center; gap:5px; min-width:0; max-width:140px;
+  background:transparent; border:1px solid transparent; border-radius:6px; padding:1px 4px;
+  color:var(--text); cursor:pointer; text-align:left;
+}
+.musicbar .mb-title:hover{background:var(--panel); border-color:var(--line)}
+.musicbar .mb-title .gi{width:1em; height:1em; color:var(--accent)}
+.mb-title-text{
+  min-width:0; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  font-size:12px; color:var(--muted);
+}
+.musicbar .mb-title:hover .mb-title-text{color:var(--text)}
+@media (max-width:1200px){
+  .musicbar .mb-title{max-width:110px}
+}
+@media (max-width:1040px){
+  .musicbar .mb-title{max-width:86px}
+  .musicbar .mb-nav{display:none}
+}
+
+/* ═══ Вкладка «Музыка» ═══ */
+.music-toolbar .music-chk{display:inline-flex; align-items:center; gap:5px; color:var(--muted); font-size:12.5px; cursor:pointer}
+.music-toolbar .music-hint{margin-left:auto}
+.music-layout{
+  flex:1; min-height:0; display:grid; grid-template-columns:230px minmax(0,1fr);
+  gap:12px; padding:12px 14px; overflow:hidden;
+}
+.music-side{
+  display:flex; flex-direction:column; min-height:0; overflow:hidden;
+  background:var(--panel); border:1px solid var(--line); border-radius:10px;
+}
+.music-side-head{
+  padding:7px 10px; border-bottom:1px solid var(--line);
+  font-size:11.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted);
+}
+.music-lists{flex:1; min-height:0; overflow:auto; padding:6px; display:flex; flex-direction:column; gap:3px}
+.music-list{
+  display:flex; align-items:center; gap:6px; width:100%; text-align:left;
+  background:transparent; border:1px solid transparent; border-radius:8px;
+  padding:6px 8px; color:var(--text); cursor:pointer;
+}
+.music-list:hover{background:var(--panel2)}
+.music-list.active{background:linear-gradient(180deg,var(--sel),var(--sel2)); color:var(--sel-text); border-color:#c9a227}
+.music-list .gi{width:1em; height:1em; opacity:.8}
+.music-list-name{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:13.5px}
+.music-list-n{font-size:11px; opacity:.7; font-variant-numeric:tabular-nums}
+.music-side-foot{padding:7px 10px; border-top:1px solid var(--line); font-size:11px; line-height:1.4}
+.music-side.dragover{outline:2px dashed var(--accent); outline-offset:-5px}
+.music-main{
+  display:flex; flex-direction:column; min-height:0; min-width:0; overflow:hidden;
+  background:var(--panel); border:1px solid var(--line); border-radius:10px;
+}
+.music-main-head{
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  padding:8px 12px; border-bottom:1px solid var(--line);
+}
+.music-main-head h3{margin:0; font-size:17px; color:var(--heading)}
+.music-main-actions{margin-left:auto; display:flex; align-items:center; gap:6px; flex-wrap:wrap}
+.music-tracks{flex:1; min-height:0; overflow:auto; padding:6px}
+.music-track{
+  display:grid; grid-template-columns:24px minmax(0,1fr) auto auto; align-items:center; gap:8px;
+  padding:6px 8px; border:1px solid transparent; border-radius:8px;
+}
+.music-track:hover{background:var(--panel2)}
+.music-track.playing{background:rgba(255,213,74,.12); border-color:rgba(201,162,39,.5)}
+html[data-theme="light"] .music-track.playing{background:rgba(184,148,74,.16)}
+.mt-idx{
+  font-size:11.5px; color:var(--muted); text-align:center; cursor:pointer;
+  font-variant-numeric:tabular-nums;
+}
+.music-track.playing .mt-idx{color:var(--accent)}
+.mt-main{min-width:0; cursor:pointer}
+.mt-name{font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.mt-sub{font-size:11.5px; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.mt-dur{font-size:12px; color:var(--muted); font-variant-numeric:tabular-nums}
+.mt-acts{display:flex; align-items:center; gap:3px}
+.mt-btn{
+  background:transparent; border:1px solid transparent; border-radius:6px; color:var(--muted);
+  padding:1px 6px; font-size:12px; line-height:1.4; cursor:pointer;
+}
+.mt-btn:hover{color:var(--text); background:var(--panel); border-color:var(--line)}
+.mt-btn.del:hover{color:var(--danger); border-color:var(--danger)}
+.music-empty{padding:26px 14px; text-align:center; color:var(--muted); font-size:14px; line-height:1.55}
+.music-empty b{color:var(--text); font-weight:600}
+.music-main.dragover{outline:2px dashed var(--accent); outline-offset:-5px}
+.mt-pick{display:flex; align-items:center; gap:8px; padding:5px 8px; border-radius:7px; cursor:pointer}
+.mt-pick:hover{background:var(--panel2)}
+.mt-pick input{accent-color:var(--accent)}
+.mt-pick .mt-pick-name{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:13.5px}
+.mt-pick .mt-pick-dur{font-size:11.5px; color:var(--muted); font-variant-numeric:tabular-nums}
+
+@media (max-width:880px){
+  .music-layout{grid-template-columns:1fr; grid-template-rows:auto minmax(0,1fr)}
+  .music-side{max-height:32vh}
+}
+
+.music-pick-foot{
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  padding:9px 13px; border-top:1px solid var(--line);
+}
+.music-pick-foot .hint{margin-left:auto}
+
+.music-vol-wrap{display:inline-flex; align-items:center; gap:6px; color:var(--muted); font-size:12.5px; cursor:pointer}
+.music-vol-ico{color:var(--accent); font-size:13px; line-height:1}
+.music-vol{width:96px; height:16px; accent-color:var(--accent); cursor:pointer}
+@media (max-width:1100px){
+  .music-vol{width:72px}
+}
