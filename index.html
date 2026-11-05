@@ -69,7 +69,23 @@
             <button id="btnFontPlus" title="Увеличить шрифт (Ctrl++)" aria-label="Увеличить шрифт">А+</button>
           </span>
           <span class="acts-group">
-            <button id="btnTheme" title="Переключить светлую/тёмную тему" aria-label="Переключить тему"><span class="gi" data-gi="sun"></span></button>
+            <span class="theme-picker">
+              <button id="btnTheme" title="Тема оформления" aria-label="Тема оформления" aria-haspopup="true" aria-expanded="false"><span class="theme-dot"></span></button>
+              <div class="menu-panel theme-menu" id="themeMenu" role="menu">
+                <span class="menu-caption">Классика</span>
+                <button type="button" role="menuitem" data-theme-pick="dark"><span class="theme-sw" style="background:linear-gradient(135deg,#c9a227 50%,#181b20 50%)"></span>Золотая тьма</button>
+                <button type="button" role="menuitem" data-theme-pick="light"><span class="theme-sw" style="background:linear-gradient(135deg,#8a6d1f 50%,#f4ecd8 50%)"></span>Пергамент</button>
+                <span class="menu-caption">Тёмные для кода</span>
+                <button type="button" role="menuitem" data-theme-pick="matrix"><span class="theme-sw" style="background:linear-gradient(135deg,#39ff14 50%,#050a06 50%)"></span>Матрица</button>
+                <button type="button" role="menuitem" data-theme-pick="dracula"><span class="theme-sw" style="background:linear-gradient(135deg,#bd93f9 50%,#282a36 50%)"></span>Dracula</button>
+                <button type="button" role="menuitem" data-theme-pick="nord"><span class="theme-sw" style="background:linear-gradient(135deg,#88c0d0 50%,#2e3440 50%)"></span>Nord</button>
+                <button type="button" role="menuitem" data-theme-pick="solarized"><span class="theme-sw" style="background:linear-gradient(135deg,#b58900 50%,#002b36 50%)"></span>Solarized Dark</button>
+                <button type="button" role="menuitem" data-theme-pick="gruvbox"><span class="theme-sw" style="background:linear-gradient(135deg,#fabd2f 50%,#282828 50%)"></span>Gruvbox</button>
+                <button type="button" role="menuitem" data-theme-pick="monokai"><span class="theme-sw" style="background:linear-gradient(135deg,#a6e22e 50%,#272822 50%)"></span>Monokai</button>
+                <button type="button" role="menuitem" data-theme-pick="tokyo"><span class="theme-sw" style="background:linear-gradient(135deg,#7aa2f7 50%,#1a1b26 50%)"></span>Tokyo Night</button>
+                <button type="button" role="menuitem" data-theme-pick="onedark"><span class="theme-sw" style="background:linear-gradient(135deg,#61afef 50%,#282c34 50%)"></span>One Dark</button>
+              </div>
+            </span>
             <button id="btnFullscreen" title="Полноэкранный режим (F11)" aria-label="Полноэкранный режим"><span class="gi" data-gi="expand"></span></button>
           </span>
           <span class="acts-sep"></span>
@@ -158,6 +174,7 @@
         <section class="home-card home-updates">
           <h2>Обновления</h2>
           <ul>
+            <li><span class="upd-date">05.11.2026</span><span>Десять тем оформления: «Золотая тьма», «Пергамент», «Матрица», Dracula, Nord, Solarized Dark, Gruvbox, Monokai, Tokyo Night и One Dark — выбор в меню у кружка в шапке, цвета интерфейса, рамок и кнопок подстраиваются под тему. Резервная копия теперь хранит плейлисты (без аудиофайлов), музыка помечает треки, которых нет на этом устройстве.</span></li>
             <li><span class="upd-date">05.11.2026</span><span>Музыка: вкладка «Музыка» с плейлистами и сценами, мини-плеер в верхней панели для быстрого переключения треков (Ctrl+Space, Ctrl+Shift+←/→, Ctrl+M), Alt+7 — переход на вкладку. Аудио хранится локально.</span></li>
             <li><span class="upd-date">04.11.2026</span><span>Новое лого — огненный d20 в наушниках; в тёмной теме золотые рамки у карточек, блоков и модалок, фиолетовые кнопки заменены на светло-золотые.</span></li>
             <li><span class="upd-date">04.11.2026</span><span>Бой: раунды и очередь хода (⚄ Инициатива, «Следующий ▸», клавиша N), проверка концентрации при уроне; окно горячих клавиш «?»; поиск по действиям монстров; магазин запоминает фильтр; журнал боя входит в резервную копию.</span></li>
@@ -360,7 +377,6 @@
           <div id="musicTracks" class="music-tracks"></div>
         </section>
       </div>
-      <input type="file" id="musicDropInput" class="hidden" multiple aria-label="Добавить файлы в плейлист">
     </div>
         <footer class="app-footer">
           <span class="af-title">Ширма мастера для D&amp;D 5.5</span>
@@ -369,7 +385,7 @@
             <span class="af-hint">Автор: Ролёвки от Вовки</span>
             <span class="af-hint" title="Иконки: Lorc, Delapouite — game-icons.net, CC BY 3.0">Иконки: game-icons.net</span>
             <span class="af-hint" title="Магические предметы SRD 5.1 — Wizards of the Coast, CC-BY-4.0">SRD 5.1 · CC-BY-4.0</span>
-            <span class="af-hint af-ver">Ширма мастера <span id="appVersion">1.0.9</span> · <a class="af-link" href="https://github.com/chipsfirst/dm_screen/releases" target="_blank" rel="noopener">что нового</a></span>
+            <span class="af-hint af-ver">Ширма мастера <span id="appVersion">1.0.10</span> · <a class="af-link" href="https://github.com/chipsfirst/dm_screen/releases" target="_blank" rel="noopener">что нового</a></span>
             <a class="af-link" href="https://boosty.to/vovkaroleplay" target="_blank" rel="noopener">Поддержать</a>
             <a class="af-link" href="https://github.com/chipsfirst/dm_screen" target="_blank" rel="noopener">Репозиторий на GitHub ↗</a>
           </span>
