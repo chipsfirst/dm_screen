@@ -459,23 +459,23 @@ function bodyHtml(b){
   }
   if(b.type==='pc' || b.type==='mob'){
     const props = `<div class="props">`+Object.entries(b.props).map(([k,v])=>{
-      const w = Math.min(30, Math.max(3, String(v==null?'':v).length + 1));
-      return `<div class="prop"><span class="lbl">${escapeHtml(k)}</span><input class="v" data-prop-key="${escapeHtml(k)}" data-prop-id="${b.id}" value="${escapeHtml(String(v))}" style="width:${w}ch"></div>`;
+      const full = escapeHtml(k)+': '+escapeHtml(String(v==null?'':v));
+      return `<label class="prop" title="${full}"><input class="v" data-prop-key="${escapeHtml(k)}" data-prop-id="${b.id}" value="${escapeHtml(String(v))}"><span class="lbl">${escapeHtml(k)}</span></label>`;
     }).join('')+`</div>`;
+    const attackRow = b.type==='pc'
+      ? `<div class="attack-row">
+          <span class="lbl">Атака:</span>
+          <input class="attack-input" type="text" data-attack="${b.id}" value="${escapeHtml(b.attack!==undefined?b.attack:'+0')}" placeholder="+бонус" title="Бонус атаки, напр. +5">
+          <span class="lbl">Урон:</span>
+          <input class="attack-input dmg-input" type="text" data-damage="${b.id}" value="${escapeHtml(b.damage!==undefined?b.damage:'')}" placeholder="1d8+3" title="Запись урона: кубик и бонус">
+        </div>`
+      : '';
     const left = `<div class="card-col-left">
       ${props}
-      ${b.type==='pc'?hpRowHtml(b):''}
       ${b.type==='pc'?`<div class="atts"><div class="atts-title">Характеристики</div>${statsInput(b)}</div>`:statsInput(b)}
+      ${attackRow}
     </div>`;
     const right = `<div class="card-col-right">
-      ${b.type==='pc'
-        ? `<div class="attack-row">
-            <span class="lbl">Атака:</span>
-            <input class="attack-input" type="text" data-attack="${b.id}" value="${escapeHtml(b.attack!==undefined?b.attack:'+0')}" placeholder="+бонус" title="Бонус атаки, напр. +5">
-            <button data-rollatt="${b.id}" title="Бросок атаки: d20 + бонус">${gi('sword')} Бросить атаку</button>
-            <span class="hint" data-attresult="${b.id}"></span>
-          </div>`
-        : ''}
       ${b.type==='pc'?resourcesHtml(b):''}
       <textarea data-field="text" data-id="${b.id}" placeholder="Заметки…" style="${autoTextareaStyle(b.text)}">${escapeHtml(b.text)}</textarea>
     </div>`;
@@ -536,6 +536,24 @@ function resourcesHtml(b){
 }
 function findBlockRes(id, i){ const b=findBlock(id); if(!b) return null; return (b.res||[])[i]; }
 /* ═══ ХП и урон на листе ПК ═══ */
+/* ═══ Общая шкала здоровья: лист ПК и карточка боя ═══ */
+function hpMaxNum(v){
+  const n = +v;
+  return (v !== '' && v != null && n > 0) ? n : 0;
+}
+function hpCurNum(v){
+  return (v === '' || v == null) ? null : Math.max(0, Math.round(+v) || 0);
+}
+function woundOf(ratio){
+  if(ratio === null) return '';
+  if(ratio <= 0) return 'dead';
+  if(ratio <= 0.1) return 'critical';
+  if(ratio <= 0.5) return 'wounded';
+  return '';
+}
+function woundLabel(st){
+  return st === 'dead' ? '☠ выбыл' : st === 'critical' ? 'окровавлен' : st === 'wounded' ? 'потрёпан' : '';
+}
 function hpMaxOf(b){ return Math.max(0, parseInt(b.props && b.props['ХП'] || b.props && b.props['HP']) || 0); }
 function hpCurOf(b){
   const max=hpMaxOf(b);
@@ -545,12 +563,7 @@ function blockHpInfo(b){
   const max = hpMaxOf(b);
   if(!max) return null;
   const cur = hpCurOf(b);
-  const r = cur/max;
-  let state = '';
-  if(cur<=0) state='dead';
-  else if(r<=0.1) state='critical';
-  else if(r<=0.5) state='wounded';
-  return { max, cur, state };
+  return { max, cur, state: woundOf(cur / max) };
 }
 function blockHpBarHtml(b){
   const info = blockHpInfo(b);
@@ -558,24 +571,9 @@ function blockHpBarHtml(b){
   const pct = Math.max(0, Math.min(100, Math.round(info.cur/info.max*100)));
   const crit = (info.state==='critical' || info.state==='dead');
   const cls = crit ? ' crit' : (info.state==='wounded' ? ' warn' : '');
-  const label = info.state==='dead' ? '☠ выбыл' : info.state==='critical' ? 'окровавлен' : info.state==='wounded' ? 'потрёпан' : '';
+  const label = woundLabel(info.state);
   return `<span class="bt-hpbar${cls}" title="ХП ${info.cur}/${info.max}"><i style="width:${pct}%"></i></span>` +
          (label ? `<span class="bt-wound${crit?' crit':''}">${label}</span>` : '');
-}
-function hpRowHtml(b){
-  const hpMax=hpMaxOf(b), cur=hpCurOf(b);
-  const knocked = cur<=0 && hpMax>0;
-  return `<div class="hp-row">
-    <span class="lbl">ХП:</span>
-    <span class="hp-big ${knocked?'knocked':''}" data-hp-val="${b.id}">${cur}</span>
-    <span class="hint">/ ${hpMax}</span>
-    <button class="res-btn hp-btn" data-hp-op="d5" data-hp-id="${b.id}" title="Урон 5">−5</button>
-    <button class="res-btn hp-btn" data-hp-op="d1" data-hp-id="${b.id}" title="Урон 1">−1</button>
-    <button class="res-btn hp-btn" data-hp-op="h1" data-hp-id="${b.id}" title="Лечение 1">+1</button>
-    <button class="res-btn hp-btn" data-hp-op="h5" data-hp-id="${b.id}" title="Лечение 5">+5</button>
-    <input class="hp-dmg-in" type="number" min="0" data-hp-in="${b.id}" placeholder="урон ⏎" title="Введите урон и нажмите Enter">
-    ${knocked?'<span class="hint" style="color:var(--danger)">☠ выбыл</span>':''}
-  </div>`;
 }
 function hpApply(bid, op){
   const b=findBlock(bid); if(!b) return;
@@ -720,21 +718,6 @@ function initCanvasEvents(){
       return;
     }
     if(t.closest('.block-title')) return; // contenteditable: сама обрабатывает
-    const rollAtt = t.closest('[data-rollatt]');
-    if(rollAtt){
-      const id=rollAtt.dataset.rollatt, b=findBlock(id); if(!b) return;
-      const bonus = parseFloat(b.attack||'0')||0;
-      const roll = 1+Math.floor(Math.random()*20);
-      const total = roll+bonus;
-      const crit = roll===20 ? ' — КРИТ!' : (roll===1?' — авто-промах':'');
-      const resEl = document.querySelector('[data-attresult="'+id+'"]');
-      if(resEl) resEl.textContent = `d20 ${roll} + ${bonus} = ${total}${crit}`;
-      const rr=document.getElementById('rollResult');
-      if(rr) rr.textContent = `Атака: ${total}`;
-      if(roll===20) playSound('crit');
-      else if(roll===1) playSound('fail');
-      return;
-    }
     const statMod = t.closest('.stat .mod');
     if(statMod){
       const b=findBlock(statMod.dataset.rollId); if(!b) return;
@@ -806,6 +789,10 @@ function initCanvasEvents(){
     }
     if(t.matches('[data-attack]')){
       const b=findBlock(t.dataset.attack); if(b){ b.attack=t.value; save(); }
+      return;
+    }
+    if(t.matches('[data-damage]')){
+      const b=findBlock(t.dataset.damage); if(b){ b.damage=t.value; save(); }
       return;
     }
     if(t.matches('.stat input.val')){
@@ -1354,7 +1341,7 @@ function addBlock(type){
   Object.assign(b, freeCascadePos());
   blocks.push(b);
   if(type==='pc'){
-    Object.assign(b.props,{Класс:'',Раса:'',HP:10,'Броня КК':10,Инициат:'+0'});
+    Object.assign(b.props,{Класс:'',Раса:'',Предыстория:'',HP:10,'Броня КК':10,Инициат:'+0'});
     b.res=[{ name:'Вдохновение', cur:1, max:1 }];
   }
   save(); render();
@@ -1514,7 +1501,7 @@ function mergeBooksRules(){
 })();
 
 /* ═══ Local library search (ленивая загрузка library-data.js) ═══ */
-const DATA_VER = '20261104b';
+const DATA_VER = '20261106b';
 let LIB = null;
 let libLoadingPromise = null;
 function ensureLibrary(){
@@ -1869,6 +1856,374 @@ libSearch.addEventListener('input', ()=> libSearchDebounced());
 libKind.addEventListener('change', ()=> renderLib());
 
 function normalizeLib(s){ return String(s||'').toLowerCase().replace(/\s+/g,' ').trim(); }
+
+/* ═══ Автодополнение: подсказки в поиске и в полях свойств ═══ */
+const AC_LIMIT = 8;
+const AC_SIZE   = ['Крошечный','Маленький','Средний','Большой','Огромный','Громадный'];
+const AC_ALIGN  = ['законно-добрый','нейтрально-добрый','хаотично-добрый','законно-нейтральный','нейтральный',
+                   'хаотично-нейтральный','законно-злой','нейтрально-злой','хаотично-злой','без мировоззрения'];
+const AC_TYPES  = ['аберрация','небожитель','великан','гигант','гуманоид','дракон','элементаль','исчадие',
+                   'зверь','конструкт','нежить','растение','слизь','фея','чудовище'];
+const AC_LANGS  = ['Общий','Эльфийский','Дварфийский','Орочий','Драконий','Гоблинский','Инфернальный','Небесный',
+                   'Первичный','Сильван','Подземный','Великаний','Гномий','Полуросликов','Акван','Ауран','Игнан',
+                   'Терран','Глубинная речь','Телепатия 60 фт'];
+const AC_SENSES = ['Тёмное зрение 60 фт','Тёмное зрение 120 фт','Слепое зрение 10 фт','Слепое зрение 30 фт',
+                   'Слепое зрение 60 фт','Истинное зрение 120 фт','Пассивное Восприятие 10','Пассивное Восприятие 12',
+                   'Пассивное Восприятие 14','Пассивное Восприятие 16'];
+const AC_CLASS  = ['Варвар','Бард','Воин','Волшебник','Друид','Жрец','Колдун','Монах','Паладин','Плут','Следопыт',
+                   'Чародей','Изобретатель'];
+const AC_RACE   = ['Человек','Эльф','Высший эльф','Лесной эльф','Дроу','Дварф','Полурослик','Гном','Полуорк',
+                   'Полуэльф','Тифлинг','Драконорождённый','Аасимар','Голиаф','Орк','Кобольд','Табакси','Генази'];
+
+function acNorm(s){ return String(s==null?'':s).toLowerCase().replace(/ё/g,'е').replace(/\s+/g,' ').trim(); }
+function acUniq(list){
+  const seen = new Set(), out = [];
+  (list||[]).forEach(v=>{
+    const txt = String(v==null?'':v).trim();
+    const k = acNorm(txt);
+    if(!k || seen.has(k)) return;
+    seen.add(k); out.push(txt);
+  });
+  return out;
+}
+
+/* Словарь значений по названию поля карточки */
+function acPropBase(key){
+  const k = acNorm(key);
+  if(/^размер/.test(k)) return AC_SIZE.slice();
+  if(/мировоззр/.test(k)) return AC_ALIGN.slice();
+  if(/^(тип|вид|категор)/.test(k)) return AC_TYPES.slice();
+  if(/^язык/.test(k)) return AC_LANGS.slice();
+  if(/^(чувств|восприят|зрен)/.test(k)) return AC_SENSES.slice();
+  if(/^класс/.test(k)) return AC_CLASS.slice();
+  if(/^(раса|родословн|народ)/.test(k)) return AC_RACE.slice();
+  if(/^(предыстор|бэкграунд|background)/.test(k)) return srdBgNames();
+  return [];
+}
+function acPropUsed(key){
+  const out = [];
+  const k = acNorm(key);
+  (blocks||[]).forEach(b=>{
+    const props = b.props || {};
+    Object.keys(props).forEach(name=>{
+      if(acNorm(name) !== k) return;
+      const v = props[name];
+      if(v!=null && String(v).trim()) out.push(String(v));
+    });
+  });
+  return out;
+}
+function acPropItems(key){
+  return acUniq(acPropBase(key).concat(acPropUsed(key)));
+}
+
+/* Сам список */
+let acEl = null;
+const acState = { input:null, all:[], items:[], idx:0 };
+
+function acBox(){
+  if(acEl) return acEl;
+  acEl = document.createElement('div');
+  acEl.className = 'ac-list';
+  acEl.hidden = true;
+  acEl.setAttribute('role','listbox');
+  acEl.addEventListener('mousedown', e=>{
+    const row = e.target && e.target.closest ? e.target.closest('[data-ac]') : null;
+    if(!row) return;
+    e.preventDefault();          // не даём полю потерять фокус
+    acPick(+row.dataset.ac);
+  });
+  document.body.appendChild(acEl);
+  return acEl;
+}
+function acMarkup(text, q){
+  const at = q ? acNorm(text).indexOf(q) : -1;
+  if(at < 0) return escapeHtml(text);
+  return escapeHtml(text.slice(0, at)) + '<b>' + escapeHtml(text.slice(at, at + q.length)) + '</b>' + escapeHtml(text.slice(at + q.length));
+}
+function acClose(){
+  if(acState.input) acState.input.setAttribute('aria-expanded','false');
+  if(acEl){ acEl.hidden = true; acEl.innerHTML = ''; }
+  acState.input = null; acState.items = []; acState.all = []; acState.idx = 0;
+}
+function acDraw(){
+  const input = acState.input;
+  if(!input) return;
+  const q = acNorm(input.value);
+  const items = (q ? acState.all.filter(v=> acNorm(v).includes(q)) : acState.all).slice(0, AC_LIMIT);
+  if(!items.length){ acClose(); return; }
+  acState.items = items;
+  acState.idx = 0;
+  const box = acBox();
+  box.innerHTML = items.map((v,i)=>
+    '<div class="ac-item'+(i===0?' on':'')+'" role="option" data-ac="'+i+'">'+acMarkup(v,q)+'</div>'
+  ).join('');
+  const r = input.getBoundingClientRect();
+  box.style.left = Math.round(r.left)+'px';
+  box.style.top = Math.round(r.bottom + 3)+'px';
+  box.style.minWidth = Math.round(r.width)+'px';
+  box.style.width = Math.max(Math.round(r.width), 240)+'px';
+  box.hidden = false;
+  input.setAttribute('aria-expanded','true');
+}
+function acPick(i){
+  const value = acState.items[i];
+  const input = acState.input;
+  if(value == null || !input) return;
+  input.value = value;
+  input.dispatchEvent(new Event('input', { bubbles:true }));
+  input.dispatchEvent(new Event('change', { bubbles:true }));
+  acClose();
+  try{ input.focus(); }catch(e){}
+}
+function acAttach(input, getItems, opts){
+  if(!input || input.dataset.acOn) return;
+  input.dataset.acOn = '1';
+  input.setAttribute('autocomplete','off');
+  input.setAttribute('aria-autocomplete','list');
+  input.setAttribute('aria-expanded','false');
+  const open = ()=>{
+    let all = [];
+    try{ all = acUniq(getItems() || []); }catch(e){ all = []; }
+    if(!all.length) return;
+    acState.input = input; acState.all = all; acState.idx = 0;
+    acDraw();
+  };
+  input.addEventListener('input', ()=>{
+    if(acState.input !== input) open(); else acDraw();
+  });
+  input.addEventListener('blur', ()=>{ setTimeout(()=>{ if(acState.input === input) acClose(); }, 120); });
+  input.addEventListener('keydown', e=>{
+    if(acState.input !== input){
+      if(e.key === 'ArrowDown'){ e.preventDefault(); open(); }
+      return;
+    }
+    if(!acState.items.length) return;
+    if(e.key === 'ArrowDown' || e.key === 'ArrowUp'){
+      e.preventDefault();
+      const n = acState.items.length;
+      acState.idx = e.key === 'ArrowDown' ? (acState.idx + 1) % n : (acState.idx - 1 + n) % n;
+      Array.prototype.forEach.call(acEl.children, (el,i)=> el.classList.toggle('on', i === acState.idx));
+      const act = acEl.children[acState.idx];
+      if(act && act.scrollIntoView) act.scrollIntoView({ block:'nearest' });
+    } else if(e.key === 'Enter' || e.key === 'Tab'){
+      if(acState.items[acState.idx] != null){ e.preventDefault(); acPick(acState.idx); }
+    } else if(e.key === 'Escape'){
+      acClose();
+    }
+  });
+  window.addEventListener('scroll', ()=>{ if(acState.input === input) acClose(); }, true);
+  window.addEventListener('resize', ()=>{ if(acState.input === input) acClose(); });
+}
+
+/* ═══ Подстановка данных из SRD 5.2.1 (класс, вид, предыстория) ═══ */
+const SRD = {
+  classes: window.SRD_CLASSES || [],
+  species: window.SRD_SPECIES || [],
+  backgrounds: window.SRD_BACKGROUNDS || [],
+};
+const SRD_AB = { 'Сила':0, 'Ловкость':1, 'Телосложение':2, 'Интеллект':3, 'Мудрость':4, 'Харизма':5 };
+function srdMod(b, idx){
+  const v = (b.stats && b.stats[idx] != null) ? +b.stats[idx] : 10;
+  return Math.floor((v - 10) / 2);
+}
+function srdSigned(n){ return (n >= 0 ? '+' : '') + n; }
+function srdFind(list, name){
+  const q = acNorm(name);
+  if(!q) return null;
+  return list.find(x=> acNorm(x.name) === q) || list.find(x=> acNorm(x.en) === q) || null;
+}
+function srdBgNames(){
+  return (SRD.backgrounds || []).map(x=> x && x.name).filter(Boolean);
+}
+/* Предыстория есть в карточках, созданных до её появления — досоздаём поле */
+function ensureBgProp(){
+  let changed = false;
+  (blocks || []).forEach(b=>{
+    if(!b || b.type !== 'pc') return;
+    const props = b.props || {};
+    const keys = Object.keys(props);
+    if(keys.some(k=> /^(предыстор|бэкграунд)/i.test(String(k).trim()))) return;
+    const out = {};
+    let placed = false;
+    keys.forEach(k=>{
+      out[k] = props[k];
+      if(!placed && /^(раса|вид|родословн)/i.test(String(k).trim())){ out['Предыстория'] = ''; placed = true; }
+    });
+    if(!placed) out['Предыстория'] = '';
+    b.props = out;
+    changed = true;
+  });
+  return changed;
+}
+function srdPlanFor(b, kind, item){
+  const groups = [];
+  if(kind === 'class'){
+    const con = srdMod(b, 2), dex = srdMod(b, 1);
+    const hp = Math.max(1, item.die + con);
+    /* не заводим второй ключ хитов: обновляем существующие HP/ХП, иначе добавляем ХП */
+    const hpKeys = Object.keys(b.props || {}).filter(k=> /^(хп|hp)$/i.test(k.trim()));
+    const numProps = {};
+    (hpKeys.length ? hpKeys : ['ХП']).forEach(k=>{ numProps[k] = String(hp); });
+    numProps['Броня КК'] = String(10+dex);
+    numProps['Инициат'] = srdSigned(dex);
+    groups.push({
+      id:'nums', title:'Числа',
+      rows:['Хиты '+hp+' (кость d'+item.die+' '+srdSigned(con)+')', 'Броня КК '+(10+dex), 'Инициатива '+srdSigned(dex)],
+      props:numProps,
+    });
+    const saves = item.saves.map(a=> a+' '+srdSigned(srdMod(b, SRD_AB[a]) + 2)).join(', ');
+    const prof = [item.armor, item.weapons, item.tools].filter(Boolean).join('; ');
+    if(saves || prof){
+      const p = {};
+      if(saves) p['Спасброски'] = saves;
+      if(prof) p['Владения'] = prof;
+      groups.push({
+        id:'prof', title:'Спасброски и владения',
+        rows:[saves ? 'Спасброски: '+saves : '', prof ? 'Владения: '+prof : ''].filter(Boolean),
+        props:p,
+      });
+    }
+    const notes = [];
+    if(item.features.length) notes.push('Особенности (1 ур.): ' + item.features.join(', '));
+    if(item.skills.count) notes.push('Навыки: выбрать ' + item.skills.count + ' из: ' + item.skills.list.join(', '));
+    if(item.equip) notes.push('Снаряжение: ' + item.equip);
+    if(notes.length) groups.push({ id:'notes', title:'Навыки, особенности, снаряжение', rows:notes, text:notes.join('\n') });
+  }
+  if(kind === 'species'){
+    const rows = ['Размер: ' + item.size, 'Скорость: ' + item.speed + ' фт'];
+    const notes = [];
+    if(item.darkvision){ rows.push('Тёмное зрение: ' + item.darkvision + ' фт'); notes.push('Тёмное зрение ' + item.darkvision + ' фт'); }
+    if(item.traits.length){ rows.push('Черты вида: ' + item.traits.join(', ')); notes.push('Черты вида: ' + item.traits.join(', ')); }
+    groups.push({
+      id:'spec', title:'Вид: ' + item.name, rows,
+      props:{ 'Размер':item.size, 'Скорость':item.speed + ' фт' },
+    });
+    if(notes.length) groups.push({ id:'spnotes', title:'Черты вида в заметки', rows:notes, text:notes.join('\n') });
+  }
+  if(kind === 'background'){
+    const rows = [
+      'Характеристики: ' + item.abilities.join(', ') + ' (+2 и +1)',
+      'Навыки: ' + item.skills.join(', '),
+      item.tool ? 'Инструмент: ' + item.tool : '',
+      item.feat ? 'Черта: ' + item.feat : '',
+      item.equip ? 'Снаряжение: ' + item.equip : '',
+    ].filter(Boolean);
+    groups.push({ id:'bg', title:'Предыстория: ' + item.name, rows, text:rows.join('\n') });
+  }
+  return groups;
+}
+let srdState = null;
+function srdModalEl(){ return document.getElementById('srdModal'); }
+function srdShow(b, kind, item){
+  const groups = srdPlanFor(b, kind, item);
+  const modal = srdModalEl();
+  if(!groups.length || !modal) return;
+  srdState = { id:b.id, groups, chosen:new Set(groups.map(g=> g.id)) };
+  const title = document.getElementById('srdTitle');
+  if(title){
+    title.textContent = (kind === 'class' ? 'Класс «' : kind === 'species' ? 'Вид «' : 'Предыстория «') + item.name + '» — что подставить?';
+  }
+  const list = document.getElementById('srdList');
+  if(list){
+    list.innerHTML = groups.map(g=>
+      '<label class="srd-group"><input type="checkbox" data-srd-group="' + escapeHtml(g.id) + '" checked>'
+      + '<span class="srd-group-main"><b>' + escapeHtml(g.title) + '</b>'
+      + g.rows.map(r=> '<span class="srd-row">' + escapeHtml(r) + '</span>').join('')
+      + '</span></label>'
+    ).join('');
+    list.querySelectorAll('[data-srd-group]').forEach(cb=>{
+      cb.addEventListener('change', ()=>{
+        if(!srdState) return;
+        if(cb.checked) srdState.chosen.add(cb.dataset.srdGroup);
+        else srdState.chosen.delete(cb.dataset.srdGroup);
+      });
+    });
+  }
+  openModal(modal, null);
+}
+function srdApply(){
+  const st = srdState;
+  const modal = srdModalEl();
+  if(!st){ if(modal) closeModal(modal); return; }
+  const b = findBlock(st.id);
+  if(!b){ if(modal) closeModal(modal); srdState = null; return; }
+  let touched = 0;
+  st.groups.forEach(g=>{
+    if(!st.chosen.has(g.id)) return;
+    if(g.props){
+      Object.keys(g.props).forEach(k=>{
+        if(String(b.props[k] == null ? '' : b.props[k]).trim() !== String(g.props[k]).trim()) touched++;
+        b.props[k] = g.props[k];
+      });
+    }
+    if(g.text){
+      const add = String(g.text).trim();
+      if(add && (b.text || '').indexOf(add) === -1){
+        b.text = (b.text ? b.text.replace(/\s+$/, '') + '\n\n' : '') + add;
+        touched++;
+      }
+    }
+  });
+  save();
+  if(currentTab === 'chars' || currentTab === 'monsters') render();
+  else renderBlockOnly(b.id);
+  if(modal) closeModal(modal);
+  srdState = null;
+  toast(touched ? 'Данные из SRD подставлены' : 'Уже было заполнено');
+}
+(function srdBind(){
+  const modal = srdModalEl();
+  if(!modal) return;
+  const close = ()=>{ closeModal(modal); srdState = null; };
+  const byClose = document.getElementById('srdClose');
+  if(byClose) byClose.addEventListener('click', close);
+  const byCancel = document.getElementById('srdCancel');
+  if(byCancel) byCancel.addEventListener('click', close);
+  const byApply = document.getElementById('srdApply');
+  if(byApply) byApply.addEventListener('click', srdApply);
+  modal.addEventListener('click', e=>{ if(e.target === modal) close(); });
+})();
+document.addEventListener('change', e=>{
+  const el = e && e.target;
+  if(!el || !el.matches || !el.matches('input.v[data-prop-key]')) return;
+  const key = acNorm(el.dataset.propKey || '');
+  const b = findBlock(el.dataset.propId);
+  if(!b) return;
+  let kind = null, item = null;
+  if(/^класс/.test(key)){ kind = 'class'; item = srdFind(SRD.classes, el.value); }
+  else if(/^(раса|вид)/.test(key)){ kind = 'species'; item = srdFind(SRD.species, el.value); }
+  else if(/^(предыстор|бэкграунд|background)/.test(key)){ kind = 'background'; item = srdFind(SRD.backgrounds, el.value); }
+  if(item) srdShow(b, kind, item);
+});
+
+/* Плашка свойства целиком ставит курсор в своё поле (в т.ч. если кликнули по подписи) */
+document.addEventListener('click', e=>{
+  const el = e && e.target;
+  const prop = el && el.closest ? el.closest('.prop') : null;
+  if(!prop) return;
+  const input = prop.querySelector('input.v');
+  if(input && document.activeElement !== input) input.focus();
+});
+
+/* Клик мимо списка закрывает подсказки раньше, чем сработает соседнее поле */
+document.addEventListener('mousedown', e=>{
+  if(!acState.input) return;
+  const t = e && e.target;
+  if(!t) return;
+  if(acEl && acEl.contains(t)) return;
+  if(t === acState.input) return;
+  acClose();
+}, true);
+
+/* Поля свойств пересоздаются при каждом рендере — цепляем подсказки по фокусу */
+document.addEventListener('focusin', e=>{
+  const el = e && e.target;
+  if(!el || !el.matches || !el.matches('input.v[data-prop-key]')) return;
+  const key = el.dataset ? el.dataset.propKey : '';
+  acAttach(el, ()=> acPropItems(key));
+});
+
 function renderLib(){
   const q = normalizeLib(libSearch.value);
   const kind = libKind.value;
@@ -4353,7 +4708,6 @@ function insertImageIntoSession(file){
 /* ════════════ Экспорт сессии в Markdown / PDF ════════════ */
 function htmlToMarkdown(html){
   const root=document.createElement('div'); root.innerHTML=html||'';
-  function esc(s){ return s; }
   function walk(node){
     if(node.nodeType===3) return node.nodeValue;
     if(node.nodeType!==1) return '';
@@ -4532,9 +4886,6 @@ function battleSorted(){
   });
 }
 function renderBattle(){
-  const nextBtn = document.getElementById('battleNextTurn');
-  if(nextBtn) nextBtn.addEventListener('click', battleNextTurn);
-
   const list = document.getElementById('battleList');
   if(!list) return;
   if(!battleParts.length){
@@ -4546,9 +4897,10 @@ function renderBattle(){
     <div class="battle-card ${p.side==='opp'?'opp':''}${p.collapsed?' collapsed':''}${p.id===battleSelId?' sel':''}${p.id===battleTurn.turnId?' turn':''}" data-bid="${p.id}" tabindex="0">
       <span class="bt-chev" title="Свернуть/развернуть">▾</span>
       <div class="bt-side">${gi(p.side==='opp'?'monsters':'character')}</div>
-      <input class="bt-name" data-field="name" data-bid="${p.id}" value="${escapeHtml(p.name)}" spellcheck="false" aria-label="Имя">
-      ${hpBarTag(p)}
-      ${woundTag(p)}
+      <span class="bt-nameline">
+        <input class="bt-name" data-field="name" data-bid="${p.id}" value="${escapeHtml(p.name)}" spellcheck="false" aria-label="Имя">
+        ${woundTag(p)}
+      </span>
       ${(p.acts && p.acts.length) ? `<div class="bt-acts">
         <select class="bt-acts-select" data-act-select="${p.id}" aria-label="Действия монстра">
           <option value="">действие…</option>
@@ -4565,7 +4917,9 @@ function renderBattle(){
       </span>
       <span class="bt-grp bt-stat bt-hpgrp">
         <span class="bt-ico" title="ХП" aria-hidden="true">${gi('heart')}</span>
+        ${hpBarTag(p)}
         <input class="bt-in bt-hp" data-field="hp" data-bid="${p.id}" type="number" value="${p.hp}" aria-label="ХП">
+        ${hpMaxTag(p)}
         <span class="bt-step">
           <button class="bt-stepbtn" data-hp-op="inc" data-bid="${p.id}" title="+1 ХП" aria-label="+1 ХП">+</button>
           <button class="bt-stepbtn" data-hp-op="dec" data-bid="${p.id}" title="−1 ХП" aria-label="−1 ХП">−</button>
@@ -4639,8 +4993,6 @@ function applyAmountTo(p, delta){
   const maxHp = (+p.hpMax > 0) ? +p.hpMax : 9999;
   p.hp = Math.max(0, Math.min(maxHp, cur + delta));
   saveBattle();
-  const hpInput = document.querySelector(`.battle-list [data-bid="${p.id}"][data-field="hp"]`);
-  if(hpInput) hpInput.value = p.hp;
   refreshBattleState(p);
   logWoundChange(p, woundBefore);
   if(delta < 0){
@@ -4651,7 +5003,6 @@ function applyAmountTo(p, delta){
     battleLogPush(`«${p.name}» вылечен на ${delta} → ХП ${p.hp}`);
     toast(`«${p.name}»: +${delta} → ХП ${p.hp}`);
   }
-  renderBattle();
   if(!hasHp) toast('Подсказка: укажите ХП в карточке, чтобы видеть полоску здоровья');
 }
 
@@ -4689,21 +5040,18 @@ function battleDamageDialog(){
 
 const BATTLE_STATUSES = ['Концентрация','Ослеплён','Оглох','Очарован','Испуган','Отравлен','Парализован','Окаменел','Схвачен','Опутан','Сбит с ног','Ошеломлён','Без сознания','Невидимый','Недееспособен','Истощён','Ускорен','Замедлен'];
 function ensureHpMax(p){
-  if(p && (p.hpMax==='' || p.hpMax==null || +p.hpMax<=0) && p.hp!=='' && p.hp!=null){
-    p.hpMax = +p.hp || 0;
-  }
+  if(!p) return;
+  const hp = (p.hp==='' || p.hp==null) ? null : +p.hp;
+  if(hp === null || !isFinite(hp)) return;
+  const max = (p.hpMax==='' || p.hpMax==null) ? 0 : (+p.hpMax || 0);
+  if(max <= 0 || hp > max) p.hpMax = Math.max(0, Math.round(hp));
 }
 function woundState(p){
-  const max = (p.hpMax!=='' && p.hpMax!=null && +p.hpMax>0) ? +p.hpMax : 0;
-  const cur = (p.hp==='' || p.hp==null) ? null : +p.hp;
-  if(!max || cur===null) return '';
-  if(cur<=0) return 'dead';
-  const r = cur/max;
-  if(r<=0.1) return 'critical';
-  if(r<=0.5) return 'wounded';
-  return '';
+  const max = hpMaxNum(p.hpMax);
+  const cur = hpCurNum(p.hp);
+  if(!max || cur === null) return '';
+  return woundOf(Math.min(1, cur / max));
 }
-function woundLabel(s){ return s==='dead' ? '☠ выбыл' : s==='critical' ? 'окровавлен' : s==='wounded' ? 'потрёпан' : ''; }
 function woundTag(p){
   const st = woundState(p);
   if(!st) return '';
@@ -4717,10 +5065,10 @@ function logWoundChange(p, before){
   else if(before) battleLogPush(`«${p.name}» — состояние в норме (ХП ${p.hp}/${p.hpMax})`);
 }
 function hpPct(p){
-  const max = (p.hpMax!=='' && p.hpMax!=null && +p.hpMax>0) ? +p.hpMax : 0;
-  const cur = (p.hp==='' || p.hp==null) ? 0 : +p.hp;
+  const max = hpMaxNum(p.hpMax);
   if(!max) return null;
-  return Math.max(0, Math.min(100, Math.round(cur/max*100)));
+  const cur = hpCurNum(p.hp);
+  return Math.max(0, Math.min(100, Math.round((cur === null ? 0 : cur) / max * 100)));
 }
 function hpBarTag(p){
   const pct = hpPct(p);
@@ -4729,22 +5077,37 @@ function hpBarTag(p){
   const cls = (st==='critical' || st==='dead') ? ' crit' : (st==='wounded' ? ' warn' : '');
   return `<span class="bt-hpbar${cls}" title="ХП ${p.hp}/${p.hpMax}"><i style="width:${pct}%"></i></span>`;
 }
+function hpMaxTag(p){
+  const max = (p.hpMax!=='' && p.hpMax!=null && +p.hpMax>0) ? +p.hpMax : 0;
+  if(!max) return '';
+  const st = woundState(p);
+  const cls = (st==='critical' || st==='dead') ? ' crit' : '';
+  return `<span class="bt-hpmax${cls}" title="Максимум хитов">/ ${max}</span>`;
+}
 function refreshBattleState(p){
   if(!p) return;
   const card = document.querySelector(`.battle-card[data-bid="${p.id}"]`);
   if(!card) return;
   const nameInput = card.querySelector('.bt-name');
-  if(!nameInput) return;
+  const hpInput = card.querySelector('.bt-hp');
+  if(!nameInput || !hpInput) return;
+  const nameLine = card.querySelector('.bt-nameline') || nameInput;
   const wHtml = woundTag(p);
   const wOld = card.querySelector('.bt-wound');
   if(!wHtml){ if(wOld) wOld.remove(); }
   else if(wOld){ wOld.outerHTML = wHtml; }
-  else { nameInput.insertAdjacentHTML('afterend', wHtml); }
+  else { nameLine.insertAdjacentHTML('beforeend', wHtml); }
   const bHtml = hpBarTag(p);
   const bOld = card.querySelector('.bt-hpbar');
   if(!bHtml){ if(bOld) bOld.remove(); }
   else if(bOld){ bOld.outerHTML = bHtml; }
-  else { nameInput.insertAdjacentHTML('afterend', bHtml); }
+  else { hpInput.insertAdjacentHTML('beforebegin', bHtml); }
+  const mHtml = hpMaxTag(p);
+  const mOld = card.querySelector('.bt-hpmax');
+  if(!mHtml){ if(mOld) mOld.remove(); }
+  else if(mOld){ mOld.outerHTML = mHtml; }
+  else { hpInput.insertAdjacentHTML('afterend', mHtml); }
+  if(hpInput.value !== String(p.hp)) hpInput.value = p.hp;
 }
 
 function addBlockToBattle(b){
@@ -4948,6 +5311,8 @@ function checkConcentration(p, dmg){
 function bindBattle(){
   const addOpp = document.getElementById('battleAddOpp');
   const addChar = document.getElementById('battleAddChar');
+  const nextBtn = document.getElementById('battleNextTurn');
+  if(nextBtn) nextBtn.addEventListener('click', battleNextTurn);
   const clr = document.getElementById('battleClear');
   if(addOpp) addOpp.addEventListener('click', ()=> battleAdd('opp'));
   if(addChar) addChar.addEventListener('click', ()=> battleAdd('char'));
@@ -5267,6 +5632,7 @@ if(monEffType) monEffType.addEventListener('change', renderMonEff);
   collapsed = new Set();
   if(!load()){ blocks = SAMPLES.map(s=>makeBlock(s.type,s.title,{title:s.title, links:s.links, stats:s.stats||[10,10,10,10,10,10], props:s.props||{}, res:sanitizeRes(s.res), text:s.text||''})); }
   blocks.forEach(b=>{ collapsed.add(b.id); });
+  if(ensureBgProp()) persistBlocks();
   loadMap();
   // загрузка медиа из IndexedDB + миграция старых base64 из localStorage
   loadAllMedia().then(()=>{

@@ -18,6 +18,7 @@ FILES=(
   shop-catalog-data.js
   books-data.js
   srd-data.js
+  srd-chars-data.js
   icons.js
   vendor/fonts.css
   vendor/fonts-extra.css
