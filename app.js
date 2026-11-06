@@ -1207,7 +1207,110 @@ document.getElementById('addPc').addEventListener('click', ()=> addBlock('pc'));
   function isMonster(o){ return !!(o && typeof o==='object' && (Array.isArray(o.actions)||Array.isArray(o.acts)||o.cr!=null)); }
   const dispType=(o)=> (o.type && !['monster','character','pc','mob'].includes(String(o.type).toLowerCase())) ? str(o.type,120) : '';
 
+  /* ═══ Long Story Short (hotbox.longstoryshort.app) ═══ */
+  function lssUnwrap(o){
+    if(!o || typeof o!=='object') return null;
+    if(o.jsonType==='character' && typeof o.data==='string'){
+      try{ const d=JSON.parse(o.data); if(d && typeof d==='object') return d; }catch(e){ return null; }
+    }
+    if(o.jsonType==='character' && o.name && typeof o.name==='object') return o;
+    return null;
+  }
+  function isLSS(o){ return !!lssUnwrap(o); }
+  const lssVal=(x,def)=> {
+    if(x==null) return def==null?'':def;
+    if(typeof x==='object'){ if('value' in x) return x.value==null?(def==null?'':def):x.value; return def==null?'':def; }
+    return x;
+  };
+  function lssProse(node, out){
+    out=out||[];
+    if(!node) return out;
+    if(Array.isArray(node)){ node.forEach(n=>lssProse(n,out)); return out; }
+    if(typeof node!=='object') return out;
+    if(node.type==='text'){ out.push(String(node.text||'')); return out; }
+    if(node.type==='hardBreak'){ out.push('\n'); return out; }
+    if(node.type==='paragraph' || node.type==='heading'){
+      const inner=[];
+      lssProse(node.content, inner);
+      const line=inner.join('').trim();
+      out.push(line+'\n');
+      return out;
+    }
+    lssProse(node.content, out);
+    return out;
+  }
+  function lssDoc(docField){
+    const v=docField && typeof docField==='object' ? docField.value : docField;
+    if(!v) return '';
+    const doc=(v && v.data) ? v.data : v;
+    return lssProse(doc).join('').replace(/[ \t]+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim();
+  }
+  function lssBlock(src){
+    const d=lssUnwrap(src);
+    if(!d) return null;
+    const info=d.info||{}, vit=d.vitality||{};
+    const name=String(lssVal(d.name,'Персонаж')).slice(0,100) || 'Персонаж';
+    const cls=String(lssVal(info.charClass,''));
+    const sub=String(lssVal(info.charSubclass,''));
+    const lvl=clampN(lssVal(info.level,1),1,30,1);
+    const b=makeBlock('pc', name);
+    const stats=d.stats||{};
+    const score=(k)=>{ const v=stats[k]; const sc=(v&&typeof v==='object')?v.score:v; return clampN(sc==null?10:sc,1,30,10); };
+    b.stats=['str','dex','con','int','wis','cha'].map(score);
+    const dexMod=Math.floor((b.stats[1]-10)/2);
+    const hp=clampN(lssVal(vit['hp-max'], lssVal(vit['hp-current'],10)),0,9999,10);
+    const ac=clampN(lssVal(vit.ac,10),0,99,10);
+    b.props={
+      'Класс': (cls + (sub? ' · '+sub : '')).slice(0,60),
+      'Уровень': String(lvl),
+      'Раса': String(lssVal(info.race,'')).slice(0,40),
+      'Предыстория': String(lssVal(info.background,'')).slice(0,60),
+      'HP': String(hp),
+      'Броня КК': String(ac),
+      'Инициат': (dexMod>=0?'+':'')+dexMod
+    };
+    // ресурсы: из файла, иначе Ци у монаха (уровень)
+    const res=[];
+    const src_res=d.resources||{};
+    Object.keys(src_res).forEach(k=>{
+      const v=src_res[k]; if(!v||typeof v!=='object') return;
+      const max=clampN(lssVal(v.max,0),0,999,0), cur=clampN(lssVal(v.value, lssVal(v.current, max)),0,999,max);
+      if(max||cur) res.push({ name:String(v.name||k).slice(0,40), cur, max: max||cur });
+    });
+    if(/монах|monk/i.test(cls) && !res.length){
+      res.push({ name:'Ци', cur:lvl, max:lvl });
+    }
+    b.res = res.length ? sanitizeRes(res) : [{ name:'Вдохновение', cur:1, max:1 }];
+    // атака: бонус первого оружия
+    const wp=d.weaponsList||[];
+    const firstW=wp[0]||{};
+    const wmod=String(firstW.mod && typeof firstW.mod==='object' ? firstW.mod.value : (firstW.mod||''));
+    if(/^[+-]\d+$/.test(wmod)) b.attack=wmod;
+    // заметки
+    const parts=[];
+    const wk=wp.map(w=>{
+      const nm=String(lssVal(w.name,'')); const dm=String(lssVal(w.dmg,'')); const nt=String(lssVal(w.notes,''));
+      return (nm||dm)? ('• '+nm+(dm? ' — '+dm : '')+(nt? ' (' + nt.replace(/\n/g,' ') + ')' : '')) : '';
+    }).filter(Boolean);
+    if(wk.length) parts.push('Оружие:\n'+wk.join('\n'));
+    const sections=[['traits','Классовые умения'],['feats','Черты и приёмы'],['attacks','Атаки и приёмы'],['prof','Навыки и снаряжение'],['quests','Задание']];
+    sections.forEach(([key,title])=>{
+      const t=lssDoc((d.text||{})[key]);
+      if(t) parts.push('— '+title+' —\n'+t);
+    });
+    const coins=d.coins||{};
+    const money=[];
+    ['pp','gp','ep','sp','cp'].forEach(c=>{ const v=clampN(lssVal(coins[c],0),0,999999,0); if(v) money.push(v+' '+({pp:'пм',gp:'зм',ep:'эм',sp:'см',cp:'мм'})[c]); });
+    if(money.length) parts.push('Монеты: '+money.join(', '));
+    b.text = parts.join('\n\n').slice(0,20000);
+    return b;
+  }
+
   function buildBlock(o){
+    if(isLSS(o)){
+      const lb=lssBlock(o);
+      if(lb) return lb;
+    }
     if(isNative(o)){
       const type = (o.type==='pc'||o.type==='mob') ? o.type : (o.mdata?'mob':'pc');
       const b = makeBlock(type, str(o.title||o.name||TYPE_LABEL[type],120));
