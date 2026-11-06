@@ -33,3 +33,6 @@ src-tauri/icons/
 
 # Портативные сборки
 build/
+
+# Промежуточный файл сборки CoS (данные уже в bestiary-data.js)
+bestiary-cos.js

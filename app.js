@@ -343,6 +343,7 @@ function sanitizeBlocks(arr){
         type:String(d.type||''), cr:String(d.cr||''), ac:String(d.ac||''), hp:String(d.hp||''),
         sp:String(d.sp||''), init:String(d.init||''), sk:String(d.sk||'').slice(0,300),
         sen:String(d.sen||'').slice(0,200), lang:String(d.lang||'').slice(0,200),
+        sav:String(d.sav||'').slice(0,120), imm:String(d.imm||'').slice(0,300),
         ab_list: safeArr(d.ab_list).slice(0,6).map(a=>({
           k:String(a&&a.k||'').slice(0,4),
           v:clampStat(a&&a.v), m:Math.round(+(a&&a.m))||0, s:String(a&&a.s||'').slice(0,6)
@@ -636,6 +637,8 @@ function mobStatBlockHtml(b){
         ${d.sk?`<div class="mob-line"><b>Навыки</b> ${escapeHtml(d.sk)}</div>`:''}
         ${d.sen?`<div class="mob-line"><b>Чувства</b> ${escapeHtml(d.sen)}</div>`:''}
         ${d.lang?`<div class="mob-line"><b>Языки</b> ${escapeHtml(d.lang)}</div>`:''}
+        ${d.sav?`<div class="mob-line"><b>Спасброски</b> ${escapeHtml(d.sav)}</div>`:''}
+        ${d.imm?`<div class="mob-line"><b>Защита</b> ${escapeHtml(d.imm)}</div>`:''}
         <div class="mob-line"><b>Опасность</b> ${escapeHtml(shortCr(d.cr))}</div>
         <div class="mob-line"><b>Инициатива</b> ${escapeHtml(d.init||'—')}</div>
       </div>
@@ -1501,7 +1504,7 @@ function mergeBooksRules(){
 })();
 
 /* ═══ Local library search (ленивая загрузка library-data.js) ═══ */
-const DATA_VER = '20261106b';
+const DATA_VER = '20261106c';
 let LIB = null;
 let libLoadingPromise = null;
 function ensureLibrary(){
@@ -1695,6 +1698,8 @@ function renderBestMonster(m){
     ${m.sk?`<div class="best-meta"><span class="tag"><b>Навыки</b> ${escapeHtml(m.sk)}</span></div>`:''}
     ${m.sen?`<div class="best-meta"><span class="tag"><b>Чувства</b> ${escapeHtml(m.sen)}</span></div>`:''}
     ${m.lang?`<div class="best-meta"><span class="tag"><b>Языки</b> ${escapeHtml(m.lang)}</span></div>`:''}
+    ${m.sav?`<div class="best-meta"><span class="tag"><b>Спасброски</b> ${escapeHtml(m.sav)}</span></div>`:''}
+    ${m.imm?`<div class="best-meta"><span class="tag"><b>Защита</b> ${escapeHtml(m.imm)}</span></div>`:''}
     ${(acts.length)?`<div class="best-acts">
       ${acts.map(a=>{
         const txt = (typeof a==='string') ? a : (a && typeof a==='object' ? (a.text||'') : '');
@@ -1799,6 +1804,7 @@ function addMonsterBlock(m){
   b.mdata = {
     type: m.type, cr: m.cr, ac: m.ac, hp: m.hp, sp: m.sp, init: m.init,
     ab_list: m.ab_list||[], sk: m.sk||'', sen: m.sen||'', lang: m.lang||'',
+    sav: m.sav||'', imm: m.imm||'',
     acts: m.acts||[]
   };
   const order=['Str','Dex','Con','Int','Wis','Cha'];
