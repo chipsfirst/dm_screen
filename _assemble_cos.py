@@ -60,21 +60,64 @@ CURLY_RE = re.compile(r"\{@[^}]*\}")
 TYPE_LOWER = re.compile(r"^(Крошечн\w+|Маленьк\w+|Средн\w+|Больш\w+|Огромн\w+|Гигантск\w+|Колоссальн\w+)\s+([А-ЯЁ])([а-яё]+)")
 
 
+AC_RU = [
+    ("natural armor", "природный доспех"),
+    ("studded leather armor", "проклёпанный кожаный доспех"),
+    ("half plate armor", "полулатный доспех"),
+    ("leather armor", "кожаный доспех"),
+    ("chain shirt", "кольчужная рубаха"),
+    ("chain mail", "кольчуга"),
+    ("splint armor", "наборный доспех"),
+    ("scale mail", "чешуйчатый доспех"),
+    ("plate armor", "латный доспех"),
+    ("hide armor", "шкурный доспех"),
+    ("ring mail", "кольчужный доспех"),
+    ("breastplate", "кираса"),
+    ("shield", "щит"),
+    ("mage armor", "доспех мага"),
+    ("barkskin", "кора"),
+]
+LATIN_RUN = re.compile(r"[A-Za-z]{3,}")
+ALLOW = {"d", "hp", "ac", "xp", "pb", "dc", "ft", "lb", "gp", "sp", "cp", "pp", "srd", "cr", "au", "dmg", "phb", "mm"}
+BRACKETS_EN = re.compile(r"\[[^\]]*[A-Za-z][^\]]*\]")
+
+
+def polish(text):
+    t = CURLY_RE.sub("", str(text or ""))
+    t = BRACKETS_EN.sub("", t)
+    t = t.replace('"', "«", 1) if t.count('"') == 1 else t
+    t = re.sub(r'"([^"]*)"', r"«\1»", t)
+    t = LATIN_RUN.sub("", t)
+    t = re.sub(r"\s+([,.;:!?)])", r"\1", t)
+    t = re.sub(r"([(])\s+", r"\1", t)
+    t = re.sub(r"\s{2,}", " ", t)
+    t = re.sub(r"\(\s*\)", "", t)
+    t = re.sub(r",\s*,", ",", t)
+    t = t.strip(" ,;:")
+    return t
+
+
 def cleanup_row(r):
     for f in ("n", "type", "ac", "hp", "sp", "sk", "sen", "lang", "cr", "imm", "sav"):
         v = r.get(f)
         if isinstance(v, str):
-            v = CURLY_RE.sub("", v)
+            v = polish(v)
             v = FEET_RE.sub("фт", v)
             v = re.sub(r"\bфт(м|х|ам|ах)\b", "фт", v)
             v = re.sub(r"\.\s*\.", ".", v)
+            if f == "ac":
+                for en, ru in AC_RU:
+                    v = re.sub(re.escape(en), ru, v, flags=re.I)
+                v = polish(v)
             r[f] = re.sub(r"\s+", " ", v).strip(" ,")
     for a in r.get("acts") or []:
-        t = CURLY_RE.sub("", a.get("text", ""))
+        t = polish(a.get("text", ""))
         t = FEET_RE.sub("фт", t)
         t = re.sub(r"\bфт(м|х|ам|ах)\b", "фт", t)
         t = re.sub(r"\.\s*\.", ".", t)
         t = re.sub(r"\s+", " ", t).strip()
+        if len(t) > 12 and not t.endswith((".", "!", "?", ")", "»", ":")):
+            t = t.rstrip(" ,;") + "."
         for en, ru in SHORT_RU.items():
             t = re.sub(rf"\b{en}\b", ru, t)
         a["text"] = t
@@ -197,7 +240,18 @@ def main():
                     v = src_row.get(f)
                     if v:
                         row[f] = v
-                row["ab_list"] = src_row.get("ab_list") or base_page.get("ab_list") or []
+                base_ab = [dict(x) for x in (base_page.get("ab_list") or [])]
+                for ov_ab in (src_row.get("ab_list") or []):
+                    k = ov_ab.get("k")
+                    for x in base_ab:
+                        if x.get("k") == k:
+                            x["v"], x["m"] = ov_ab["v"], ov_ab["m"]
+                            break
+                    else:
+                        base_ab.append(dict(ov_ab))
+                order = {"Str": 0, "Dex": 1, "Con": 2, "Int": 3, "Wis": 4, "Cha": 5}
+                base_ab.sort(key=lambda x: order.get(x.get("k"), 9))
+                row["ab_list"] = base_ab
                 if row["ab_list"]:
                     row["ab"] = ", ".join(f"{x['k']} {x['v']} ({x['m']:+d})" for x in row["ab_list"])
                 # имя из 5e.tools-цепи + правки «the wereraven» → имя НИПа
