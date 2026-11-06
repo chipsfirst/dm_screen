@@ -19,6 +19,7 @@ FILES=(
   books-data.js
   srd-data.js
   srd-chars-data.js
+  wow-data.js
   icons.js
   vendor/fonts.css
   vendor/fonts-extra.css

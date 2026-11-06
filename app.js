@@ -1453,6 +1453,10 @@ function booksLibMerged(){
   if(LIB.__booksMerged) return;
   LIB.__booksMerged = true;
   LIB.spells = (LIB.spells||[]).concat(BOOKS_SPELLS);
+  if(window.WOW_DATA && Array.isArray(window.WOW_DATA.spells)){
+    const known = new Set((LIB.spells||[]).map(sp=>sp.n));
+    window.WOW_DATA.spells.forEach(sp=>{ if(!known.has(sp.n)){ known.add(sp.n); LIB.spells.push(sp); } });
+  }
 }
 /* предметы книг — в магазин */
 (function mergeBooksShop(){
@@ -1485,6 +1489,23 @@ function booksLibMerged(){
   });
 })();
 
+/* предметы WoW — в магазин */
+(function mergeWowShop(){
+  const wow = window.WOW_DATA;
+  if(!wow || !Array.isArray(wow.items) || !Array.isArray(window.SHOP)) return;
+  const existing = new Set(window.SHOP.map(i=>i.n));
+  wow.items.forEach(it=>{
+    if(existing.has(it.n)) return;
+    existing.add(it.n);
+    window.SHOP.push({
+      n: it.n, c: 'Магические предметы (WoW)',
+      v: '—',
+      w: [it.type, it.rarity, it.att ? 'настройка' : ''].filter(Boolean).join(' · '),
+      d: it.d || '', src: 'WoW'
+    });
+  });
+})();
+
 /* правила книг — в «Правила» (вызывается после объявления RULES_FOR_LIB) */
 function mergeBooksRules(){
   (BOOKS.rules||[]).forEach(r=>{
@@ -1504,7 +1525,7 @@ function mergeBooksRules(){
 })();
 
 /* ═══ Local library search (ленивая загрузка library-data.js) ═══ */
-const DATA_VER = '20261106c';
+const DATA_VER = '20261106e';
 let LIB = null;
 let libLoadingPromise = null;
 function ensureLibrary(){
@@ -1611,13 +1632,26 @@ function syncHomeBestiaryCount(){
   if(n) el.textContent = String(n);
 }
 
+function mergeWowBestiary(){
+  const wow = window.WOW_DATA;
+  if(!wow || !Array.isArray(wow.monsters) || !Array.isArray(window.BESTIARY)) return;
+  if(window.BESTIARY.__wowMerged) return;
+  const known = new Set(window.BESTIARY.map(m=>String(m.en||'').toLowerCase()));
+  wow.monsters.forEach(m=>{
+    if(known.has(String(m.en||'').toLowerCase())) return;
+    known.add(String(m.en||'').toLowerCase());
+    window.BESTIARY.push(Object.assign({}, m, { id: window.BESTIARY.length }));
+  });
+  window.BESTIARY.__wowMerged = true;
+}
+
 function ensureBestiary(){
-  if(window.BESTIARY && window.BESTIARY.length){ syncHomeBestiaryCount(); return Promise.resolve(); }
+  if(window.BESTIARY && window.BESTIARY.length){ mergeWowBestiary(); syncHomeBestiaryCount(); return Promise.resolve(); }
   if(bestiaryLoadingPromise) return bestiaryLoadingPromise;
   bestiaryLoadingPromise = new Promise((resolve, reject)=>{
     const s=document.createElement('script');
     s.src='bestiary-data.js?v='+DATA_VER;
-    s.onload=()=>{ syncHomeBestiaryCount(); resolve(); };
+    s.onload=()=>{ mergeWowBestiary(); syncHomeBestiaryCount(); resolve(); };
     s.onerror=()=>{ bestiaryLoadingPromise=null; reject(new Error('не удалось загрузить bestiary-data.js')); };
     document.head.appendChild(s);
   });
