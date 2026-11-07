@@ -25,27 +25,27 @@
     --font-body:'Cormorant Garamond','Alegreya','Book Antiqua','Palatino Linotype',Palatino,Georgia,serif;
     --font-head:'Grenze Gotisch','Cinzel Decorative','Uncial Antiqua','Cinzel','Book Antiqua',Georgia,serif;
   }
-  /* Пергамент */
+  /* Пергамент — светлая тема: тёплая бумага, латунь, шалфей */
   html[data-theme="light"]{
-    --bg:#f4ecd8; --panel:#fdf8ec; --panel2:#f2e8d2; --line:#d9c9a6;
-    --card-edge:#ddcfae; --card-edge-hi:#b8944a; --modal-edge:#cbb489;
-    --text:#2b2418; --muted:#7c6e54; --accent:#8a6d1f; --accent2:#9a7418;
-    --danger:#b23a2e; --ok:#2f7d3e;
-    --sel:#f9ecd0; --sel2:#ecd6a2; --sel-text:#3a2c0d;
-    --heading:#a3171a;
-    --btn-bg:linear-gradient(180deg,#fef9ee 0%,#f6e8c6 55%,#ecd9ab 100%);
-    --btn-text:#2e2408; --btn-border:#b8912a;
-    --bar-line:rgba(185,148,74,.45); --divider:rgba(185,148,74,.28);
-    --card-shadow:0 2px 12px rgba(120,96,48,.12);
-    --modal-shadow:0 18px 50px rgba(120,96,48,.20), 0 0 0 1px rgba(184,148,74,.18);
-    --play-bg:rgba(184,148,74,.16);
-    --bar-bg:linear-gradient(180deg,#fffaf1 0%,#f6eedb 100%);
-    --footer-bg:linear-gradient(180deg,#f6eedb 0%,#efe4cd 100%);
+    --bg:#f4efe2; --panel:#fcf9ef; --panel2:#eee6d3; --line:#d8cdb6;
+    --card-edge:#d6c8ac; --card-edge-hi:#b79f74; --modal-edge:#bda987;
+    --text:#1d1a13; --muted:#554e3d; --accent:#5b6b44; --accent2:#4a3b22;
+    --accent3:#6b7a52; --danger:#9d2f22; --ok:#3a6b45;
+    --sel:#5b6b44; --sel2:#4b5937; --sel-text:#fbf6e6;
+    --heading:#8a352a;
+    --btn-bg:linear-gradient(180deg,#f8f2e4 0%,#e7d9bf 52%,#d5c3a2 100%);
+    --btn-text:#241d10; --btn-border:#b79f74;
+    --bar-line:rgba(91,107,68,.44); --divider:rgba(91,107,68,.26);
+    --card-shadow:0 2px 10px rgba(74,64,44,.12);
+    --modal-shadow:0 18px 46px rgba(74,64,44,.20), 0 0 0 1px rgba(91,107,68,.16);
+    --play-bg:rgba(183,159,116,.18);
+    --bar-bg:linear-gradient(180deg,#fcf9ef 0%,#f4eedd 100%);
+    --footer-bg:linear-gradient(180deg,#f4eedd 0%,#ece4d1 100%);
     --page-bg:
-      radial-gradient(1200px 620px at 50% -12%, #fffaf0 0%, rgba(255,250,240,0) 62%),
-      radial-gradient(900px 520px at 100% 108%, #eadfc4 0%, rgba(234,223,196,0) 58%),
-      linear-gradient(180deg,#f7f0de 0%,#f1e7d1 100%);
-    --logo-shadow:drop-shadow(0 2px 4px rgba(120,96,48,.25));
+      radial-gradient(1200px 620px at 50% -12%, #fdfaf1 0%, rgba(253,250,241,0) 62%),
+      radial-gradient(900px 520px at 100% 108%, #e6ddc6 0%, rgba(230,221,198,0) 58%),
+      linear-gradient(180deg,#f7f2e5 0%,#f0ead9 100%);
+    --logo-shadow:drop-shadow(0 2px 4px rgba(74,64,44,.24));
   }
   /* Матрица: чёрный фон, неоново-зелёный текст, моноширинный набор */
   html[data-theme="matrix"]{
@@ -383,6 +383,7 @@
   .map-empty{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:var(--muted); text-align:center; padding:20px}
   .map-token{
     position:absolute; border-radius:50%; border:2px solid rgba(0,0,0,.55);
+    touch-action:none;
     display:flex; align-items:center; justify-content:center; color:#14181c; font-weight:700;
     cursor:grab; user-select:none; box-shadow:0 3px 10px rgba(0,0,0,.45); z-index:5;
     transform:translate(-50%,-50%); line-height:1;
@@ -564,7 +565,27 @@ select{background:var(--panel2); color:var(--text); border:1px solid var(--line)
     box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 2px 6px rgba(0,0,0,.18);
   }
   button:hover{filter:brightness(1.06); box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 3px 10px rgba(0,0,0,.28)}
-  html[data-theme="light"] button:hover{box-shadow: inset 0 1px 0 rgba(255,255,255,.1), 0 3px 10px rgba(0,0,0,.4)}
+  /* Латунные кнопки: тёплый металл с заметным градиентом */
+  html[data-theme="light"] button{
+    border-radius:7px; border-color:var(--btn-border); background:var(--btn-bg);
+    box-shadow: inset 0 1px 0 rgba(255,252,240,.95), inset 0 -1px 0 rgba(120,100,64,.18), 0 1px 2px rgba(90,74,44,.20);
+  }
+  html[data-theme="light"] button:hover{
+    filter:none; border-color:#a8916a;
+    background:linear-gradient(180deg,#fffdf5 0%,#f1e4ca 52%,#dfcdaa 100%);
+    box-shadow: inset 0 1px 0 rgba(255,253,244,.98), inset 0 -1px 0 rgba(120,100,64,.20), 0 2px 6px rgba(90,74,44,.24);
+  }
+  html[data-theme="light"] button:active{
+    filter:none; transform:none;
+    background:linear-gradient(180deg,#cfbe9d 0%,#e4d7bd 60%,#f2ead8 100%);
+    box-shadow: inset 0 2px 4px rgba(90,74,44,.30), inset 0 1px 0 rgba(255,252,240,.55);
+  }
+  html[data-theme="light"] #btnRoll, html[data-theme="light"] .die-btn.active, html[data-theme="light"] .tab.active{
+    border-color:#4b5937;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 1px 2px rgba(60,64,40,.28);
+  }
+  html[data-theme="light"] ::selection{background:#c8d3ac; color:#1d1a13}
+  html[data-theme="light"] input::placeholder, html[data-theme="light"] textarea::placeholder{color:#635b48; opacity:1}
   button:active{filter:brightness(.96); transform:translateY(1px)}
   button:disabled{opacity:.45; cursor:default; filter:none}
 
@@ -653,9 +674,32 @@ select{background:var(--panel2); color:var(--text); border:1px solid var(--line)
   .map-tok-name{color:var(--text); font-weight:600}
   .hidden{display:none !important}
 
+  /* ── Единые компактные панели вкладок ── */
+  .view-toolbar, .map-toolbar, .battle-toolbar{padding:5px 8px; gap:6px}
+  .view-toolbar button, .battle-toolbar button{padding:3px 8px; font-size:12px; line-height:1.25; border-radius:7px}
+  .view-toolbar select, .battle-toolbar select{padding:3px 6px; font-size:12px; border-radius:7px}
+  .canvas{padding:8px}
+  .battle-list{padding:8px}
+  .home-wrap{max-width:none; padding:10px 12px; gap:10px}
+  .music-layout{padding:8px 10px; gap:10px; grid-template-columns:206px minmax(0,1fr)}
+  .map-toolbar{padding:4px 8px; gap:5px}
+  .map-toolbar button{padding:2px 7px; font-size:11.5px}
+  .map-toolbar select{padding:2px 5px; font-size:11.5px}
+  .map-adv{
+    flex-basis:100%; display:flex; flex-wrap:wrap; gap:6px; align-items:center;
+    padding-top:4px; margin-top:1px; border-top:1px dashed var(--divider);
+  }
+  .map-adv[hidden]{display:none !important}
+
   /* ── Сессии (редактор) ── */
   .sessions-wrap{flex:1; display:flex; min-height:0; overflow:hidden}
-  .sessions-list{width:220px; min-width:180px; border-right:1px solid var(--line); background:var(--panel); display:flex; flex-direction:column; min-height:0}
+  .sessions-list{
+    width:206px; min-width:0; border-right:1px solid var(--line); background:var(--panel);
+    display:flex; flex-direction:column; min-height:0; overflow:hidden;
+    transition:width .16s ease, opacity .16s ease;
+  }
+  .sessions-wrap.list-collapsed .sessions-list{width:0; opacity:0; border-right-color:transparent; pointer-events:none}
+  .sess-list-toggle{padding:4px 8px; font-size:14px; line-height:1.2; flex:0 0 auto}
   .sessions-list-head{padding:8px; border-bottom:1px solid var(--line)}
   .sessions-list-head button{width:100%}
   .sessions-list-items{flex:1; overflow-y:auto; padding:6px; min-height:0}
@@ -665,12 +709,22 @@ select{background:var(--panel2); color:var(--text); border:1px solid var(--line)
   .session-item .si-title{font-weight:600; font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
   .session-item .si-date{color:var(--muted); font-size:11px}
   .sessions-editor{flex:1; display:flex; flex-direction:column; min-width:0; min-height:0}
-  .editor-toolbar{display:flex; gap:4px; flex-wrap:wrap; align-items:center; padding:6px 12px; border-bottom:1px solid var(--line); background:var(--panel)}
-  .editor-toolbar button{min-width:30px; padding:4px 7px; font-size:12px}
+  .editor-toolbar{
+    display:flex; gap:3px; flex-wrap:nowrap; align-items:center; padding:5px 8px;
+    border-bottom:1px solid var(--line); background:var(--panel);
+    overflow-x:auto; overflow-y:hidden; scrollbar-width:thin;
+  }
+  .editor-toolbar::-webkit-scrollbar{height:5px}
+  .editor-toolbar::-webkit-scrollbar-thumb{background:var(--line); border-radius:3px}
+  .editor-toolbar > *{flex:0 0 auto}
+  .sessions-editor .editor-toolbar button{min-width:24px; padding:2px 6px; font-size:12px; line-height:1.25; border-radius:6px}
+  .sessions-editor .editor-toolbar .editor-select{padding:2px 5px; font-size:12px; line-height:1.25}
   .editor-toolbar .editor-select{padding:4px 6px; font-size:12px; background:var(--panel2); color:var(--text); border:1px solid var(--line); border-radius:6px; outline:none}
+  .editor-toolbar #sessionFontFamily{max-width:150px}
+  .editor-toolbar #sessionFontSize{width:64px}
   .editor-toolbar button.active{background:linear-gradient(180deg,var(--sel),var(--sel2)); color:var(--sel-text); border-color:var(--card-edge-hi)}
-  .editor-title-row{display:flex; gap:8px; align-items:center; padding:8px 12px; border-bottom:1px solid var(--line)}
-  .session-title-input{flex:1; min-width:0; background:var(--panel2); border:1px solid var(--line); border-radius:6px; color:var(--text); padding:7px 10px; font-size:15px; font-weight:600; outline:none}
+  .editor-title-row{display:flex; gap:6px; align-items:center; padding:5px 8px; border-bottom:1px solid var(--line)}
+  .session-title-input{flex:1; min-width:0; background:var(--panel2); border:1px solid var(--line); border-radius:6px; color:var(--text); padding:5px 9px; font-size:13.5px; font-weight:600; outline:none}
   .session-title-input:focus{border-color:var(--accent)}
   .session-editor{
     flex:1; overflow-y:auto; min-height:0; padding:20px 26px; outline:none; line-height:1.6; font-size:15px;
@@ -1129,6 +1183,45 @@ select{background:var(--panel2); color:var(--text); border:1px solid var(--line)
   .map-rail .mt-name{font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
   .map-rail .map-tab.add{font-size:18px; padding:6px 0; text-align:center}
   .map-rail .mt-del{flex:0 0 auto}
+  .map-layout.rail-collapsed .map-rail{
+    flex-basis:0; width:0; padding:0; border-right-color:transparent;
+    opacity:0; pointer-events:none; overflow:hidden;
+  }
+  .map-rail-toggle{padding:4px 8px; font-size:14px; line-height:1.2; flex:0 0 auto}
+
+  /* ── Библиотека комнат ── */
+  .room-lib .modal-box{width:min(680px,94vw)}
+  .room-lib-tabs{display:flex; gap:6px; padding:8px 12px 0}
+  .room-lib-tabs .room-tab{padding:4px 12px; font-size:12.5px; border-radius:7px}
+  .room-lib-tabs .room-tab.active{background:linear-gradient(180deg,var(--sel),var(--sel2)); color:var(--sel-text); border-color:var(--card-edge-hi)}
+  .room-lib-body{padding:10px 12px; overflow:auto; max-height:min(60vh,460px)}
+  .room-lib-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(148px,1fr)); gap:10px}
+  .room-card{
+    display:flex; flex-direction:column; gap:6px; padding:8px; text-align:left;
+    border:1px solid var(--line); border-radius:9px; background:var(--panel2); cursor:pointer;
+  }
+  .room-card:hover{border-color:var(--card-edge-hi); background:var(--panel)}
+  .room-card .rc-top{display:flex; align-items:center; justify-content:space-between; gap:6px}
+  .room-card .rc-name{font-size:12.5px; font-weight:600; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .room-card .rc-size{font-size:10.5px; color:var(--muted); flex:0 0 auto}
+  .room-card .rc-art{width:100%; height:72px; display:block; background:var(--panel); border-radius:6px}
+  .room-lib-foot{padding:8px 12px 12px; font-size:11.5px}
+
+  /* Зум карты — правый нижний угол, как в картах */
+  .map-zoomctl{
+    position:absolute; right:14px; bottom:14px; z-index:20;
+    display:flex; flex-direction:column; align-items:center; gap:4px;
+    background:var(--panel); border:1px solid var(--line); border-radius:9px;
+    padding:4px; box-shadow:0 6px 18px rgba(0,0,0,.22);
+  }
+  .map-zoomctl button{
+    width:30px; height:28px; padding:0; display:flex; align-items:center; justify-content:center;
+    font-size:16px; line-height:1; border-radius:6px;
+  }
+  .map-zoomctl .mz-label{
+    font-size:10.5px; color:var(--muted); font-variant-numeric:tabular-nums; line-height:1;
+    padding:2px 0 1px;
+  }
 
   /* ── Бой: быстрый ввод, палитра статусов, клавиатура ── */
   #battleToolbar{position:relative}
@@ -1714,4 +1807,57 @@ kbd{font-size:12px}
 .music-vol{width:96px; height:16px; accent-color:var(--accent); cursor:pointer}
 @media (max-width:1100px){
   .music-vol{width:72px}
+}
+
+/* ── Узкие экраны: планшет и телефон ── */
+@media (max-width: 820px){
+  /* Сессии: список сверху, редактор на всю ширину */
+  .sessions-wrap{flex-direction:row; position:relative}
+  .map-layout{position:relative}
+  .map-rail{
+    position:absolute; top:0; bottom:0; width:min(72vw,224px); z-index:8;
+    left:-105%; opacity:0; pointer-events:none;
+    box-shadow:3px 0 20px rgba(40,34,22,.28);
+  }
+  .map-layout.rail-open .map-rail{left:0; opacity:1; pointer-events:auto}
+  .map-layout.rail-collapsed .map-rail{width:min(72vw,224px); padding:8px}
+  .map-zoomctl{right:10px; bottom:10px}
+  .sessions-list{
+    position:absolute; left:0; top:0; bottom:0; width:min(80vw,258px); max-height:none;
+    z-index:6; transform:translateX(-104%);
+    border-right:1px solid var(--line); border-bottom:none; box-shadow:3px 0 20px rgba(60,50,32,.22);
+    opacity:0;
+  }
+  .sessions-wrap.list-open .sessions-list{transform:none; opacity:1}
+  .sessions-wrap.list-collapsed .sessions-list{width:min(80vw,258px)}
+  .sessions-editor{flex:1 1 auto; min-width:0}
+  .sessions-editor{flex:1 1 auto; min-height:0}
+  /* Заголовок сессии и его кнопки переносятся, ничего не уезжает за край */
+  .editor-title-row{flex-wrap:wrap}
+  .editor-title-row .session-title-input{flex:1 1 160px; min-width:0}
+  .editor-title-row .hint{flex:1 1 100%; order:5}
+  /* Подвал: перенос строк вместо обрезки */
+  .app-footer{height:auto; min-height:30px; flex-wrap:wrap; gap:4px 12px; padding:5px 12px}
+  .app-footer .af-title{flex:1 1 100%}
+  .app-footer .af-right{margin-left:0; flex-wrap:wrap; white-space:normal; gap:6px 12px}
+  .app-footer .af-hint{white-space:normal; overflow:visible; text-overflow:clip}
+  /* Верхняя панель: вкладки и действия — отдельными строками на всю ширину */
+  .topbar .main-head{flex:0 0 100%; width:100%; min-width:0; flex-wrap:wrap}
+}
+
+@media (max-width: 560px){
+  /* Вкладки — одной прокручиваемой строкой, без «лестницы» на пол-экрана */
+  .topbar .main-head{min-width:0; width:100%}
+  .topbar .tabbar{flex-wrap:nowrap; overflow-x:auto; max-width:100%; padding-bottom:2px}
+  .topbar .tabbar::-webkit-scrollbar{height:0}
+  .topbar .tabbar .tab{flex:0 0 auto}
+  .main-head .actions{width:100%; justify-content:flex-start}
+  /* Компактнее панель редактора и отступы текста */
+  .editor-toolbar{padding:4px 8px; gap:3px}
+  .editor-toolbar button{min-width:26px; padding:3px 6px}
+  .session-editor{padding:14px 14px 14px 26px}
+  /* В подвале на телефоне оставляем только версию и ссылки */
+  .app-footer .af-hint{display:none}
+  .app-footer .af-hint.af-ver{display:inline}
+  .app-footer{font-size:11px}
 }

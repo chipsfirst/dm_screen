@@ -238,7 +238,7 @@
             <span class="acts-sep"></span>
             <button data-cmd="insertUnorderedList" title="Список">• —</button>
             <button data-cmd="insertOrderedList" title="Нумерованный список">1.</button>
-            <button data-block="blockquote" title="Цитата">❝</button>
+            <button data-block="blockquote" title="Цитата (повторно — вернуть обычный текст)">❝</button>
             <button data-block="pre" title="Код">‹/›</button>
             <span class="acts-sep"></span>
             <button data-cmd="justifyLeft" title="Выравнивание по левому краю">⇤</button>
@@ -246,14 +246,37 @@
             <button data-cmd="justifyRight" title="Выравнивание по правому краю">⇥</button>
             <button data-cmd="justifyFull" title="Выравнивание по ширине">☰</button>
             <span class="acts-sep"></span>
-            <select id="sessionFontSize" class="editor-select" title="Размер шрифта" aria-label="Размер шрифта">
+            <select id="sessionFontSize" class="editor-select" title="Размер шрифта (в пикселях)" aria-label="Размер шрифта">
               <option value="">Размер</option>
-              <option value="2">Мелкий</option>
-              <option value="3">Обычный</option>
-              <option value="4">Крупнее</option>
-              <option value="5">Крупный</option>
-              <option value="6">Очень крупный</option>
-              <option value="7">Огромный</option>
+              <option value="11">11</option>
+              <option value="12">12</option>
+              <option value="13">13</option>
+              <option value="14">14</option>
+              <option value="15">15</option>
+              <option value="16">16</option>
+              <option value="17">17</option>
+              <option value="18">18</option>
+              <option value="20">20</option>
+              <option value="22">22</option>
+              <option value="24">24</option>
+              <option value="28">28</option>
+              <option value="32">32</option>
+              <option value="36">36</option>
+              <option value="42">42</option>
+            </select>
+            <select id="sessionFontFamily" class="editor-select" title="Шрифт" aria-label="Шрифт">
+              <option value="">Шрифт</option>
+              <option value="'Cormorant Garamond', serif">Классика</option>
+              <option value="'PT Serif', serif">PT Serif</option>
+              <option value="Alegreya, serif">Alegreya</option>
+              <option value="Forum, serif">Forum</option>
+              <option value="'Cinzel', serif">Cinzel</option>
+              <option value="Inter, sans-serif">Inter</option>
+              <option value="'Book Antiqua', 'Palatino Linotype', serif">Book Antiqua</option>
+              <option value="Georgia, serif">Georgia</option>
+              <option value="'Times New Roman', serif">Times</option>
+              <option value="Palatino, serif">Palatino</option>
+              <option value="ui-monospace, Menlo, monospace">Моноширинный</option>
             </select>
             <span class="acts-sep"></span>
             <button data-link="1" title="Ссылка"><span class="gi" data-gi="link"></span></button>
@@ -264,6 +287,7 @@
             <button data-cmd="redo" title="Повторить">↷</button>
           </div>
           <div class="editor-title-row">
+            <button id="sessionsListToggle" class="sess-list-toggle" title="Список сессий" aria-label="Показать или скрыть список сессий" aria-expanded="true">☰</button>
             <input id="sessionTitle" class="session-title-input" placeholder="Название сессии" aria-label="Название сессии">
             <span class="hint" id="sessionSaved"></span>
             <button id="sessionExportMd" title="Экспорт в Markdown">⬇ MD</button>
@@ -276,38 +300,58 @@
     </div>
     <div class="tabview" id="view-map" hidden>
       <div class="map-toolbar">
+        <button id="mapRailToggle" class="map-rail-toggle" title="Список карт" aria-label="Показать или скрыть список карт" aria-expanded="true">☰</button>
         <button id="mapAdd" title="Добавить новую карту"><span class="gi" data-gi="map"></span> + Карта</button>
-        <button id="mapFromUrl" title="Добавить карту по ссылке на изображение">Из URL</button>
-        <button id="mapFull" title="Квадратная карта на всё доступное пространство">Квадраты на экран</button>
         <button id="mapAddToken" title="Поставить персонажа или монстра на карту"><span class="gi" data-gi="character"></span> ＋ На карту</button>
-        <input type="file" id="mapFileInput" accept="image/*" class="hidden" aria-label="Загрузка карты">
-        <select id="mapShape" title="Форма клетки">
-          <option value="hex">Гексы</option>
-          <option value="square">Квадраты</option>
+        <button id="mapRoomsLib" title="Библиотека комнат и готовые пресеты подземелий">▦ Комнаты</button>
+        <select id="mapDrawTool" title="Рисование на карте">
+          <option value="none">Рисование: выкл</option>
+          <option value="pen">✏ Перо</option>
+          <option value="room">▭ Комната</option>
+          <option value="oval">◯ Зал</option>
+          <option value="corridor">▬ Коридор</option>
         </select>
-        <label class="map-chk"><input type="checkbox" id="mapSnap"> привязка к клеткам</label>
-        <label class="map-chk">клетка <input type="number" id="mapCellPx" min="12" max="160" step="1" value="34"> px</label>
-        <label class="map-chk">клетка = <input type="number" id="mapFeet" min="1" max="60" step="1" value="5"> фт</label>
         <button id="mapRuler" title="Линейка: два клика по карте">Линейка</button>
+        <button id="mapSnapShapes" title="Примагнитить нарисованные комнаты к сетке">🧲 К сетке</button>
         <span class="hint" id="mapRulerLabel" hidden></span>
-        <select id="mapZoneType" title="Шаблон зоны (AoE)">
-          <option value="none">Зона: нет</option>
-          <option value="circle">Зона: круг</option>
-          <option value="cone">Зона: конус</option>
-          <option value="line">Зона: линия</option>
-          <option value="cube">Зона: куб</option>
-        </select>
-        <button id="mapZoneClear" title="Убрать все зоны с карты">Очистить зоны</button>
-        <select id="mapFogMode" title="Туман войны">
-          <option value="off">Туман: выкл</option>
-          <option value="hide">Туман: закрыть</option>
-          <option value="reveal">Туман: открыть</option>
-        </select>
-        <span class="hint" id="mapTypeHint">изображение, до 8 МБ · PNG/JPG/WebP</span>
+        <button id="mapMoreBtn" title="Форма клетки, сетка, зоны и туман" aria-expanded="false">⚙ Ещё</button>
+        <input type="file" id="mapFileInput" accept="image/*" class="hidden" aria-label="Загрузка карты">
+        <div class="map-adv" id="mapAdvanced" hidden>
+          <button id="mapFromUrl" title="Добавить карту по ссылке на изображение">Из URL</button>
+          <button id="mapFull" title="Квадратная карта на всё доступное пространство">Квадраты на экран</button>
+          <select id="mapShape" title="Форма клетки">
+            <option value="hex">Гексы</option>
+            <option value="square">Квадраты</option>
+          </select>
+          <label class="map-chk"><input type="checkbox" id="mapSnap"> привязка к клеткам</label>
+          <label class="map-chk">клетка <input type="number" id="mapCellPx" min="12" max="160" step="1" value="34"> px</label>
+          <label class="map-chk">клетка = <input type="number" id="mapFeet" min="1" max="60" step="1" value="5"> фт</label>
+          <select id="mapZoneType" title="Шаблон зоны (AoE)">
+            <option value="none">Зона: нет</option>
+            <option value="circle">Зона: круг</option>
+            <option value="cone">Зона: конус</option>
+            <option value="line">Зона: линия</option>
+            <option value="cube">Зона: куб</option>
+          </select>
+          <button id="mapZoneClear" title="Убрать все зоны с карты">Очистить зоны</button>
+          <select id="mapFogMode" title="Туман войны">
+            <option value="off">Туман: выкл</option>
+            <option value="hide">Туман: закрыть</option>
+            <option value="reveal">Туман: открыть</option>
+          </select>
+          <button id="mapDrawClear" title="Стереть рисунок с карты">Стереть рисунок</button>
+          <span class="hint" id="mapTypeHint">изображение, до 8 МБ · PNG/JPG/WebP</span>
+        </div>
       </div>
       <div class="map-layout">
         <aside class="map-rail" id="mapTabs" aria-label="Список карт"></aside>
         <div class="map-canvas" id="mapCanvas"></div>
+      </div>
+      <div class="map-zoomctl" aria-label="Масштаб карты">
+        <button id="mapZoomIn" title="Приблизить" aria-label="Приблизить">+</button>
+        <span class="mz-label" id="mapZoomLabel">100%</span>
+        <button id="mapZoomOut" title="Отдалить" aria-label="Отдалить">−</button>
+        <button id="mapZoomReset" title="Вписать карту в экран" aria-label="Вписать карту в экран">⤢</button>
       </div>
       <div class="map-panel" id="tokenPanel" hidden>
         <div class="mp-head"><strong id="tokenPanelTitle">Токен</strong><button class="mp-close" id="tokenClose" title="Закрыть">✕</button></div>
@@ -319,6 +363,22 @@
         <label>КД<input type="number" id="tokenAc" min="0" max="40" step="1"></label>
         <label>Цвет<input type="color" id="tokenColor"></label>
         <button class="del" id="tokenDelete">Удалить токен</button>
+      </div>
+    </div>
+    <div class="modal" id="roomLibModal" hidden>
+      <div class="modal-box modal-md room-lib">
+        <div class="modal-head">
+          <strong>Комнаты и подземелья</strong>
+          <button class="modal-close" id="roomLibClose" title="Закрыть">✕</button>
+        </div>
+        <div class="room-lib-tabs">
+          <button class="room-tab active" data-room-tab="rooms">Комнаты</button>
+          <button class="room-tab" data-room-tab="dungeons">Подземелья</button>
+        </div>
+        <div class="room-lib-body">
+          <div class="room-lib-grid" id="roomLibGrid"></div>
+        </div>
+        <div class="room-lib-foot hint">Вставится в центр видимой карты; дальше двигайте и стирайте как обычный рисунок.</div>
       </div>
     </div>
     <div class="tabview" id="view-battle" hidden>
@@ -389,7 +449,7 @@
             <span class="af-hint">Автор: Ролёвки от Вовки</span>
             <span class="af-hint" title="Иконки: Lorc, Delapouite — game-icons.net, CC BY 3.0">Иконки: game-icons.net</span>
             <span class="af-hint" title="Магические предметы SRD 5.2.1 — Wizards of the Coast, CC-BY-4.0">SRD 5.2.1 · CC-BY-4.0</span>
-            <span class="af-hint af-ver">Ширма мастера <span id="appVersion">1.0.13</span> · <a class="af-link" href="https://github.com/chipsfirst/dm_screen/releases" target="_blank" rel="noopener">что нового</a></span>
+            <span class="af-hint af-ver">Ширма мастера <span id="appVersion">1.1.0</span> · <a class="af-link" href="https://github.com/chipsfirst/dm_screen/releases" target="_blank" rel="noopener">что нового</a></span>
             <a class="af-link" href="https://boosty.to/vovkaroleplay" target="_blank" rel="noopener">Поддержать</a>
             <a class="af-link" href="https://github.com/chipsfirst/dm_screen" target="_blank" rel="noopener">Репозиторий на GitHub ↗</a>
           </span>
