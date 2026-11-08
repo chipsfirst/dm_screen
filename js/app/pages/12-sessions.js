@@ -324,14 +324,24 @@ function bindSessionToolbar(){
   // вставка из буфера обмена (Ctrl+V)
   ed.addEventListener('paste', e=>{
     const items=e.clipboardData && e.clipboardData.items;
-    if(!items) return;
-    for(const it of items){
-      if(it.type && it.type.indexOf('image')===0){
-        const f=it.getAsFile();
-        if(f){ e.preventDefault(); insertImageIntoSession(f); afterEdit(); }
-        return;
+    if(items){
+      for(const it of items){
+        if(it.type && it.type.indexOf('image')===0){
+          const f=it.getAsFile();
+          if(f){ e.preventDefault(); insertImageIntoSession(f); afterEdit(); }
+          return;
+        }
       }
     }
+    // HTML из чужой страницы тащит свой цвет текста: чёрный на тёмном фоне не виден
+    const raw=e.clipboardData && e.clipboardData.getData('text/html');
+    if(!raw) return;
+    e.preventDefault();
+    const clean=stripPastedColors(raw);
+    let ok=false;
+    try{ ok=document.execCommand('insertHTML', false, clean); }catch(err){ ok=false; }
+    if(!ok) insertHtmlAtCaret(clean);
+    afterEdit();
   });
   // перетаскивание файла в редактор
   ed.addEventListener('drop', e=>{
@@ -343,6 +353,65 @@ function bindSessionToolbar(){
     const s=findSession(activeSessionId); if(s){ s.html=ed.innerHTML.replace(/\u200b/g,''); s.updated=Date.now(); scheduleSaveSessions(); }
   }
 }
+
+/* Вставка сохраняет цвета источника: чёрный текст из светлой страницы
+   в тёмной теме не читается. Снимаем цвет и фон, оформление оставляем. */
+function stripPastedColors(html){
+  const box=document.createElement('div');
+  box.innerHTML=String(html||'');
+  const drop=['color','background','background-color','-webkit-text-fill-color','text-fill-color'];
+  Array.prototype.forEach.call(box.querySelectorAll('[style]'), el=>{
+    const st=el.style;
+    if(!st) return;
+    drop.forEach(p=>{ try{ st.removeProperty(p); }catch(e){} });
+    const left=(el.getAttribute('style')||'').replace(/[\s;]/g,'');
+    if(!left) el.removeAttribute('style');
+  });
+  Array.prototype.forEach.call(box.querySelectorAll('font'), el=>{
+    el.removeAttribute('color'); el.removeAttribute('face');
+  });
+  Array.prototype.forEach.call(box.querySelectorAll('[bgcolor]'), el=> el.removeAttribute('bgcolor'));
+  return box.innerHTML;
+}
+function insertHtmlAtCaret(html){
+  const sel=window.getSelection && window.getSelection();
+  if(!sel || !sel.rangeCount) return false;
+  const range=sel.getRangeAt(0);
+  range.deleteContents();
+  const tmp=document.createElement('div');
+  tmp.innerHTML=html;
+  const frag=document.createDocumentFragment();
+  let last=null;
+  while(tmp.firstChild){ last=tmp.firstChild; frag.appendChild(last); }
+  if(!last) return false;
+  range.insertNode(frag);
+  const after=document.createRange();
+  after.setStartAfter(last); after.collapse(true);
+  sel.removeAllRanges(); sel.addRange(after);
+  return true;
+}
+/* В однострочных contenteditable (названия блоков, имена ресурсов) разметка не нужна */
+document.addEventListener('paste', e=>{
+  const t=e.target;
+  if(!t || !t.isContentEditable) return;
+  if(t.id==='sessionEditor') return;
+  const cd=e.clipboardData;
+  if(!cd) return;
+  e.preventDefault();
+  const text=cd.getData('text/plain')||'';
+  let ok=false;
+  try{ ok=document.execCommand('insertText', false, text); }catch(err){ ok=false; }
+  if(!ok){
+    const sel=window.getSelection && window.getSelection();
+    if(sel && sel.rangeCount){
+      const r=sel.getRangeAt(0); r.deleteContents();
+      const node=document.createTextNode(text);
+      r.insertNode(node);
+      r.setStartAfter(node); r.collapse(true);
+      sel.removeAllRanges(); sel.addRange(r);
+    }
+  }
+});
 
 function insertImageIntoSession(file){
   if(!file || !/^image\//.test(file.type)) return;

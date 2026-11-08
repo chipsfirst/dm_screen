@@ -7,7 +7,7 @@ function ensureWow(){
   if(wowLoadingPromise) return wowLoadingPromise;
   wowLoadingPromise = new Promise((resolve, reject)=>{
     const s=document.createElement('script');
-    s.src='wow-data.js?v='+DATA_VER;
+    s.src='js/data/wow-data.js?v='+DATA_VER;
     s.onload=()=>{ applyWowData(); resolve(window.WOW_DATA); };
     s.onerror=()=>{ wowLoadingPromise=null; reject(new Error('не удалось загрузить wow-data.js')); };
     document.head.appendChild(s);
@@ -30,7 +30,7 @@ function ensureLibrary(){
   if(libLoadingPromise) return libLoadingPromise;
   libLoadingPromise = new Promise((resolve, reject)=>{
     const s=document.createElement('script');
-    s.src='library-data.js?v='+DATA_VER;
+    s.src='js/data/library-data.js?v='+DATA_VER;
     s.onload=()=>{
       LIB=window.LIBRARY || { spells:[], items:[] };
       booksLibMerged();

@@ -26,7 +26,7 @@ function ensureBestiary(){
   if(bestiaryLoadingPromise) return bestiaryLoadingPromise;
   bestiaryLoadingPromise = new Promise((resolve, reject)=>{
     const s=document.createElement('script');
-    s.src='bestiary-data.js?v='+DATA_VER;
+    s.src='js/data/bestiary-data.js?v='+DATA_VER;
     s.onload=()=>{
       ensureWow().then(()=>{ mergeWowBestiary(); syncHomeBestiaryCount(); resolve(); })
                .catch(()=>{ mergeWowBestiary(); syncHomeBestiaryCount(); resolve(); });
@@ -270,7 +270,7 @@ document.getElementById('btnLibrary').addEventListener('click', ()=>{
 });
 document.getElementById('libClose').addEventListener('click', ()=> closeModal(libModal));
 libModal.addEventListener('click', e=>{ if(e.target===libModal) closeModal(libModal); });
-const libSearchDebounced = debounce(renderLib, 180);
+const libSearchDebounced = debounce(()=> renderLib(), 180);
 libSearch.addEventListener('input', ()=> libSearchDebounced());
 libKind.addEventListener('change', ()=> renderLib());
 

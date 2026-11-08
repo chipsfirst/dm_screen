@@ -289,6 +289,7 @@ function addItemBlock(it){
   if(it.v) txt += `\nЦена: ${it.v}`;
   if(it.w) txt += `\nВес: ${it.w}`;
   if(it.p) txt += `\nСвойства: ${it.p}`;
+  if(it.d) txt += `\n\n${it.d}`;
   addRuleBlock({ title:it.n, text:txt.trim() });
 }
 function addRuleBlock(r){

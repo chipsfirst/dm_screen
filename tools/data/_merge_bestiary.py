@@ -357,6 +357,39 @@ def ab_list_5e(m):
     return out
 
 
+AB_SHORT = {'Str': 'Сил', 'Dex': 'Лов', 'Con': 'Тел', 'Int': 'Инт', 'Wis': 'Мдр', 'Cha': 'Хар'}
+
+
+def sav_str_custom(m):
+    """Владения спасбросками из формата 5etools (save != mod)."""
+    abl = m.get('abilities') or {}
+    parts = []
+    for k in AB_ORDER:
+        a = abl.get(k) or {}
+        sv, md = a.get('save'), a.get('mod')
+        if sv is None or md is None or sv == md:
+            continue
+        parts.append(f"{AB_SHORT[k]} {str(sv).replace(' ', '')}")
+    return ', '.join(parts)
+
+
+def sav_str_5e(m):
+    saves = m.get('save') or {}
+    parts = []
+    for k in AB_ORDER:
+        v = saves.get(AB_LOW[k])
+        if v is None:
+            continue
+        try:
+            sc = int(m.get(AB_LOW[k], 10) or 10)
+            if int(v) == mod_of(sc):
+                continue
+            parts.append(f"{AB_SHORT[k]} {signed(int(v))}")
+        except (TypeError, ValueError):
+            continue
+    return ', '.join(parts)
+
+
 def ab_str(ab_list):
     return ', '.join(f"{AB_RU[x['k']]} {x['v']} ({signed(x['m'])})" for x in ab_list)
 
@@ -371,6 +404,7 @@ def row_custom(m, mon):
         'sp': str(m.get('Speed', ''))[:60], 'init': str(m.get('initiative', ''))[:16],
         'ab': ab_str(ab), 'sk': localize(str(m.get('skills', '')), SKILL_RU)[:120],
         'sen': localize(str(m.get('senses', '')), SENSE_RU)[:80], 'lang': localize(str(m.get('languages', '')), LANG_RU)[:80],
+        'sav': sav_str_custom(m)[:120],
         'img': m.get('image_src', '') or '', 'ab_list': ab, 'acts': acts_custom(m)[:60],
         '_src': str(m.get('source', '')),
     }
@@ -397,7 +431,7 @@ def row_5e(m, mon):
         'ac': ac_5e(m), 'hp': hp_5e(m), 'sp': sp_5e(m), 'init': init[:16],
         'ab': ab_str(ab), 'sk': localize(sk_s, SKILL_RU)[:120],
         'sen': localize(sen_s, SENSE_RU)[:80], 'lang': localize(lang_s, LANG_RU)[:80],
-        'img': '', 'ab_list': ab, 'acts': acts_5e(m)[:60],
+        'sav': sav_str_5e(m)[:120], 'img': '', 'ab_list': ab, 'acts': acts_5e(m)[:60],
         '_src': str(m.get('source', '')),
     }
 

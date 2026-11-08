@@ -1,6 +1,6 @@
 [package]
 name = "shirma-master"
-version = "1.1.1"
+version = "1.2.0"
 description = "Ширма мастера — локальный инструмент мастера D&D"
 authors = ["Ролёвки от Вовки"]
 edition = "2021"
