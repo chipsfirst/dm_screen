@@ -10,24 +10,20 @@ mkdir -p "$OUT"
 FILES=(
   index.html
   style.css
-  app.js
-  app-data.js
-  library-data.js
-  bestiary-data.js
-  shop-data.js
-  shop-catalog-data.js
-  books-data.js
-  srd-data.js
-  srd-chars-data.js
-  wow-data.js
-  icons.js
+  manifest.json
+  assets/logo.png
+  assets/logo.svg
+  assets/icon.svg
+  assets/hex.svg
+  js/icons.js
   vendor/fonts.css
   vendor/fonts-extra.css
-  logo.png
-  logo.svg
-  icon.svg
-  hex.svg
-  manifest.json
+)
+
+DIRS=(
+  js/app
+  js/data
+  assets/svg
 )
 
 for f in "${FILES[@]}"; do
@@ -39,17 +35,27 @@ for f in "${FILES[@]}"; do
   cp "$f" "$OUT/$f"
 done
 
-mkdir -p "$OUT/vendor"
+for d in "${DIRS[@]}"; do
+  if [ ! -d "$d" ]; then
+    echo "Нет папки: $d" >&2
+    exit 1
+  fi
+  mkdir -p "$OUT/$d"
+  cp -R "$d/." "$OUT/$d/"
+done
+
 if [ -d vendor/fonts ]; then
+  mkdir -p "$OUT/vendor"
   cp -R vendor/fonts "$OUT/vendor/fonts"
 fi
 
-if [ -d icons ]; then
-  cp -R icons "$OUT/icons"
-else
-  echo "Нет папки icons" >&2
-  exit 1
-fi
+# bestiary-cos.js — промежуточный артефакт сборщика, приложение его не подключает
+rm -f "$OUT/js/data/bestiary-cos.js"
+
+# каждая часть приложения должна быть на месте — иначе приложение молча не запустится
+for part in "$OUT"/js/app/*/*.js; do
+  [ -f "$part" ] || { echo "В сборке нет частей приложения" >&2; exit 1; }
+done
 
 touch "$OUT/.nojekyll"
 

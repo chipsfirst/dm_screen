@@ -24,4 +24,4 @@ jobs:
           python-version: '3.12'
 
       - name: Аудит бестиария
-        run: python3 _audit_bestiary.py --ci
+        run: python3 tools/data/_audit_bestiary.py --ci

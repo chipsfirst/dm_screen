@@ -43,21 +43,33 @@ bash packaging/make_portable.sh        # портативный zip
 
 Установщики собираются в GitHub Actions (`.github/workflows/build-installers.yml`): вручную через Actions → «Сборка и релиз» или пушем тега `v*` — тогда создаётся GitHub Release с файлами. Локальная сборка Tauri требует Rust и Node: `npm i -g @tauri-apps/cli@^2`, затем `tauri build` из `src-tauri/`.
 
-Пересборка данных из исходных JSON — скрипты `_build_*.py`, `_merge_bestiary.py`, `_translate_bestiary_ru.py`; исходники лежат в `data/`.
+Пересборка данных из исходных JSON — скрипты в `tools/data/` (`_build_*.py`, `_merge_bestiary.py`, `_translate_bestiary_ru.py`); исходники лежат в `data/`, готовые файлы попадают в `js/data/`. Подробности — `tools/README.md`.
 
-Проверки перед релизом — `.github/workflows/checks.yml`: загрузка `app.js` в Node с DOM-заглушкой (`tests/check-app.mjs`) и аудит бестиария (`_audit_bestiary.py --ci`). Локально: `node tests/check-app.mjs`, `python3 _audit_bestiary.py --ci`.
+Проверки перед релизом — `.github/workflows/checks.yml`: загрузка приложения в Node с DOM-заглушкой (`tests/check-app.mjs`) и аудит бестиария (`tools/data/_audit_bestiary.py --ci`). Локально: `node tests/check-app.mjs`, `python3 tools/data/_audit_bestiary.py --ci`.
 
 ## Структура
 
 ```
-index.html, style.css, app.js   — приложение
-*-data.js                       — данные: бестиарий, библиотека, магазин, SRD, книги AU
-vendor/                         — локальные шрифты (Inter, PT Serif, Alegreya, Forum)
-packaging/                      — сборка веб-файлов и портативной версии
-src-tauri/                      — проект Tauri (установщики)
-tests/                          — проверка загрузки приложения в Node
-.github/workflows/              — CI: релизы, демо на Pages, проверки
-data/, _*.py                    — исходники и сборщики данных
+index.html            — точка входа: разметка и подключение скриптов
+style.css             — оформление
+manifest.json         — PWA-манифест
+js/app/
+  core/               — модель данных, IndexedDB, localStorage, undo, сохранение на диск
+  ui/                 — рендер, темы, события, модалки, глобальный поиск
+  data/               — правила, пресеты, бестиарий, SRD, магазин, библиотека
+  media/              — музыка и карта
+  pages/              — сессии и вкладка «Бой»
+js/data/              — сгенерированные данные: бестиарий, библиотека, магазин, SRD, книги AU
+js/icons.js           — реестр SVG-иконок
+assets/               — логотипы, гекс, исходные SVG
+vendor/               — локальные шрифты (Inter, PT Serif, Alegreya, Forum)
+tools/data/           — python-сборщики данных и их кэш
+packaging/            — сборка веб-файлов и портативной версии
+src-tauri/            — проект Tauri (установщики)
+tests/                — проверка загрузки приложения в Node
+data/                 — исходники данных (JSON, Markdown)
+.github/workflows/    — CI: релизы, демо на Pages, проверки
+dist/, build/         — результаты сборки (в git не хранятся)
 ```
 
 ## Благодарности и лицензии

@@ -29,6 +29,7 @@ Windows: двойной клик по start-windows.bat (PowerShell уже ес�
 TXT
 
 cd build/portable
+rm -f ../ShirmaMaster-portable.zip
 zip -qr ../ShirmaMaster-portable.zip ShirmaMaster
 cd ../..
 echo "Готово: build/ShirmaMaster-portable.zip ($(du -sh build/ShirmaMaster-portable.zip | cut -f1))"

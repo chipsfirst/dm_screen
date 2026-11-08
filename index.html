@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#1b1e22">
 <title>Ширма мастера — D&D 5.5</title>
-<link rel="icon" href="logo.png" type="image/png">
+<link rel="icon" href="assets/logo.png" type="image/png">
 <link rel="manifest" href="manifest.json">
 <link rel="stylesheet" href="vendor/fonts.css">
 <link rel="stylesheet" href="vendor/fonts-extra.css">
@@ -22,7 +22,7 @@
   </div>
   <main class="main">
     <div class="topbar">
-      <img class="site-logo" src="logo.png" alt="Ролёвки от Вовки">
+      <img class="site-logo" src="assets/logo.png" alt="Ролёвки от Вовки">
       <div class="musicbar" id="musicBar" aria-label="Музыкальный плеер">
         <button id="mbPrev" class="mb-btn mb-nav" title="Предыдущий трек (Ctrl+Shift+←)" aria-label="Предыдущий трек">|◀</button>
         <button id="mbPlay" class="mb-btn mb-play" title="Играть или пауза (Ctrl+Space)" aria-label="Играть или пауза">▶</button>
@@ -117,7 +117,7 @@
     <div class="tabview" id="view-home">
       <div class="home-wrap">
         <div class="home-hero">
-          <img class="home-logo" src="logo.png" alt="d20">
+          <img class="home-logo" src="assets/logo.png" alt="d20">
           <div>
             <h1>Ширма мастера</h1>
             <p class="home-lead">Цифровая ширма для настольных ролевых игр D&amp;D 5.5 (2024). Полностью офлайн: серверов нет, данные хранятся в браузере.</p>
@@ -449,7 +449,7 @@
             <span class="af-hint">Автор: Ролёвки от Вовки</span>
             <span class="af-hint" title="Иконки: Lorc, Delapouite — game-icons.net, CC BY 3.0">Иконки: game-icons.net</span>
             <span class="af-hint" title="Магические предметы SRD 5.2.1 — Wizards of the Coast, CC-BY-4.0">SRD 5.2.1 · CC-BY-4.0</span>
-            <span class="af-hint af-ver">Ширма мастера <span id="appVersion">1.1.0</span> · <a class="af-link" href="https://github.com/chipsfirst/dm_screen/releases" target="_blank" rel="noopener">что нового</a></span>
+            <span class="af-hint af-ver">Ширма мастера <span id="appVersion">1.1.1</span> · <a class="af-link" href="https://github.com/chipsfirst/dm_screen/releases" target="_blank" rel="noopener">что нового</a></span>
             <a class="af-link" href="https://boosty.to/vovkaroleplay" target="_blank" rel="noopener">Поддержать</a>
             <a class="af-link" href="https://github.com/chipsfirst/dm_screen" target="_blank" rel="noopener">Репозиторий на GitHub ↗</a>
           </span>
@@ -762,14 +762,25 @@
   </div>
 </div>
 
-<script src="shop-data.js"></script>
-<script src="shop-catalog-data.js"></script>
-<script src="app-data.js"></script>
-<script src="books-data.js"></script>
-<script src="srd-data.js"></script>
-<script src="srd-chars-data.js"></script>
-<script src="wow-data.js"></script>
-<script src="icons.js"></script>
-<script src="app.js"></script>
+<script src="js/data/shop-data.js"></script>
+<script src="js/data/shop-catalog-data.js"></script>
+<script src="js/data/app-data.js"></script>
+<script src="js/data/books-data.js"></script>
+<script src="js/data/srd-data.js"></script>
+<script src="js/data/srd-chars-data.js"></script>
+<script src="js/icons.js"></script>
+<script src="js/app/core/01-state.js"></script>
+<script src="js/app/ui/02-render.js"></script>
+<script src="js/app/ui/03-ui.js"></script>
+<script src="js/app/ui/04-events.js"></script>
+<script src="js/app/data/05-rules.js"></script>
+<script src="js/app/ui/06-modals.js"></script>
+<script src="js/app/data/07-bestiary.js"></script>
+<script src="js/app/data/08-content.js"></script>
+<script src="js/app/media/09-music.js"></script>
+<script src="js/app/media/10-map.js"></script>
+<script src="js/app/ui/11-search.js"></script>
+<script src="js/app/pages/12-sessions.js"></script>
+<script src="js/app/pages/13-battle.js"></script>
 </body>
 </html>

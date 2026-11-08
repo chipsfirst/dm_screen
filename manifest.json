@@ -11,7 +11,7 @@
   "lang": "ru",
   "icons": [
     {
-      "src": "logo.png",
+      "src": "assets/logo.png",
       "type": "image/png",
       "sizes": "128x128",
       "purpose": "any"

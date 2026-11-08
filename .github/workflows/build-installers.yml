@@ -72,7 +72,7 @@ jobs:
 
       - name: Сгенерировать иконки
         shell: bash
-        run: tauri icon app-icon.png --output src-tauri/icons
+        run: tauri icon assets/app-icon.png --output src-tauri/icons
 
       - name: Собрать установщики
         run: tauri build --target ${{ matrix.target }}
