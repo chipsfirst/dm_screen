@@ -871,6 +871,7 @@ function updateMapPenBtn(){
 }
 
 function renderMap(){
+  if(typeof hideMapNoteTip==='function') hideMapNoteTip();
   const mc = document.getElementById('mapCanvas'); if(!mc) return;
   const m = curMap();
   renderMapTabs();
@@ -959,21 +960,32 @@ function renderMap(){
       const lbl=document.createElement('div'); lbl.className='tok-name'; lbl.textContent=k.label;
       el.appendChild(lbl);
     } else {
-      el.className='map-marker'+(sel?' selected':'');
+      const linked = !!k.blockId && (blocks||[]).some(b=>b.id===k.blockId);
+      el.className='map-marker'+(sel?' selected':'')+(linked?' has-note':'');
       el.style.left=percent(k.x,m.baseW)+'%'; el.style.top=percent(k.y,m.baseH)+'%';
       el.style.background=k.color||'#7fb3e6';
-      el.dataset.id=k.id; el.title=k.label;
+      el.dataset.id=k.id;
+      el.title = linked ? (k.label+' — открыть заметку (Shift — настройки метки)') : k.label;
       const lbl2=document.createElement('div'); lbl2.className='map-marker-label'; lbl2.textContent=k.label;
       el.appendChild(lbl2);
+      if(linked){ const dot=document.createElement('span'); dot.className='mk-note-dot'; el.appendChild(dot); }
     }
     wrapper.appendChild(el);
-    // клик — выбрать маркер (не перетаскивание)
+    // клик: у метки с заметкой — переход к ней, иначе выбор и панель
     el.addEventListener('click', e=>{
       e.stopPropagation();
       if(el.__dragged){ el.__dragged=false; return; }
+      if(!isToken && !e.shiftKey && k.blockId && (blocks||[]).some(b=>b.id===k.blockId)){
+        if(typeof openMarkerNote==='function'){ openMarkerNote(m,k); return; }
+      }
       selectedMarkerId = (selectedMarkerId===k.id)? null : k.id;
       renderMap();
     });
+    if(!isToken){
+      el.addEventListener('mouseenter', ()=>{ if(typeof showMapNoteTip==='function') showMapNoteTip(el,m,k); });
+      el.addEventListener('mouseleave', ()=>{ if(typeof hideMapNoteTip==='function') hideMapNoteTip(); });
+      el.addEventListener('pointerdown', ()=>{ if(typeof hideMapNoteTip==='function') hideMapNoteTip(); });
+    }
     // drag маркера: указатель (мышь, палец, стилус) с захватом
     el.addEventListener('pointerdown', e=>{
       if(mapPenOn) return;
@@ -1025,6 +1037,7 @@ function renderMap(){
   updateMapLockBtn();
   updateMapPenBtn();
   updateTokenPanel();
+  if(window.updateMapMarkerCtl) window.updateMapMarkerCtl();
   syncMapControls();
   // прокрутка после рендера — в пределах краёв карты
   requestAnimationFrame(()=>{

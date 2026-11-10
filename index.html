@@ -309,6 +309,8 @@
         <button id="mapRailToggle" class="map-rail-toggle" title="Список карт" aria-label="Показать или скрыть список карт" aria-expanded="true">☰</button>
         <button id="mapAdd" title="Добавить новую карту"><span class="gi" data-gi="map"></span> + Карта</button>
         <button id="mapAddToken" title="Поставить персонажа или монстра на карту"><span class="gi" data-gi="character"></span> ＋ На карту</button>
+        <button id="mapAddMarker" title="Поставить метку с подписью на карту"><span class="gi" data-gi="map"></span> Метка</button>
+        <span class="hint" id="mapPlaceHint" hidden>Кликните по карте, чтобы поставить метку</span>
         <button id="mapRoomsLib" title="Библиотека комнат и готовые пресеты подземелий">▦ Комнаты</button>
         <select id="mapDrawTool" title="Рисование на карте">
           <option value="none">Рисование: выкл</option>
@@ -370,6 +372,14 @@
         <label>Цвет<input type="color" id="tokenColor"></label>
         <button class="del" id="tokenDelete">Удалить токен</button>
       </div>
+      <div class="map-panel" id="markerCtl" hidden>
+        <div class="mp-head"><strong id="markerName">Метка</strong><button class="mp-close" id="markerDone" title="Закрыть">✕</button></div>
+        <button class="btn" id="markerNote">Создать заметку</button>
+        <button class="btn" id="markerRename">Переименовать</button>
+        <button class="btn" id="markerColor">Сменить цвет</button>
+        <button class="del" id="markerDel">Удалить метку</button>
+      </div>
+      <div class="map-note-tip" id="mapNoteTip" hidden></div>
     </div>
     <div class="modal" id="roomLibModal" hidden>
       <div class="modal-box modal-md room-lib">
@@ -455,7 +465,7 @@
             <span class="af-hint">Автор: Ролёвки от Вовки</span>
             <span class="af-hint" title="Иконки: Lorc, Delapouite — game-icons.net, CC BY 3.0">Иконки: game-icons.net</span>
             <span class="af-hint" title="Магические предметы SRD 5.2.1 — Wizards of the Coast, CC-BY-4.0">SRD 5.2.1 · CC-BY-4.0</span>
-            <span class="af-hint af-ver">Ширма мастера <span id="appVersion">1.3.0</span> · <a class="af-link" href="https://github.com/chipsfirst/dm_screen/releases" target="_blank" rel="noopener">что нового</a></span>
+            <span class="af-hint af-ver">Ширма мастера <span id="appVersion">1.3.1</span> · <a class="af-link" href="https://github.com/chipsfirst/dm_screen/releases" target="_blank" rel="noopener">что нового</a></span>
             <a class="af-link" href="https://boosty.to/vovkaroleplay" target="_blank" rel="noopener">Поддержать</a>
             <a class="af-link" href="https://github.com/chipsfirst/dm_screen" target="_blank" rel="noopener">Репозиторий на GitHub ↗</a>
           </span>

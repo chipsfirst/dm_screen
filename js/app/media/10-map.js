@@ -63,11 +63,72 @@ function addMapMarker(){
   const btn=document.getElementById('mapAddMarker'); if(btn) btn.classList.toggle('active', !!mapPlaceOn);
   if(mapPlaceOn) toast('Кликните по карте, чтобы поставить маркер');
 }
+function markerLinkedBlock(m,k){
+  if(!k || !k.blockId) return null;
+  return (blocks||[]).find(b=>b.id===k.blockId) || null;
+}
+function focusBlockOnScreen(b){
+  if(!b) return;
+  showTab('chars');
+  requestAnimationFrame(()=>{
+    const el=document.getElementById('canvas').querySelector('[data-id="'+b.id+'"]');
+    if(!el) return;
+    el.scrollIntoView({behavior:'smooth', block:'center'});
+    el.classList.add('flash');
+    setTimeout(()=>el.classList.remove('flash'), 1600);
+  });
+}
+function openMarkerNote(m,k){
+  const b=markerLinkedBlock(m,k);
+  if(!b){ toast('У метки ещё нет заметки'); return; }
+  focusBlockOnScreen(b);
+}
+function showMapNoteTip(el,m,k){
+  const b=markerLinkedBlock(m,k);
+  const tip=document.getElementById('mapNoteTip');
+  if(!b || !tip) return;
+  const text=String(b.text||'').trim();
+  tip.innerHTML='<div class="mnt-title">'+escapeHtml(b.title||k.label)+'</div>'+
+    '<div class="mnt-text">'+escapeHtml(text.length>500?text.slice(0,500)+'…':text)+'</div>'+
+    '<div class="mnt-foot">Клик — открыть заметку на ширме</div>';
+  tip.hidden=false;
+  const r=el.getBoundingClientRect();
+  const tr=tip.getBoundingClientRect();
+  let left=r.left+r.width/2-tr.width/2;
+  let top=r.top-tr.height-12;
+  if(top<8) top=r.bottom+12;
+  left=Math.max(8,Math.min(left, window.innerWidth-tr.width-8));
+  top=Math.max(8,Math.min(top, window.innerHeight-tr.height-8));
+  tip.style.left=left+'px';
+  tip.style.top=top+'px';
+}
+function hideMapNoteTip(){
+  const tip=document.getElementById('mapNoteTip');
+  if(tip) tip.hidden=true;
+}
+function markerNoteAction(m,k){
+  if(!m||!k) return;
+  let b=markerLinkedBlock(m,k);
+  if(!b){
+    b=makeBlock('rule', k.label||'Метка');
+    b.text='Метка на карте «'+(m.name||'Карта')+'».\n\n';
+    blocks.push(b);
+    k.blockId=b.id;
+    save(); saveMap();
+    toast('Заметка создана на ширме');
+  }
+  focusBlockOnScreen(b);
+}
 async function placeMarkerAt(x,y){
   const m=curMap(); if(!m) return;
-  const label=await uiPrompt('Подпись маркера:','Маркер'); if(label===null) return;
-  m.markers.push({ id:'k'+Math.random().toString(36).slice(2,7), x:x, y:y,
-    label:(label.trim()||'Маркер').slice(0,40), color:'#7fb3e6' });
+  const label=await uiPrompt('Подпись метки:','Метка'); if(label===null) return;
+  const k={ id:'k'+Math.random().toString(36).slice(2,7), x:x, y:y,
+    label:(label.trim()||'Метка').slice(0,40), color:'#7fb3e6' };
+  m.markers.push(k);
+  mapPlaceOn=false;
+  const hint=document.getElementById('mapPlaceHint'); if(hint) hint.hidden=true;
+  const btn=document.getElementById('mapAddMarker'); if(btn) btn.classList.remove('active');
+  selectedMarkerId=k.id;
   saveMap(); renderMap();
 }
 async function renameMap(id){
@@ -360,6 +421,7 @@ bindRoomLib();
   const mc=document.getElementById('mapCanvas');
   if(mc){
     mc.addEventListener('scroll', ()=>{
+      hideMapNoteTip();
       const m=curMap(); if(!m||mapLocked) return; m.scrollX=mc.scrollLeft; m.scrollY=mc.scrollTop; saveMap();
     });
     // зум колесом отключён — колесо прокручивает карту
@@ -406,7 +468,7 @@ bindRoomLib();
         }
         if(mapZoneType!=='none'){ placeZoneAt(m, x, y); return; }
         if(mapPlaceOn){ const sp=snapPoint(m,x,y); placeMarkerAt(sp.x,sp.y); return; }
-        if(selectedMarkerId){ selectedMarkerId=null; renderMap(); }
+        if(selectedMarkerId){ selectedMarkerId=null; renderMap(); if(window.updateMapMarkerCtl) window.updateMapMarkerCtl(); }
       });
     }
     // панель управления выбранным маркером
@@ -415,8 +477,15 @@ bindRoomLib();
       if(!ctl) return;
       const m=curMap();
       const k = m && selectedMarkerId ? m.markers.find(x=>x.id===selectedMarkerId) : null;
-      ctl.classList.toggle('hidden', !k);
+      const isTok = !!(k && (k.kind==='pc' || k.kind==='mob'));
+      ctl.hidden = !k || isTok;
       const nm=document.getElementById('markerName'); if(nm) nm.textContent=k?k.label:'';
+      const nb=document.getElementById('markerNote');
+      if(nb){
+        const linked = !!(k && markerLinkedBlock(m,k));
+        nb.textContent = linked ? 'Открыть заметку' : 'Создать заметку';
+        nb.title = linked ? 'Перейти к связанной заметке на ширме' : 'Создать заметку на ширме и связать её с меткой';
+      }
     }
     function deselect(){ selectedMarkerId=null; renderMap(); updateMarkerCtl(); }
     document.getElementById('markerRename')&&document.getElementById('markerRename').addEventListener('click', async ()=>{
@@ -431,6 +500,10 @@ bindRoomLib();
     document.getElementById('markerDel')&&document.getElementById('markerDel').addEventListener('click', async ()=>{
       const m=curMap(); if(!m||!selectedMarkerId) return; if(!(await uiConfirm('Удалить маркер?'))) return;
       m.markers=m.markers.filter(x=>x.id!==selectedMarkerId); selectedMarkerId=null; saveMap(); renderMap(); updateMarkerCtl();
+    });
+    document.getElementById('markerNote')&&document.getElementById('markerNote').addEventListener('click', ()=>{
+      const m=curMap(); const k=m&&selectedMarkerId?m.markers.find(x=>x.id===selectedMarkerId):null; if(!k) return;
+      markerNoteAction(m,k); updateMarkerCtl();
     });
     document.getElementById('markerDone')&&document.getElementById('markerDone').addEventListener('click', deselect);
     window.updateMapMarkerCtl=updateMarkerCtl;
