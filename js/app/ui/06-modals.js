@@ -1,5 +1,5 @@
 /* ═══ Local library search (ленивая загрузка library-data.js) ═══ */
-const DATA_VER = '20261106e';
+const DATA_VER = '1.3.2';
 let wowLoadingPromise = null;
 /* Ленивая загрузка wow-data.js (400 КБ): нужна магазину, библиотеке и бестиарию */
 function ensureWow(){

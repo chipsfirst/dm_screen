@@ -26,11 +26,11 @@ ABILITY_RU = {
     'Intelligence': 'Интеллект', 'Wisdom': 'Мудрость', 'Charisma': 'Харизма',
 }
 SKILL_RU = {
-    'Acrobatics': 'Акробатика', 'Animal Handling': 'Обращение с животными',
+    'Acrobatics': 'Акробатика', 'Animal Handling': 'Уход за животными',
     'Arcana': 'Аркана', 'Athletics': 'Атлетика', 'Deception': 'Обман',
     'History': 'История', 'Insight': 'Проницательность', 'Intimidation': 'Запугивание',
     'Investigation': 'Анализ', 'Medicine': 'Медицина', 'Nature': 'Природа',
-    'Perception': 'Восприятие', 'Performance': 'Выступление', 'Persuasion': 'Убеждение',
+    'Perception': 'Внимательность', 'Performance': 'Выступление', 'Persuasion': 'Убеждение',
     'Religion': 'Религия', 'Sleight of Hand': 'Ловкость рук', 'Stealth': 'Скрытность',
     'Survival': 'Выживание',
 }
@@ -62,7 +62,7 @@ WEAPON_RU = {
     'None': 'Нет',
     'Simple weapons': 'Простое оружие',
     'Simple weapons and Martial weapons that have the Finesse or Light property':
-        'Простое оружие и воинское оружие со свойствами «изящное» или «лёгкое»',
+        'Простое оружие и воинское оружие со свойствами «фехтовальное» или «лёгкое»',
     'Simple weapons and Martial weapons that have the Light property':
         'Простое оружие и воинское оружие со свойством «лёгкое»',
     'Simple and Martial weapons': 'Простое и воинское оружие',
