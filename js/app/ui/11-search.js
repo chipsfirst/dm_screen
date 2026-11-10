@@ -129,6 +129,12 @@ document.getElementById('tablesRoll').addEventListener('click', ()=>{
     <div class="lib-main">
       <div class="lib-meta">${escapeHtml(key)} · бросок: ${roll}</div>
       <div class="lib-title" style="margin-top:6px; font-size:15px">${escapeHtml(val)}</div>
-    </div></div>`;
+    </div></div>
+    <div class="gen-row"><button class="btn" data-tables-add="1">Добавить на ширму</button></div>`;
+  const addBtn = tablesResult.querySelector('[data-tables-add]');
+  if(addBtn) addBtn.addEventListener('click', ()=>{
+    addRuleBlock({ title: key + ' (d' + list.length + '=' + roll + ')', text: String(val) });
+    toast('Добавлено на ширму');
+  });
 });
 

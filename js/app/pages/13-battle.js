@@ -516,12 +516,20 @@ function bindBattle(){
       else { p[f] = numField(inp.value); }
       if(f==='hp'){ ensureHpMax(p); if(dropConcentrationIfDown(p)) renderBattle(); refreshBattleState(p); }
       saveBattle();
-      if(f==='init'){
-        const order = battleSorted().map(x=>x.id);
-        const els = [...list.querySelectorAll('.battle-card')];
-        els.sort((x,y)=> order.indexOf(x.dataset.bid) - order.indexOf(y.dataset.bid));
-        els.forEach(el=> list.appendChild(el));
-      }
+    });
+    /* порядок пересобираем только когда ввод закончен: иначе карточка
+       переезжает на первом же символе и поле теряет фокус */
+    list.addEventListener('change', e=>{
+      const inp = e.target.closest('[data-field="init"]');
+      if(!inp) return;
+      const p = battleParts.find(x=>x.id===inp.dataset.bid);
+      if(!p) return;
+      const v = numField(inp.value);
+      if(p.init !== v){ p.init = v; saveBattle(); }
+      const order = battleSorted().map(x=>x.id);
+      const els = [...list.querySelectorAll('.battle-card')];
+      els.sort((x,y)=> order.indexOf(x.dataset.bid) - order.indexOf(y.dataset.bid));
+      els.forEach(el=> list.appendChild(el));
     });
     list.addEventListener('click', e=>{
       const card = e.target.closest('.battle-card');

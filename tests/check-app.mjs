@@ -18,6 +18,7 @@ const APP_PARTS = [
   'js/app/ui/11-search.js',
   'js/app/pages/12-sessions.js',
   'js/app/pages/13-battle.js',
+  'js/app/pages/14-generators.js',
 ];
 const files = [
   'tests/dom-stub.js',

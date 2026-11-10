@@ -53,9 +53,10 @@ function blockCard(b){
         <span class="block-title" data-title="${b.id}" contenteditable="true" spellcheck="false" title="Кликните, чтобы переименовать">${escapeHtml(b.title||'(без названия)')}</span>
         <span class="type-tag ${b.type}">${ttype}</span>
         ${b.type==='pc' ? blockHpBarHtml(b) : ''}
+        ${open ? '' : `<button class="del del-head" data-action="delete" data-id="${b.id}" title="Удалить блок" aria-label="Удалить блок">✕</button>`}
       </div>
     </div>
-    ${ open ? bodyHtml(b) : `<div class="block-foot"><button class="del" data-action="delete" data-id="${b.id}">Удалить</button></div>` }
+    ${ open ? bodyHtml(b) : '' }
     <div class="resize-handle" data-resize="${b.id}" title="Изменить размер"></div>
   </div>`;
   return li;

@@ -24,7 +24,7 @@ function initCanvasEvents(){
   canvas.addEventListener('click', e=>{
     const t = e.target;
     // клик по заголовку блока — свернуть/развернуть
-    if(t.closest('[data-toggle]') && !t.closest('.block-title')){
+    if(t.closest('[data-toggle]') && !t.closest('.block-title') && !t.closest('[data-action]')){
       const blockEl=t.closest('.block');
       if(blockEl) toggleBlock(blockEl.dataset.id);
       return;
@@ -458,3 +458,36 @@ function timerToggle(){
 }
 if(timerBtn) timerBtn.addEventListener('click', timerToggle);
 
+/* ═══ Вид карточек: обычные / компактные / плотная сетка ═══ */
+const DENSITY_KEY = 'shirma_density_v1';
+const DENSITY_MODES = ['', 'compact'];
+const DENSITY_LABEL = { '': 'Обычные карточки', compact: 'Компактные карточки' };
+function applyDensity(v){
+  if(v === 'compact') document.documentElement.setAttribute('data-density', v);
+  else document.documentElement.removeAttribute('data-density');
+}
+(function(){
+  let v = '';
+  try{ v = localStorage.getItem(DENSITY_KEY) || ''; }catch(e){}
+  if(DENSITY_MODES.indexOf(v) < 0) v = '';
+  applyDensity(v);
+})();
+(function(){
+  const btn = document.getElementById('btnDensity');
+  if(!btn) return;
+  const cur = ()=> document.documentElement.getAttribute('data-density') || '';
+  const sync = ()=>{
+    const v = cur();
+    btn.setAttribute('aria-pressed', v ? 'true' : 'false');
+    btn.title = 'Вид карточек: ' + (DENSITY_LABEL[v] || DENSITY_LABEL['']);
+  };
+  sync();
+  btn.addEventListener('click', ()=>{
+    const v = cur();
+    const next = DENSITY_MODES[(DENSITY_MODES.indexOf(v) + 1) % DENSITY_MODES.length];
+    applyDensity(next);
+    try{ localStorage.setItem(DENSITY_KEY, next); }catch(e){}
+    sync();
+    toast(DENSITY_LABEL[next]);
+  });
+})();

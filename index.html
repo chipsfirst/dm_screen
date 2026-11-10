@@ -100,7 +100,11 @@
               <button id="btnShop" title="Магазин: снаряжение и цены"><span class="gi" data-gi="shop"></span> Магазин</button>
               <button id="btnMonEffects" title="Таблицы эффектов по типам монстров"><span class="gi" data-gi="effects"></span> Эффекты</button>
               <button id="btnTables" title="Броски по случайным таблицам (d100)"><span class="gi" data-gi="tables"></span> Таблицы</button>
+              <button id="btnRules" title="Правила D&D 5.5 и советы по проведению"><span class="gi" data-gi="book"></span> Правила</button>
+              <button id="btnGen" title="Генераторы: сокровища, травмы, критические эффекты, бой"><span class="gi" data-gi="dice"></span> Генераторы</button>
               <span class="menu-caption">Система</span>
+              <button id="btnDensity" aria-pressed="false" title="Компактные карточки на ширме"><span class="gi" data-gi="expand"></span> Компактные карточки</button>
+              <button id="btnTips" title="Случайный совет мастеру"><span class="gi" data-gi="book"></span> Совет мастеру</button>
               <button id="btnSaveDir" title="Выбрать папку для автосохранения резервной копии"><span class="gi" data-gi="folder"></span> Папка сохранений…</button>
               <button id="btnExport"><span class="gi" data-gi="export"></span> Экспорт JSON</button>
               <button id="btnImport"><span class="gi" data-gi="import"></span> Импорт</button>
@@ -142,6 +146,8 @@
                 <li><b>Музыка</b> — плейлисты и сцены, мини-плеер в верхней панели.</li>
                 <li><b>Эффекты</b> — таблицы эффектов по типам монстров.</li>
                 <li><b>Таблицы</b> — случайные таблицы для импровизации.</li>
+                <li><b>Правила</b> — сводка правил D&amp;D 5.5 и советы по проведению.</li>
+                <li><b>Генераторы</b> — сокровища, травмы, критические эффекты, бой, квесты, НПС и подземелья со схемой плана.</li>
                 <li><b>Кости</b> — d4…d100 и свои грани, несколько бросков сразу.</li>
                 <li><b>Экспорт / Импорт</b> — резервная копия всех данных.</li>
               </ul>
@@ -151,6 +157,8 @@
               <button data-menu-target="btnShop"><span class="gi" data-gi="shop"></span> Магазин</button>
               <button data-menu-target="btnMonEffects"><span class="gi" data-gi="effects"></span> Эффекты</button>
               <button data-menu-target="btnTables"><span class="gi" data-gi="tables"></span> Таблицы</button>
+              <button data-menu-target="btnGen"><span class="gi" data-gi="dice"></span> Генераторы</button>
+              <button data-menu-target="btnRules"><span class="gi" data-gi="book"></span> Правила</button>
             </div>
           </div>
         </div>
@@ -447,7 +455,7 @@
             <span class="af-hint">Автор: Ролёвки от Вовки</span>
             <span class="af-hint" title="Иконки: Lorc, Delapouite — game-icons.net, CC BY 3.0">Иконки: game-icons.net</span>
             <span class="af-hint" title="Магические предметы SRD 5.2.1 — Wizards of the Coast, CC-BY-4.0">SRD 5.2.1 · CC-BY-4.0</span>
-            <span class="af-hint af-ver">Ширма мастера <span id="appVersion">1.2.0</span> · <a class="af-link" href="https://github.com/chipsfirst/dm_screen/releases" target="_blank" rel="noopener">что нового</a></span>
+            <span class="af-hint af-ver">Ширма мастера <span id="appVersion">1.3.0</span> · <a class="af-link" href="https://github.com/chipsfirst/dm_screen/releases" target="_blank" rel="noopener">что нового</a></span>
             <a class="af-link" href="https://boosty.to/vovkaroleplay" target="_blank" rel="noopener">Поддержать</a>
             <a class="af-link" href="https://github.com/chipsfirst/dm_screen" target="_blank" rel="noopener">Репозиторий на GitHub ↗</a>
           </span>
@@ -648,6 +656,84 @@
   </div>
 </div>
 
+<!-- Правила D&D 5.5 -->
+<div class="modal" id="rulesModal" hidden>
+  <div class="modal-box modal-lg">
+    <div class="modal-head">
+      <strong><span class="gi" data-gi="book"></span> Правила D&D 5.5</strong>
+      <button class="modal-close" id="rulesClose">✕</button>
+    </div>
+    <div class="modal-results rules-body">
+      <details open><summary>Проверки и броски</summary>
+        <div>Проверка: d20 + модификатор против сложности (Сл). Преимущество и помеха — бросок двух d20 с выбором лучшего или худшего результата.<br>
+        Натуральная 20 при атаке — критическое попадание: кости урона удваиваются. Натуральная 1 — автоматический промах.<br>
+        Пассивная проверка = 10 + все модификаторы (без броска).</div>
+      </details>
+      <details><summary>Бой</summary>
+        <div>Инициатива: d20 + модификатор Ловкости, по убыванию.<br>
+        В свой ход: перемещение, одно действие, бонусное действие (если даёт способность), одна реакция (вне своего хода), одно свободное взаимодействие с предметом.<br>
+        Атака: d20 + модификатор атаки против КД. Основные действия: Атака, Рывок, Отход, Затаивание, Помощь, Поиск, Использование предмета, Подготовка.<br>
+        Укрытие: половина — +2 к КД, три четверти — +5, полное — атаковать нельзя.</div>
+      </details>
+      <details><summary>Отдых и восстановление</summary>
+        <div>Короткий отдых — 1 час: можно потратить кости хитов, чтобы восстановить здоровье.<br>
+        Продолжительный отдых — 8 часов: все хиты и половина костей хитов (минимум одна).<br>
+        Смерть: три успешных спасброска от смерти — стабилизация, три провала — смерть. Урон при 0 хитов — провал спасброска.</div>
+      </details>
+      <details><summary>Состояния</summary>
+        <div>Ослеплён — не видит, помеха на атаки, по нему преимущество. Очарован — не может атаковать очаровавшего. Оглох — не слышит. Испуган — помеха, пока источник страха в поле зрения. Схвачен — скорость 0. Недееспособен — не может действовать и говорить. Невидим — преимущество на атаки. Парализован — недееспособен, проваливает спасброски Силы и Ловкости. Окаменел — превращён в камень. Отравлен — помеха на атаки и проверки. Ничком — атаки вблизи с преимуществом, вставание стоит половины скорости. Опутан — скорость 0. Ошеломлён — недееспособен, проваливает спасброски Ловкости. Без сознания — падает, недееспособен. Истощение — уровни дают штрафы к проверкам и скорости.</div>
+      </details>
+      <details><summary>Магия</summary>
+        <div>Ячейки заклинаний тратятся на заклинания своего уровня и ниже; ячейка выше уровня усиливает эффект.<br>
+        Концентрация: одновременно только одно такое заклинание. При уроне — спасбросок Телосложения Сл 10 или половина полученного урона (что выше).<br>
+        Ритуал можно сотворить без ячейки, если у класса есть такая возможность, — но на 10 минут дольше.</div>
+      </details>
+      <details><summary>Планирование игр</summary>
+        <div>Готовьте ситуацию, а не сюжет: кто чего хочет, что произойдёт без вмешательства героев, какие три улики ведут к разгадке.<br>
+        На сессию — 3–5 сцен, на игровой день — 6–8 средних или сложных столкновений, два коротких отдыха.<br>
+        Держите под рукой запасные имена, пару слухов и одну случайную угрозу — этого хватает на импровизацию.</div>
+      </details>
+      <details><summary>Проведение за столом</summary>
+        <div>Спрашивайте «что ты делаешь?», а не «ты делаешь?». Давайте выбор без единственно верного ответа: оба варианта должны чего-то стоить.<br>
+        Провал меняет ситуацию, а не останавливает историю. Держите темп: короткие описания, быстрая инициатива, смена темпа после напряжённой сцены.<br>
+        Дайте каждому игроку момент, где его персонаж решает задачу. Обсудите границы и комфорт за столом до игры — и возвращайтесь к этому, если что-то пошло не так.</div>
+      </details>
+    </div>
+  </div>
+</div>
+
+<!-- Совет мастеру -->
+<div class="modal" id="tipsModal" hidden>
+  <div class="modal-box">
+    <div class="modal-head">
+      <strong><span class="gi" data-gi="book"></span> Совет мастеру</strong>
+      <button class="modal-close" id="tipsClose">✕</button>
+    </div>
+    <div class="modal-results" id="tipsBody"></div>
+    <div class="gen-row"><button class="btn" id="tipsNext">Ещё совет</button></div>
+  </div>
+</div>
+
+<!-- Генераторы -->
+<div class="modal" id="genModal" hidden>
+  <div class="modal-box modal-lg">
+    <div class="modal-head">
+      <strong><span class="gi" data-gi="dice"></span> Генераторы</strong>
+      <button class="modal-close" id="genClose">✕</button>
+    </div>
+    <div class="modal-search gen-tabs">
+      <button class="gen-tab on" data-gen="treasure">Сокровища</button>
+      <button class="gen-tab" data-gen="injury">Травмы</button>
+      <button class="gen-tab" data-gen="crit">Критические эффекты</button>
+      <button class="gen-tab" data-gen="battle">Бой</button>
+      <button class="gen-tab" data-gen="quest">Квесты</button>
+      <button class="gen-tab" data-gen="npc">НПС</button>
+      <button class="gen-tab" data-gen="dungeon">Подземелья</button>
+    </div>
+    <div class="modal-results" id="genBody"></div>
+  </div>
+</div>
+
 <!-- Global search modal (Ctrl+K) -->
 <div class="modal" id="goModal" hidden>
   <div class="modal-box modal-lg">
@@ -780,5 +866,6 @@
 <script src="js/app/ui/11-search.js"></script>
 <script src="js/app/pages/12-sessions.js"></script>
 <script src="js/app/pages/13-battle.js"></script>
+<script src="js/app/pages/14-generators.js"></script>
 </body>
 </html>

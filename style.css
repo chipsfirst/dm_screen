@@ -337,7 +337,12 @@ html,body{height:100%}
     min-height:0; padding:12px;
   }
   .map-canvas.has-bg{background-color:var(--bg)}
-  .map-canvas.locked{overflow:hidden}
+  .map-canvas.locked{overflow:auto}
+  .map-canvas{scrollbar-gutter:stable}
+  .map-canvas::-webkit-scrollbar{width:12px; height:12px}
+  .map-canvas::-webkit-scrollbar-track{background:rgba(0,0,0,.12)}
+  .map-canvas::-webkit-scrollbar-thumb{background:rgba(120,130,145,.55); border-radius:6px; border:2px solid transparent; background-clip:content-box}
+  .map-canvas::-webkit-scrollbar-thumb:hover{background:rgba(140,150,165,.75); background-clip:content-box}
   #mapLock.locked{background:linear-gradient(180deg,var(--sel),var(--sel2)); color:var(--sel-text); border-color:var(--card-edge-hi)}
   /* сцена — реальный размер карты с учётом вписывания; ею ограничена прокрутка */
   .map-stage{position:relative; margin:0 auto}
@@ -455,6 +460,8 @@ html,body{height:100%}
   .block-foot{padding:6px 10px; border-top:1px solid var(--divider); display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
   .block-foot .del{margin-left:auto; background:none; border:none; color:var(--danger); cursor:pointer; font-size:12px}
   .block-foot .del:hover{text-decoration:underline}
+  .block-head .del.del-head{margin-left:auto; background:none; border:none; color:var(--danger); cursor:pointer; font-size:13px; line-height:1; padding:0 2px; opacity:.7}
+  .block-head .del.del-head:hover{opacity:1}
   .resize-input{width:60px; background:var(--panel2); color:var(--text); border:1px solid var(--line); border-radius:6px; padding:3px 6px; font-size:12px}
   .resize-handle{
     position:absolute; right:0; bottom:0; width:16px; height:16px; cursor:nwse-resize;
@@ -778,6 +785,17 @@ html,body{height:100%}
   .lib-row .lib-meta{color:var(--muted); font-size:12px; margin-top:2px}
   .lib-row .lib-add{flex-shrink:0; font-size:18px; line-height:1; align-self:center; color:var(--accent2); opacity:0}
   .lib-row:hover .lib-add{opacity:1}
+  .gen-tabs{display:flex; gap:8px; flex-wrap:wrap}
+  .gen-tab{font-size:13px; padding:6px 12px; border-radius:8px; border:1px solid var(--line); background:var(--panel2); color:var(--text); cursor:pointer}
+  .gen-tab.on{background:var(--accent2); color:#141414; border-color:var(--accent2)}
+  .gen-row{display:flex; gap:10px; align-items:center; flex-wrap:wrap; padding:10px 12px}
+  .gen-row label{font-size:12px; color:var(--muted)}
+  .gen-row select,.gen-row input[type=number]{padding:5px 8px; border-radius:6px; border:1px solid var(--line); background:var(--panel2); color:var(--text); font-size:13px}
+  .gen-row input[type=number]{width:70px}
+  .gen-block{padding:8px 12px; border-bottom:1px solid var(--line)}
+  .gen-block b{font-size:12px; color:var(--muted); display:block; margin-bottom:3px}
+  .gen-big{font-size:20px; font-weight:700; padding:10px 12px 2px; color:var(--accent2)}
+  .gen-out{padding-bottom:10px}
   .go-row .lib-add{opacity:.6}
   .go-row:hover .lib-add{opacity:1}
   .lib-row .lib-p{font-size:12px; color:var(--muted); margin-top:3px}
@@ -1735,3 +1753,28 @@ kbd{font-size:12px}
   .app-footer .af-hint.af-ver{display:inline}
   .app-footer{font-size:11px}
 }
+
+/* ═══ Компактные карточки ═══ */
+html[data-density="compact"] .canvas{padding:6px; gap:6px}
+html[data-density="compact"] .block{margin-bottom:4px}
+html[data-density="compact"] .block-head{padding:3px 6px; gap:4px}
+html[data-density="compact"] .block-head .title,
+html[data-density="compact"] .block-head .title input{font-size:13px}
+html[data-density="compact"] .block-body{padding:1px 6px 4px}
+html[data-density="compact"] .block textarea{min-height:34px; font-size:12px; padding:3px 5px}
+html[data-density="compact"] .prop{font-size:11px; padding:1px 5px}
+html[data-density="compact"] .props,
+html[data-density="compact"] .stats{gap:2px; margin-bottom:3px}
+html[data-density="compact"] .stat{min-width:38px}
+html[data-density="compact"] .attack-row{padding:2px 5px; margin:2px 0 3px}
+html[data-density="compact"] .card-cols{gap:5px}
+html[data-density="compact"] .card-notes{margin-top:3px; padding-top:2px}
+html[data-density="compact"] .block-foot{gap:4px}
+
+/* ═══ Правила D&D 5.5 ═══ */
+.rules-body{padding:6px 4px}
+.rules-body details{border-bottom:1px solid var(--line); padding:3px 0}
+.rules-body details:last-child{border-bottom:none}
+.rules-body summary{cursor:pointer; font-weight:600; font-size:14px; padding:6px 8px; border-radius:6px; list-style-position:inside}
+.rules-body summary:hover{background:var(--panel2)}
+.rules-body details > div{padding:6px 10px 10px; font-size:13px; line-height:1.55}

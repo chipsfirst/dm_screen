@@ -442,7 +442,7 @@ function renderShop(){
   });
   if(!list.length){ shopResults.innerHTML='<div class="lib-empty">Ничего не найдено.</div>'; return; }
   const limit=120;
-  shopResults.innerHTML = list.slice(0,limit).map(i=>{
+  let html = list.slice(0,limit).map((i, idx)=>{
     const meta = [i.c, i.g, i.d, i.w ? i.w+' фнт' : ''].filter(Boolean).join(' · ');
     const alt = i.vc||i.ve ? `<span class="shop-alt" title="дешёвая / дорогая цена">${escapeHtml(i.vc||'—')} / ${escapeHtml(i.ve||'—')}</span>` : '';
     const rare = i.l ? '<span class="shop-rare" title="ограниченный запас">редко</span>' : '';
@@ -453,9 +453,20 @@ function renderShop(){
         <div class="lib-meta">${escapeHtml(meta)}</div>
       </div>
       <span class="shop-price"><b>${escapeHtml(i.v)}</b>${alt}</span>
+      <span class="lib-add" data-shop-add="${idx}" title="Добавить на ширму" aria-label="Добавить на ширму">＋</span>
     </div>`;
   }).join('');
-  if(list.length>limit) shopResults.innerHTML+=`<div class="lib-empty">…ещё ${list.length-limit} — уточните запрос.</div>`;
+  if(list.length>limit) html += `<div class="lib-empty">…ещё ${list.length-limit} — уточните запрос.</div>`;
+  shopResults.innerHTML = html;
+  shopResults.querySelectorAll('[data-shop-add]').forEach(el=>{
+    el.addEventListener('click', e=>{
+      e.stopPropagation();
+      const it = list[+el.dataset.shopAdd];
+      if(!it) return;
+      addItemBlock({ n: it.n, t: it.c, v: it.v, w: it.w, d: it.d });
+      toast('Предмет добавлен на ширму');
+    });
+  });
 }
 function fillShopCats(){
   const cats=shopCats();
