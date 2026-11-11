@@ -180,6 +180,10 @@
         <section class="home-card home-updates">
           <h2>Обновления</h2>
           <ul>
+            <li><span class="upd-date">11.11.2026</span><span>Карта: генератор подземелий с комнатами и коридорами, штрихованные стены и проёмы на стыках; верхнее меню «Рисование / Объекты / Создать / Сетка / Зоны / Ещё».</span></li>
+            <li><span class="upd-date">11.11.2026</span><span>Карта: 115 ассетов — мебель, двери, классы, цифры, секреты и монстры; ассеты DCSS теперь цветные, а чёрно-белый режим остался опцией.</span></li>
+            <li><span class="upd-date">11.11.2026</span><span>Карта: фигуры и коридоры можно выделять, двигать, менять размер, поворачивать и удалять; комнаты и подземелья вставляются из библиотеки.</span></li>
+            <li><span class="upd-date">11.11.2026</span><span>Карта: зоны AoE с размером в футах (5–240, шаг 5) и добавлением по кнопке, поворот зон Shift+перетаскиванием; цветные метки и токены.</span></li>
             <li><span class="upd-date">06.11.2026</span><span>Импорт персонажей из Long Story Short: файл <code>.json</code> из hotbox.longstoryshort.app при импорте разворачивается в готовую карточку — имя, класс с подклассом, уровень, раса, характеристики, хиты, КД и бонус атаки, а классовые умения, черты, атаки, снаряжение и задание переносятся в заметки текстом; монеты учитываются отдельной строкой.</span></li>
             <li><span class="upd-date">06.11.2026</span><span>Добавлен контент World of Warcraft для D&amp;D 5e: 84 монстра (Иллидан Ярость Бури, Артас, Аллерия Ветрокрылая, драконьи стаи, Пылающий Легион), 69 заклинаний (Апофеоз, Ледяная Коса) и 64 магических предмета (Испепелитель, Ледяная Скорбь, Шаламейн) — в бестиарии, библиотеке и магазине.</span></li>
             <li><span class="upd-date">06.11.2026</span><span>Бестиарий пополнен монстрами Curse of Strahd: 96 статблоков с официальным русским переводом интерфейса dnd.su — Страд фон Зарович, Рахадин, Баба Лысага, Янтарный голем, вистани, вервороны и вся нежить Баровии. Всего в бестиарии 606 монстров, у новых записей сохранены иммунитеты, сопротивления и спасброски.</span></li>
@@ -307,47 +311,84 @@
     <div class="tabview" id="view-map" hidden>
       <div class="map-toolbar">
         <button id="mapRailToggle" class="map-rail-toggle" title="Список карт" aria-label="Показать или скрыть список карт" aria-expanded="true">☰</button>
-        <button id="mapAdd" title="Добавить новую карту"><span class="gi" data-gi="map"></span> + Карта</button>
-        <button id="mapAddToken" title="Поставить персонажа или монстра на карту"><span class="gi" data-gi="character"></span> ＋ На карту</button>
-        <button id="mapAddMarker" title="Поставить метку с подписью на карту"><span class="gi" data-gi="map"></span> Метка</button>
+        <button id="mapAdd" title="Добавить новую карту"><span class="gi" data-gi="map"></span> Добавить карту</button>
+      <div class="map-menu-bar" id="mapMenus" aria-label="Инструменты карты">
+        <div class="map-menu">
+          <button class="map-menu-btn" aria-expanded="false"><span class="gi" data-gi="pen"></span> Рисование <span class="mm-caret">▾</span></button>
+          <div class="menu-panel"><div class="ms-row" id="msDraw"></div></div>
+        </div>
+        <div class="map-menu">
+          <button class="map-menu-btn" aria-expanded="false"><span class="gi" data-gi="character"></span> Объекты <span class="mm-caret">▾</span></button>
+          <div class="menu-panel"><div class="ms-row" id="msObj"></div></div>
+        </div>
+        <div class="map-menu">
+          <button class="map-menu-btn" aria-expanded="false"><span class="gi" data-gi="book"></span> Создать <span class="mm-caret">▾</span></button>
+          <div class="menu-panel"><div class="ms-row" id="msCreate"></div></div>
+        </div>
+        <div class="map-menu">
+          <button class="map-menu-btn" aria-expanded="false"><span class="gi" data-gi="hex"></span> Сетка <span class="mm-caret">▾</span></button>
+          <div class="menu-panel"><div class="ms-row" id="msView"></div></div>
+        </div>
+        <div class="map-menu">
+          <button class="map-menu-btn" aria-expanded="false"><span class="gi" data-gi="effects"></span> Зоны <span class="mm-caret">▾</span></button>
+          <div class="menu-panel"><div class="ms-row" id="msZones"></div></div>
+        </div>
+        <div class="map-menu">
+          <button class="map-menu-btn" aria-expanded="false"><span class="gi" data-gi="folder"></span> Ещё <span class="mm-caret">▾</span></button>
+          <div class="menu-panel"><div class="ms-row" id="msMore"></div></div>
+        </div>
+      </div>
+        <button id="mapToolsBtn" title="Показать или скрыть панель инструментов" aria-expanded="true">⚙ Инструменты</button>
+        <button id="mapAddToken" title="Поставить персонажа или монстра на карту"><span class="gi" data-gi="character"></span> Персонаж</button>
+        <button id="mapAddMarker" title="Поставить метку с подписью на карту"><span class="gi" data-gi="note"></span> Метка</button>
         <span class="hint" id="mapPlaceHint" hidden>Кликните по карте, чтобы поставить метку</span>
-        <button id="mapRoomsLib" title="Библиотека комнат и готовые пресеты подземелий">▦ Комнаты</button>
+        <button id="mapRoomsLib" title="Готовые комнаты и подземелья"><span class="gi" data-gi="book"></span> Комнаты</button>
+        <button id="mapAssets" title="Ассеты, цифры и токены классов"><span class="gi" data-gi="folder"></span> Ассеты</button>
+        <button id="mapGen" title="Сгенерировать случайное подземелье"><span class="gi" data-gi="dice"></span> Подземелье</button>
         <select id="mapDrawTool" title="Рисование на карте">
-          <option value="none">Рисование: выкл</option>
-          <option value="pen">✏ Перо</option>
-          <option value="room">▭ Комната</option>
-          <option value="oval">◯ Зал</option>
-          <option value="corridor">▬ Коридор</option>
+          <option value="none">Инструмент: выключен</option>
+          <option value="select">Выбор и правка</option>
+          <option value="pen">Перо</option>
+          <option value="room">Комната</option>
+          <option value="oval">Зал</option>
+          <option value="corridor">Коридор</option>
+          <option value="poly">Полигон</option>
         </select>
-        <button id="mapRuler" title="Линейка: два клика по карте">Линейка</button>
-        <button id="mapSnapShapes" title="Примагнитить нарисованные комнаты к сетке">🧲 К сетке</button>
+        <button id="mapRuler" title="Измерить расстояние: два клика по карте"><span class="gi" data-gi="ruler"></span> Линейка</button>
+        <button id="mapSnapShapes" title="Примагнитить нарисованное к сетке"><span class="gi" data-gi="magnet"></span> Привязать</button>
         <span class="hint" id="mapRulerLabel" hidden></span>
-        <button id="mapMoreBtn" title="Форма клетки, сетка, зоны и туман" aria-expanded="false">⚙ Ещё</button>
+        <span class="hint" id="mapDrawHint">Как рисовать: выберите инструмент и протяните по карте — комната появится со стенами. Полигон: клики по вершинам, двойной клик — замкнуть. Ассеты ставятся в центр карты, затем их можно двигать.</span>
+        <button id="mapMoreBtn" title="Дополнительные настройки" aria-expanded="false">⚙ Дополнительно</button>
         <input type="file" id="mapFileInput" accept="image/*" class="hidden" aria-label="Загрузка карты">
         <div class="map-adv" id="mapAdvanced" hidden>
-          <button id="mapFromUrl" title="Добавить карту по ссылке на изображение">Из URL</button>
-          <button id="mapFull" title="Квадратная карта на всё доступное пространство">Квадраты на экран</button>
+          <button id="mapFromUrl" title="Добавить карту по ссылке на изображение">Карта по ссылке</button>
+          <button id="mapFull" title="Растянуть карту на всё доступное пространство"><span class="gi" data-gi="expand"></span> На экран</button>
           <select id="mapShape" title="Форма клетки">
-            <option value="hex">Гексы</option>
-            <option value="square">Квадраты</option>
+            <option value="hex">Сетка: гексы</option>
+            <option value="square">Сетка: квадраты</option>
           </select>
-          <label class="map-chk"><input type="checkbox" id="mapSnap"> привязка к клеткам</label>
-          <label class="map-chk">клетка <input type="number" id="mapCellPx" min="12" max="160" step="1" value="34"> px</label>
-          <label class="map-chk">клетка = <input type="number" id="mapFeet" min="1" max="60" step="1" value="5"> фт</label>
+          <label class="map-chk"><input type="checkbox" id="mapSnap"> Привязка к сетке</label>
+          <label class="map-chk"><input type="checkbox" id="mapMono"> Чёрно-белая карта</label>
+          <label class="map-chk">Клетка, px: <input type="number" id="mapCellPx" min="12" max="160" step="1" value="34"></label>
+          <label class="map-chk">Клетка: <input type="number" id="mapFeet" min="1" max="60" step="1" value="5"> футов</label>
           <select id="mapZoneType" title="Шаблон зоны (AoE)">
-            <option value="none">Зона: нет</option>
-            <option value="circle">Зона: круг</option>
-            <option value="cone">Зона: конус</option>
-            <option value="line">Зона: линия</option>
-            <option value="cube">Зона: куб</option>
+            <option value="none">Зоны: нет</option>
+            <option value="circle">Зоны: круг</option>
+            <option value="cone">Зоны: конус</option>
+            <option value="line">Зоны: линия</option>
+            <option value="cube">Зоны: куб</option>
           </select>
-          <button id="mapZoneClear" title="Убрать все зоны с карты">Очистить зоны</button>
+          <button id="mapZoneAdd" title="Добавить зону в центр видимой карты"><span class="gi" data-gi="effects"></span> Добавить зону</button>
+          <button id="mapZoneClear" title="Убрать все зоны с карты"><span class="gi" data-gi="effects"></span> Убрать зоны</button>
           <select id="mapFogMode" title="Туман войны">
-            <option value="off">Туман: выкл</option>
-            <option value="hide">Туман: закрыть</option>
-            <option value="reveal">Туман: открыть</option>
+            <option value="off">Туман войны: выключен</option>
+            <option value="hide">Туман войны: закрыть</option>
+            <option value="reveal">Туман войны: открыть</option>
           </select>
-          <button id="mapDrawClear" title="Стереть рисунок с карты">Стереть рисунок</button>
+          <button id="mapDrawClear" title="Очистить рисунок на карте"><span class="gi" data-gi="trash"></span> Очистить</button>
+          <button id="mapExport" title="Сохранить карту в JSON-файл"><span class="gi" data-gi="export"></span> Сохранить</button>
+          <button id="mapImport" title="Загрузить карту из JSON-файла"><span class="gi" data-gi="import"></span> Загрузить</button>
+          <input type="file" id="mapImportInput" accept=".json,application/json" class="hidden" aria-label="Импорт карты">
           <span class="hint" id="mapTypeHint">изображение, до 8 МБ · PNG/JPG/WebP</span>
         </div>
       </div>
@@ -355,6 +396,7 @@
         <aside class="map-rail" id="mapTabs" aria-label="Список карт"></aside>
         <div class="map-canvas" id="mapCanvas"></div>
       </div>
+
       <div class="map-zoomctl" aria-label="Масштаб карты">
         <button id="mapZoomIn" title="Приблизить" aria-label="Приблизить">+</button>
         <span class="mz-label" id="mapZoomLabel">100%</span>
@@ -379,7 +421,39 @@
         <button class="btn" id="markerColor">Сменить цвет</button>
         <button class="del" id="markerDel">Удалить метку</button>
       </div>
+      <div class="map-panel" id="propCtl" hidden>
+        <div class="mp-head"><strong id="propName">Пропс</strong><button class="mp-close" id="propDone" title="Закрыть">✕</button></div>
+        <button class="btn" id="propRotL">⟲ Повернуть влево</button>
+        <button class="btn" id="propRotR">⟳ Повернуть вправо</button>
+        <button class="btn" id="propFlip">Отразить</button>
+        <div class="prop-size-row"><button class="btn" id="propSizeM">−</button><span id="propSizeVal">1×</span><button class="btn" id="propSizeP">+</button></div>
+        <button class="del" id="propDel">Удалить пропс</button>
+      </div>
+      <div class="map-panel" id="drawCtl" hidden>
+        <div class="mp-head"><strong>Фигура</strong><button class="mp-close" id="drawCtlClose" title="Снять выделение">✕</button></div>
+        <div class="draw-rot-row"><button class="btn" id="drawRotL" title="Повернуть на 15° против часовой">⟲ 15°</button><button class="btn" id="drawRotR" title="Повернуть на 15° по часовой">⟳ 15°</button></div>
+        <button class="del" id="drawDelete"><span class="gi" data-gi="trash"></span> Удалить фигуру</button>
+        <span class="hint">Тяните за края и углы — размер; за кружок сверху — поворот; внутри — перемещение. Delete — удалить.</span>
+      </div>
       <div class="map-note-tip" id="mapNoteTip" hidden></div>
+    </div>
+    <div class="modal" id="zoneModal" hidden>
+      <div class="modal-box zone-modal">
+        <div class="modal-head"><strong>Новая зона</strong><button class="modal-close" id="zoneModalClose" title="Закрыть">✕</button></div>
+        <div class="zone-modal-body">
+          <div class="zone-types" id="zoneTypes">
+            <button type="button" data-ztype="circle"><span class="gi" data-gi="circle"></span> Круг</button>
+            <button type="button" data-ztype="cone"><span class="gi" data-gi="cone"></span> Конус</button>
+            <button type="button" data-ztype="line"><span class="gi" data-gi="line"></span> Линия</button>
+            <button type="button" data-ztype="cube"><span class="gi" data-gi="cube"></span> Куб</button>
+          </div>
+          <label>Размер: <input type="number" id="zoneFeetModal" min="5" max="240" step="5" value="20"> фт</label>
+        </div>
+        <div class="zone-actions">
+          <button class="btn" id="zoneAddCancel">Отмена</button>
+          <button class="btn" id="zoneAddConfirm">Добавить</button>
+        </div>
+      </div>
     </div>
     <div class="modal" id="roomLibModal" hidden>
       <div class="modal-box modal-md room-lib">
@@ -394,7 +468,17 @@
         <div class="room-lib-body">
           <div class="room-lib-grid" id="roomLibGrid"></div>
         </div>
-        <div class="room-lib-foot hint">Вставится в центр видимой карты; дальше двигайте и стирайте как обычный рисунок.</div>
+        <div class="room-lib-foot hint">Вставится в центр видимой карты; стены появятся автоматически. Дальше двигайте и стирайте как обычный рисунок.</div>
+      </div>
+    </div>
+    <div class="modal" id="tilesModal" hidden>
+      <div class="modal-box modal-md tiles-modal">
+        <div class="modal-head">
+          <strong>Ассеты для карты</strong>
+          <button class="modal-close" id="tilesClose" title="Закрыть">✕</button>
+        </div>
+        <div class="tiles-body" id="tilesGrid"></div>
+        <div class="room-lib-foot hint">Тайлы DCSS (CC0). Клик — поставить в центр карты; дальше двигайте мышью.</div>
       </div>
     </div>
     <div class="tabview" id="view-battle" hidden>
@@ -465,7 +549,7 @@
             <span class="af-hint">Автор: Ролёвки от Вовки</span>
             <span class="af-hint" title="Иконки: Lorc, Delapouite — game-icons.net, CC BY 3.0">Иконки: game-icons.net</span>
             <span class="af-hint" title="Магические предметы SRD 5.2.1 — Wizards of the Coast, CC-BY-4.0">SRD 5.2.1 · CC-BY-4.0</span>
-            <span class="af-hint af-ver">Ширма мастера <span id="appVersion">1.3.3</span> · <a class="af-link" href="https://github.com/chipsfirst/dm_screen/releases" target="_blank" rel="noopener">что нового</a></span>
+            <span class="af-hint af-ver">Ширма мастера <span id="appVersion">1.3.4</span> · <a class="af-link" href="https://github.com/chipsfirst/dm_screen/releases" target="_blank" rel="noopener">что нового</a></span>
             <a class="af-link" href="https://boosty.to/vovkaroleplay" target="_blank" rel="noopener">Поддержать</a>
             <a class="af-link" href="https://github.com/chipsfirst/dm_screen" target="_blank" rel="noopener">Репозиторий на GitHub ↗</a>
           </span>
@@ -856,26 +940,27 @@
   </div>
 </div>
 
-<script src="js/data/shop-data.js?v=1.3.3"></script>
-<script src="js/data/shop-catalog-data.js?v=1.3.3"></script>
-<script src="js/data/app-data.js?v=1.3.3"></script>
-<script src="js/data/books-data.js?v=1.3.3"></script>
-<script src="js/data/srd-data.js?v=1.3.3"></script>
-<script src="js/data/srd-chars-data.js?v=1.3.3"></script>
-<script src="js/icons.js?v=1.3.3"></script>
-<script src="js/app/core/01-state.js?v=1.3.3"></script>
-<script src="js/app/ui/02-render.js?v=1.3.3"></script>
-<script src="js/app/ui/03-ui.js?v=1.3.3"></script>
-<script src="js/app/ui/04-events.js?v=1.3.3"></script>
-<script src="js/app/data/05-rules.js?v=1.3.3"></script>
-<script src="js/app/ui/06-modals.js?v=1.3.3"></script>
-<script src="js/app/data/07-bestiary.js?v=1.3.3"></script>
-<script src="js/app/data/08-content.js?v=1.3.3"></script>
-<script src="js/app/media/09-music.js?v=1.3.3"></script>
-<script src="js/app/media/10-map.js?v=1.3.3"></script>
-<script src="js/app/ui/11-search.js?v=1.3.3"></script>
-<script src="js/app/pages/12-sessions.js?v=1.3.3"></script>
-<script src="js/app/pages/13-battle.js?v=1.3.3"></script>
-<script src="js/app/pages/14-generators.js?v=1.3.3"></script>
+<script src="js/data/shop-data.js?v=1.3.4"></script>
+<script src="js/data/shop-catalog-data.js?v=1.3.4"></script>
+<script src="js/data/app-data.js?v=1.3.4"></script>
+<script src="js/data/books-data.js?v=1.3.4"></script>
+<script src="js/data/srd-data.js?v=1.3.4"></script>
+<script src="js/data/srd-chars-data.js?v=1.3.4"></script>
+<script src="js/data/tiles-data.js?v=1.3.4"></script>
+<script src="js/icons.js?v=1.3.4"></script>
+<script src="js/app/core/01-state.js?v=1.3.4"></script>
+<script src="js/app/ui/02-render.js?v=1.3.4"></script>
+<script src="js/app/ui/03-ui.js?v=1.3.4"></script>
+<script src="js/app/ui/04-events.js?v=1.3.4"></script>
+<script src="js/app/data/05-rules.js?v=1.3.4"></script>
+<script src="js/app/ui/06-modals.js?v=1.3.4"></script>
+<script src="js/app/data/07-bestiary.js?v=1.3.4"></script>
+<script src="js/app/data/08-content.js?v=1.3.4"></script>
+<script src="js/app/media/09-music.js?v=1.3.4"></script>
+<script src="js/app/media/10-map.js?v=1.3.4"></script>
+<script src="js/app/ui/11-search.js?v=1.3.4"></script>
+<script src="js/app/pages/12-sessions.js?v=1.3.4"></script>
+<script src="js/app/pages/13-battle.js?v=1.3.4"></script>
+<script src="js/app/pages/14-generators.js?v=1.3.4"></script>
 </body>
 </html>

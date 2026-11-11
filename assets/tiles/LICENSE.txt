@@ -1,0 +1,12 @@
+Тайлы в этой папке — Dungeon Crawl Stone Soup (crawl tiles).
+
+Лицензия: CC0 / public domain (авторы вернули тайлы в общественное достояние;
+часть исходных тайлов — публичный домен RLTiles, некоторые изменены).
+Источник: https://github.com/crawl/tiles
+Исходные файлы: https://github.com/crawl/crawl/tree/master/crawl-ref/source/rltiles
+
+Атрибуция не требуется, но авторы просят указывать Crawl Stone Soup.
+
+Иконки (assets/tiles/icons): game-icons.net, лицензия CC BY 3.0.
+Авторы: Delapouite (https://delapouite.com), Lorc (https://lorcblog.blogspot.com) и др.
+Требуется атрибуция: «Icons made by Delapouite, Lorc and others. Available on https://game-icons.net».

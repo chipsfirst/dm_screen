@@ -61,7 +61,11 @@ function addMapMarker(){
   mapPlaceOn = !mapPlaceOn;
   const hint=document.getElementById('mapPlaceHint'); if(hint) hint.hidden = !mapPlaceOn;
   const btn=document.getElementById('mapAddMarker'); if(btn) btn.classList.toggle('active', !!mapPlaceOn);
-  if(mapPlaceOn) toast('Кликните по карте, чтобы поставить маркер');
+  if(mapPlaceOn){
+    mapZoneType='none';
+    const zt=document.getElementById('mapZoneType'); if(zt) zt.value='none';
+    toast('Кликните по карте, чтобы поставить маркер');
+  }
 }
 function markerLinkedBlock(m,k){
   if(!k || !k.blockId) return null;
@@ -147,7 +151,8 @@ function mapDuplicate(){
   const cp=normMap({ id:'m'+Math.random().toString(36).slice(2,8), name:(m.name||'Карта')+' (копия)',
     bgKey:m.bgKey, bg:m.bg, baseW:m.baseW, baseH:m.baseH, zoom:m.zoom, scrollX:m.scrollX, scrollY:m.scrollY,
     markers:m.markers.map(k=>({...k,id:'k'+Math.random().toString(36).slice(2,7)})),
-    draw:m.draw.map(s=>({color:s.color,width:s.width,pts:s.pts.map(p=>[p[0],p[1]])})) });
+    props:(m.props||[]).map(p=>({...p,id:'p'+Math.random().toString(36).slice(2,7)})),
+    draw:(m.draw||[]).map(s=>JSON.parse(JSON.stringify(s))) });
   maps.push(cp); activeMapId=cp.id; saveMap(); renderMap(); toast('Карта дублирована');
 }
 function mapSnapPNG(){
@@ -219,7 +224,7 @@ function presetBBox(items){
   });
   return { x:x1, y:y1, w:Math.max(1,x2-x1), h:Math.max(1,y2-y1) };
 }
-function presetColor(kind){ return kind==='corr' ? '#c0564f' : (kind==='hall' ? '#7fb3e6' : '#c9a227'); }
+function presetColor(kind){ return '#111'; }
 function presetPreview(p){
   const items=presetItems(p), bb=presetBBox(items);
   const pad=0.6, vw=bb.w+pad*2, vh=bb.h+pad*2;
@@ -228,12 +233,12 @@ function presetPreview(p){
     const col=presetColor(it.k);
     const X=it.x-bb.x+pad, Y=it.y-bb.y+pad;
     if(it.k==='hall'){
-      shapes+='<ellipse cx="'+(X+it.w/2)+'" cy="'+(Y+it.h/2)+'" rx="'+((it.w)/2)+'" ry="'+((it.h)/2)+'" fill="'+col+'33" stroke="'+col+'" stroke-width="0.09"/>';
+      shapes+='<ellipse cx="'+(X+it.w/2)+'" cy="'+(Y+it.h/2)+'" rx="'+((it.w)/2)+'" ry="'+((it.h)/2)+'" fill="#ffffff" stroke="'+col+'" stroke-width="0.09"/>';
     } else if(it.k==='corr'){
       const horiz=it.w>=it.h;
-      shapes+='<rect x="'+X+'" y="'+Y+'" width="'+it.w+'" height="'+it.h+'" fill="'+col+'44" stroke="'+col+'" stroke-width="0.09"/>';
+      shapes+='<rect x="'+X+'" y="'+Y+'" width="'+it.w+'" height="'+it.h+'" fill="#f2f2f2" stroke="'+col+'" stroke-width="0.09"/>';
     } else {
-      shapes+='<rect x="'+X+'" y="'+Y+'" width="'+it.w+'" height="'+it.h+'" rx="0.25" fill="'+col+'2e" stroke="'+col+'" stroke-width="0.09"/>';
+      shapes+='<rect x="'+X+'" y="'+Y+'" width="'+it.w+'" height="'+it.h+'" rx="0.25" fill="#ffffff" stroke="'+col+'" stroke-width="0.09"/>';
     }
   });
   return '<svg class="rc-art" viewBox="0 0 '+vw+' '+vh+'" preserveAspectRatio="xMidYMid meet" aria-hidden="true">'+shapes+'</svg>';
@@ -264,11 +269,33 @@ function insertMapPreset(p){
   const ox=Math.max(0,(m.baseW-bb.w*cell)/2 - bb.x*cell);
   const oy=Math.max(0,(m.baseH-bb.h*cell)/2 - bb.y*cell);
   m.draw=m.draw||[];
+  const roomShapes=[], corrShapes=[];
   items.forEach(it=>{
-    const type = it.k==='corr' ? 'corridor' : (it.k==='hall' ? 'ellipse' : 'rect');
-    m.draw.push({ type, color:presetColor(it.k), width:2,
-      x: ox+it.x*cell, y: oy+it.y*cell, w: it.w*cell, h: it.h*cell });
+    const x=ox+it.x*cell, y=oy+it.y*cell, w=it.w*cell, h=it.h*cell;
+    if(it.k==='corr'){
+      const t=Math.max(4, Math.min(w,h));
+      const pts = w>=h ? [[x,y+h/2],[x+w,y+h/2]] : [[x+w/2,y],[x+w/2,y+h]];
+      corrShapes.push({ type:'cpath', pts:pts, w:t, color:'#111', fill:'rgba(0,0,0,.06)', width:2 });
+    } else {
+      const type = it.k==='hall' ? 'ellipse' : 'rect';
+      roomShapes.push({ type, x:x, y:y, w:w, h:h, color:'#111', fill:'rgba(255,255,255,.5)', width:2, wall:true });
+    }
   });
+  const doors=[];
+  corrShapes.forEach(c=>{
+    const pts=c.pts||[]; if(pts.length<2) return;
+    const t=c.w||0; if(t<=0) return;
+    const p0=pts[0], p1=pts[1], pn=pts[pts.length-1], pm=pts[pts.length-2];
+    const h0=Math.abs(p1[0]-p0[0])>=Math.abs(p1[1]-p0[1]);
+    doors.push(h0 ? {x:p0[0]-4,y:p0[1]-t/2,w:8,h:t} : {x:p0[0]-t/2,y:p0[1]-4,w:t,h:8});
+    const hN=Math.abs(pn[0]-pm[0])>=Math.abs(pn[1]-pm[1]);
+    doors.push(hN ? {x:pn[0]-4,y:pn[1]-t/2,w:8,h:t} : {x:pn[0]-t/2,y:pn[1]-4,w:t,h:8});
+  });
+  const doorShapes=doors.map(d=>({type:'rect', x:d.x, y:d.y, w:d.w, h:d.h, color:'#fff', fill:'#fff', width:1, wall:false}));
+  m.draw=m.draw.concat(roomShapes, doorShapes, corrShapes);
+  window.drawSelectIndex(m.draw.length-1);
+  const selTool=document.getElementById('mapDrawTool');
+  if(selTool){ selTool.value='select'; selTool.dispatchEvent(new Event('change',{bubbles:true})); }
   saveMap(); renderMap();
   const mbox=document.getElementById('roomLibModal'); if(mbox) closeModal(mbox);
   toast('Пресет «'+p.name+'» добавлен на карту');
@@ -289,15 +316,48 @@ function bindRoomLib(){
   });
 }
 bindRoomLib();
+/* ── меню «Добавить карту» ── */
+let mapAddMenuEl=null;
+function openMapAddMenu(btn){
+  if(!mapAddMenuEl){
+    const el=document.createElement('div');
+    el.id='mapAddMenu'; el.className='map-add-menu'; el.hidden=true;
+    el.innerHTML='<button type="button" data-act="file">С компьютера</button>'
+      +'<button type="button" data-act="url">По ссылке</button>'
+      +'<button type="button" data-act="blank">Пустая карта (квадраты)</button>';
+    el.addEventListener('click', e=>{
+      const b=e.target.closest('button'); if(!b) return;
+      const act=b.dataset.act;
+      el.hidden=true;
+      if(act==='file') document.getElementById('mapFileInput')?.click();
+      else if(act==='url') mapAddFromUrl();
+      else if(act==='blank') addFullScreenMap();
+    });
+    document.body.appendChild(el);
+    mapAddMenuEl=el;
+    document.addEventListener('pointerdown', e=>{
+      if(el.hidden) return;
+      if(el.contains(e.target) || e.target.closest('#mapAdd, #mapAddTab')) return;
+      el.hidden=true;
+    });
+    document.addEventListener('keydown', e=>{ if(e.key==='Escape' && !el.hidden) el.hidden=true; });
+  }
+  mapAddMenuEl.hidden=false;
+  const r=btn.getBoundingClientRect();
+  const w=mapAddMenuEl.offsetWidth||210;
+  mapAddMenuEl.style.left=Math.max(8, Math.min(window.innerWidth-w-8, r.left))+'px';
+  mapAddMenuEl.style.top=(r.bottom+8)+'px';
+}
 /* ── обработчики карты ── */
 { const fi=document.getElementById('mapFileInput');
   if(fi) fi.addEventListener('change', e=>{ const f=e.target.files && e.target.files[0]; if(f) mapAddFromFile(f); e.target.value=''; });
-  const add=document.getElementById('mapAdd'); if(add) add.addEventListener('click', ()=> fi&&fi.click());
+  const add=document.getElementById('mapAdd'); if(add && !add.dataset.bound){ add.dataset.bound='1'; add.addEventListener('click', ()=> openMapAddMenu(add)); }
   const drawSel=document.getElementById('mapDrawTool');
   if(drawSel && !drawSel.dataset.bound){
     drawSel.dataset.bound='1';
     drawSel.addEventListener('change', ()=>{
-      mapPenOn = drawSel.value!=='none';
+      mapPenOn = drawSel.value!=='none' && drawSel.value!=='select';
+      if(drawSel.value!=='select' && window.drawSelectIndex) window.drawSelectIndex(-1);
       updateMapPenBtn();
       const mc=document.getElementById('mapCanvas');
       if(mc){ const m=curMap(); if(m){ m.scrollX=mc.scrollLeft; m.scrollY=mc.scrollTop; } }
@@ -428,7 +488,7 @@ bindRoomLib();
     // панорама: тащим пустое место карты мышью
     mc.addEventListener('mousedown', e=>{
       if(mapLocked||mapPenOn) return;
-      if(e.target.closest('.map-marker')||e.target.closest('.map-token')||e.target.closest('.map-draw')) return;
+      if(e.target.closest('.map-marker')||e.target.closest('.map-token')||e.target.closest('.map-draw')||e.target.closest('.map-prop')) return;
       e.preventDefault();
       const sx=e.clientX, sy=e.clientY, sl=mc.scrollLeft, st=mc.scrollTop;
       let moved=false;
@@ -446,7 +506,7 @@ bindRoomLib();
   { const MC=document.getElementById('mapCanvas');
     if(MC){
       MC.addEventListener('click', e=>{
-        if(e.target.closest('.map-marker')) return; // выбор маркера — в самом маркере
+        if(e.target.closest('.map-marker')||e.target.closest('.map-prop')||e.target.closest('.map-draw')) return;
         if(e.target.closest('.zone')) return;        // зону тащим, новую не ставим
         const m=curMap(); if(!m) return;
         const w=MC.querySelector('.map-zoom'); if(!w) return;
@@ -466,8 +526,8 @@ bindRoomLib();
           }
           return;
         }
-        if(mapZoneType!=='none'){ placeZoneAt(m, x, y); return; }
         if(mapPlaceOn){ const sp=snapPoint(m,x,y); placeMarkerAt(sp.x,sp.y); return; }
+        if(mapZoneType!=='none'){ placeZoneAt(m, x, y); return; }
         if(selectedMarkerId){ selectedMarkerId=null; renderMap(); if(window.updateMapMarkerCtl) window.updateMapMarkerCtl(); }
       });
     }
@@ -510,3 +570,317 @@ bindRoomLib();
   }
 }
 
+
+
+/* ── Ассеты и пропсы карты ── */
+(function mapProps(){
+  const btn=document.getElementById('mapAssets');
+  const modal=document.getElementById('tilesModal');
+  const grid=document.getElementById('tilesGrid');
+  const closeBtn=document.getElementById('tilesClose');
+  if(!btn || !modal || !grid) return;
+  function renderPalette(){
+    const cats = window.MAP_TILES || [];
+    grid.innerHTML = cats.map(cat =>
+      '<div class="tiles-cat">'+escapeHtml(cat.cat)+'</div>'+
+      '<div class="tiles-grid">'+cat.items.map(it =>
+        '<button class="tile-btn" data-tile="'+escapeHtml(it.file)+'" title="'+escapeHtml(it.name)+'">'+
+        '<img src="assets/tiles/'+escapeHtml(it.file)+'?v=2" alt="" loading="lazy">'+
+        '<span>'+escapeHtml(it.name)+'</span></button>').join('')+'</div>').join('');
+    grid.querySelectorAll('[data-tile]').forEach(b=>{
+      b.addEventListener('click', ()=>{ addPropAt(b.dataset.tile); closeModal(modal); });
+    });
+  }
+  function mapViewCenter(){
+    const mc=document.getElementById('mapCanvas'); const m=curMap();
+    if(!mc || !m) return { x:0, y:0 };
+    const z=Math.min(8, Math.max(0.05, mapFitScale(mc,m)*(m.userZoom||1)));
+    const x=(mc.scrollLeft + mc.clientWidth/2)/z;
+    const y=(mc.scrollTop + mc.clientHeight/2)/z;
+    return { x:Math.max(0, Math.min(m.baseW, x)), y:Math.max(0, Math.min(m.baseH, y)) };
+  }
+  function addPropAt(file){
+    const m=curMap(); if(!m) return;
+    const c=mapViewCenter();
+    const p=normProp({ file:file, x:c.x, y:c.y });
+    (m.props=m.props||[]).push(p);
+    selectedPropId=p.id;
+    saveMap(); renderMap();
+  }
+  function updatePropCtl(){
+    const ctl=document.getElementById('propCtl'); if(!ctl) return;
+    const m=curMap();
+    const p=m && selectedPropId ? (m.props||[]).find(x=>x.id===selectedPropId) : null;
+    ctl.hidden=!p;
+    const nm=document.getElementById('propName'); if(nm) nm.textContent = p ? p.file.replace(/^.*\//,'').replace(/\.png$/,'') : 'Пропс';
+    const sv=document.getElementById('propSizeVal'); if(sv) sv.textContent = p ? (Math.round(p.w*100)/100)+'×' : '1×';
+  }
+  btn.addEventListener('click', ()=>{ renderPalette(); openModal(modal, btn); });
+  closeBtn && closeBtn.addEventListener('click', ()=> closeModal(modal));
+  modal.addEventListener('click', e=>{ if(e.target===modal) closeModal(modal); });
+  document.getElementById('propRotL')&&document.getElementById('propRotL').addEventListener('click', ()=>{
+    const m=curMap(); const p=m&&selectedPropId?(m.props||[]).find(x=>x.id===selectedPropId):null; if(!p) return;
+    p.rot=((p.rot-90)%360+360)%360; saveMap(); renderMap();
+  });
+  document.getElementById('propRotR')&&document.getElementById('propRotR').addEventListener('click', ()=>{
+    const m=curMap(); const p=m&&selectedPropId?(m.props||[]).find(x=>x.id===selectedPropId):null; if(!p) return;
+    p.rot=((p.rot+90)%360+360)%360; saveMap(); renderMap();
+  });
+  document.getElementById('propFlip')&&document.getElementById('propFlip').addEventListener('click', ()=>{
+    const m=curMap(); const p=m&&selectedPropId?(m.props||[]).find(x=>x.id===selectedPropId):null; if(!p) return;
+    p.flip=!p.flip; saveMap(); renderMap();
+  });
+  document.getElementById('propSizeM')&&document.getElementById('propSizeM').addEventListener('click', ()=>{
+    const m=curMap(); const p=m&&selectedPropId?(m.props||[]).find(x=>x.id===selectedPropId):null; if(!p) return;
+    p.w=Math.max(0.5, Math.round((p.w-0.5)*100)/100); saveMap(); renderMap();
+  });
+  document.getElementById('propSizeP')&&document.getElementById('propSizeP').addEventListener('click', ()=>{
+    const m=curMap(); const p=m&&selectedPropId?(m.props||[]).find(x=>x.id===selectedPropId):null; if(!p) return;
+    p.w=Math.min(4, Math.round((p.w+0.5)*100)/100); saveMap(); renderMap();
+  });
+  document.getElementById('propDel')&&document.getElementById('propDel').addEventListener('click', async ()=>{
+    const m=curMap(); if(!m||!selectedPropId) return; if(!(await uiConfirm('Удалить пропс?'))) return;
+    m.props=(m.props||[]).filter(x=>x.id!==selectedPropId); selectedPropId=null; saveMap(); renderMap();
+  });
+  document.getElementById('propDone')&&document.getElementById('propDone').addEventListener('click', ()=>{ selectedPropId=null; renderMap(); });
+  window.updatePropCtl=updatePropCtl;
+})();
+
+
+/* ── Генератор подземелий и JSON карты ── */
+(function mapTools(){
+  const gen=document.getElementById('mapGen');
+  const exp=document.getElementById('mapExport');
+  const imp=document.getElementById('mapImport');
+  const inp=document.getElementById('mapImportInput');
+  if(!gen) return;
+  async function generateBsp(){
+    const m=curMap(); if(!m) return;
+    if((m.draw||[]).length){
+      if(!(await uiConfirm('Очистить текущий рисунок и сгенерировать подземелье?'))) return;
+      m.draw=[];
+    }
+    const cell=mapCellPx(m);
+    const snap=v=>Math.round(v/cell)*cell;
+    function makeRoom(node){
+      const mgn=cell*1.2;
+      const maxW=Math.max(cell*2.4, node.w-mgn*2), maxH=Math.max(cell*2.4, node.h-mgn*2);
+      const w=Math.min(maxW, cell*(2.4+Math.random()*2.6));
+      const h=Math.min(maxH, cell*(2.4+Math.random()*2.6));
+      const x=node.x+(node.w-w)/2 + (Math.random()-0.5)*Math.min(cell, Math.max(0,maxW-w));
+      const y=node.y+(node.h-h)/2 + (Math.random()-0.5)*Math.min(cell, Math.max(0,maxH-h));
+      const room={ type:'rect', x:x, y:y, w:w, h:h, color:'#111', fill:'rgba(255,255,255,.5)', width:2, wall:true };
+      m.draw.push(room); return room;
+    }
+    function splitNode(node, depth){
+      const min=cell*5;
+      if(depth<=0 || (node.w<2*min && node.h<2*min)){ node.room=makeRoom(node); return node; }
+      if(node.w>=node.h){
+        if(node.w<2*min){ node.room=makeRoom(node); return node; }
+        const cut=min+Math.random()*(node.w-2*min);
+        node.axis='x'; node.cut=node.x+cut;
+        node.left=splitNode({x:node.x,y:node.y,w:cut,h:node.h},depth-1);
+        node.right=splitNode({x:node.x+cut,y:node.y,w:node.w-cut,h:node.h},depth-1);
+      } else {
+        if(node.h<2*min){ node.room=makeRoom(node); return node; }
+        const cut=min+Math.random()*(node.h-2*min);
+        node.axis='y'; node.cut=node.y+cut;
+        node.left=splitNode({x:node.x,y:node.y,w:node.w,h:cut},depth-1);
+        node.right=splitNode({x:node.x,y:node.y+cut,w:node.w,h:node.h-cut},depth-1);
+      }
+      return node;
+    }
+    function collect(node, out){ if(!node) return out; if(node.room){ out.push(node.room); return out; } collect(node.left,out); collect(node.right,out); return out; }
+    function nearestRoom(list, edge, dir){
+      let best=null, bestVal=null;
+      list.forEach(r=>{
+        const v = edge==='x' ? (dir>0 ? r.x+r.w : r.x) : (dir>0 ? r.y+r.h : r.y);
+        if(bestVal===null || (dir>0 ? v>bestVal : v<bestVal)){ bestVal=v; best=r; }
+      });
+      return best;
+    }
+    function connect(node){
+      if(!node || !node.left) return;
+      connect(node.left); connect(node.right);
+      const leftRooms=collect(node.left,[]), rightRooms=collect(node.right,[]);
+      if(!leftRooms.length || !rightRooms.length) return;
+      const t=Math.max(2,cell*0.7);
+      function pushPath(pts){
+        const clean=[];
+        pts.forEach(p=>{ const q=clean[clean.length-1]; if(!q || Math.abs(q[0]-p[0])>0.5 || Math.abs(q[1]-p[1])>0.5) clean.push([p[0],p[1]]); });
+        if(clean.length>=2) m.draw.push({ type:'cpath', pts:clean, w:t, color:'#111', fill:'rgba(0,0,0,.06)', width:2 });
+      }
+      if(node.axis==='x'){
+        const ra=nearestRoom(leftRooms,'x',1), rb=nearestRoom(rightRooms,'x',-1);
+        const ax=ra.x+ra.w, bx=rb.x;
+        if(bx-ax<4) return;
+        const cut=Math.max(ax+1, Math.min(bx-1, node.cut));
+        const ay=snap(ra.y+ra.h/2), by=snap(rb.y+rb.h/2);
+        if(Math.abs(ay-by)>0.5) pushPath([[ax,ay],[cut,ay],[cut,by],[bx,by]]);
+        else pushPath([[ax,ay],[bx,by]]);
+      } else {
+        const ra=nearestRoom(leftRooms,'y',1), rb=nearestRoom(rightRooms,'y',-1);
+        const ay=ra.y+ra.h, by=rb.y;
+        if(by-ay<4) return;
+        const cut=Math.max(ay+1, Math.min(by-1, node.cut));
+        const ax=snap(ra.x+ra.w/2), bx=snap(rb.x+rb.w/2);
+        if(Math.abs(ax-bx)>0.5) pushPath([[ax,ay],[ax,cut],[bx,cut],[bx,by]]);
+        else pushPath([[ax,ay],[ax,by]]);
+      }
+    }
+    const pad=cell*1.2;
+    const root={ x:pad, y:pad, w:Math.max(cell*10, m.baseW-pad*2), h:Math.max(cell*10, m.baseH-pad*2) };
+    splitNode(root, 4);
+    connect(root);
+    const rooms=m.draw.filter(d=>d.type==='rect'||d.type==='ellipse');
+    const corrs=m.draw.filter(d=>d.type==='cpath');
+    const doors=[];
+    corrs.forEach(c=>{
+      const pts=c.pts||[]; if(pts.length<2) return;
+      const t=c.w||0; if(t<=0) return;
+      const p0=pts[0], p1=pts[1], pn=pts[pts.length-1], pm=pts[pts.length-2];
+      const h0=Math.abs(p1[0]-p0[0])>=Math.abs(p1[1]-p0[1]);
+      doors.push(h0 ? {x:p0[0]-4,y:p0[1]-t/2,w:8,h:t} : {x:p0[0]-t/2,y:p0[1]-4,w:t,h:8});
+      const hN=Math.abs(pn[0]-pm[0])>=Math.abs(pn[1]-pm[1]);
+      doors.push(hN ? {x:pn[0]-4,y:pn[1]-t/2,w:8,h:t} : {x:pn[0]-t/2,y:pn[1]-4,w:t,h:8});
+    });
+    const doorShapes=doors.map(d=>({type:'rect', x:d.x, y:d.y, w:d.w, h:d.h, color:'#fff', fill:'#fff', width:1, wall:false}));
+    m.draw=rooms.concat(doorShapes, corrs);
+    saveMap(); renderMap(); toast('Подземелье сгенерировано');
+  }
+  function exportMap(){
+    const m=curMap(); if(!m) return;
+    const txt=JSON.stringify(normMap(m), null, 1);
+    saveFile((m.name||'карта')+'.json', txt, 'application/json');
+    toast('Карта сохранена в JSON');
+  }
+  gen.addEventListener('click', generateBsp);
+  exp && exp.addEventListener('click', exportMap);
+  imp && imp.addEventListener('click', ()=>{ if(inp) inp.click(); });
+  inp && inp.addEventListener('change', ()=>{
+    const f=inp.files && inp.files[0]; if(!f) return;
+    const r=new FileReader();
+    r.onload=()=>{
+      try{
+        const obj=JSON.parse(String(r.result||'{}'));
+        const m=normMap(obj);
+        maps.push(m); activeMapId=m.id; saveMap(); renderMap();
+        toast('Карта импортирована');
+      }catch(e){ uiAlert('Не удалось прочитать JSON карты'); }
+      inp.value='';
+    };
+    r.readAsText(f);
+  });
+})();
+
+
+/* ── Боковая панель инструментов карты ── */
+(function mapMenus(){
+  const bar=document.getElementById('mapMenus');
+  if(!bar) return;
+  const gDraw=document.getElementById('msDraw');
+  const gObj=document.getElementById('msObj');
+  const gCreate=document.getElementById('msCreate');
+  const gView=document.getElementById('msView');
+  const gZones=document.getElementById('msZones');
+  const gMore=document.getElementById('msMore');
+  function move(id,parent){ const el=document.getElementById(id); if(el&&parent) parent.appendChild(el); }
+  ['mapDrawTool','mapRuler','mapSnapShapes','mapDrawHint'].forEach(id=>move(id,gDraw));
+  ['mapAddToken','mapAddMarker'].forEach(id=>move(id,gObj));
+  ['mapGen','mapRoomsLib','mapAssets'].forEach(id=>move(id,gCreate));
+  ['mapShape','mapCellPx','mapFeet','mapSnap','mapMono','mapFull','mapFogMode'].forEach(id=>move(id,gView));
+  ['mapZoneAdd','mapZoneClear'].forEach(id=>move(id,gZones));
+  ['mapDrawClear','mapExport','mapImport','mapImportInput','mapFileInput','mapRulerLabel','mapTypeHint'].forEach(id=>move(id,gMore));
+  const more=document.getElementById('mapMoreBtn'); if(more) more.style.display='none';
+  const adv=document.getElementById('mapAdvanced'); if(adv) adv.hidden=true;
+  const toolsBtn=document.getElementById('mapToolsBtn'); if(toolsBtn) toolsBtn.style.display='none';
+  const segSync=[];
+  function seg(selId,parent,opts){
+    const sel=document.getElementById(selId);
+    if(!sel || !parent) return;
+    const box=document.createElement('div');
+    box.className='ms-seg'+(opts.length===2?' two':'');
+    opts.forEach(o=>{
+      const b=document.createElement('button');
+      b.type='button'; b.title=o.t; b.dataset.val=o.v;
+      b.innerHTML='<span class="gi" data-gi="'+o.i+'"></span><span>'+o.l+'</span>';
+      b.addEventListener('click', ()=>{ sel.value=o.v; sel.dispatchEvent(new Event('change',{bubbles:true})); syncSel(); });
+      box.appendChild(b);
+    });
+    parent.insertBefore(box, sel);
+    sel.hidden=true;
+    function syncSel(){ box.querySelectorAll('button').forEach(b=>b.classList.toggle('active', b.dataset.val===sel.value)); }
+    sel.addEventListener('change', syncSel);
+    syncSel();
+    hydrateIcons(box);
+    segSync.push(syncSel);
+  }
+  seg('mapDrawTool', gDraw, [
+    {v:'none',l:'Выкл',i:'off',t:'Инструмент выключен'},
+    {v:'select',l:'Выбор',i:'select',t:'Выбор фигур: двигать, менять размер, удалять'},
+    {v:'pen',l:'Перо',i:'pen',t:'Свободное рисование'},
+    {v:'room',l:'Комната',i:'room',t:'Прямоугольная комната'},
+    {v:'oval',l:'Зал',i:'oval',t:'Овальный зал'},
+    {v:'corridor',l:'Коридор',i:'corridor',t:'Коридор'},
+    {v:'poly',l:'Полигон',i:'polygon',t:'Многоугольная комната'}
+  ]);
+  seg('mapShape', gView, [
+    {v:'hex',l:'Гексы',i:'hex',t:'Сетка: гексы'},
+    {v:'square',l:'Квадраты',i:'square',t:'Сетка: квадраты'}
+  ]);
+  seg('mapFogMode', gView, [
+    {v:'off',l:'Выкл',i:'off',t:'Туман войны выключен'},
+    {v:'hide',l:'Скрыть',i:'moon',t:'Закрыть области туманом'},
+    {v:'reveal',l:'Открыть',i:'sun',t:'Открыть области'}
+  ]);
+  window.__msSync = ()=>segSync.forEach(f=>f());
+  function updateDrawCtl(){
+    const ctl=document.getElementById('drawCtl'); if(!ctl) return;
+    const m=curMap(); const i=window.__drawSelIndex;
+    const s=(m && i>=0 && window.__drawSelMap===m.id)?(m.draw||[])[i]:null;
+    ctl.hidden=!s;
+  }
+  window.updateDrawCtl=updateDrawCtl;
+  const dcl=document.getElementById('drawCtlClose');
+  if(dcl) dcl.addEventListener('click', ()=>{ window.drawSelectIndex(-1); renderMap(); });
+  const ddel=document.getElementById('drawDelete');
+  if(ddel) ddel.addEventListener('click', ()=>{ if(window.deleteDrawSel) window.deleteDrawSel(); });
+  function rotateDrawSel(d){
+    const m=curMap(); const i=window.__drawSelIndex;
+    if(!m||i<0||!(m.draw||[])[i]) return;
+    const s=m.draw[i];
+    s.rot=(((+s.rot||0)+d)%360+360)%360;
+    saveMap(); renderMap();
+  }
+  const rl=document.getElementById('drawRotL'); if(rl) rl.addEventListener('click', ()=>rotateDrawSel(-15));
+  const rr=document.getElementById('drawRotR'); if(rr) rr.addEventListener('click', ()=>rotateDrawSel(15));
+  document.addEventListener('keydown', e=>{
+    if(currentTab!=='map') return;
+    const tag=(e.target&&e.target.tagName||'').toLowerCase();
+    if(tag==='input'||tag==='textarea'||tag==='select'||(e.target&&e.target.isContentEditable)) return;
+    if((e.key==='Delete'||e.key==='Backspace') && window.__drawSelIndex>=0){
+      e.preventDefault();
+      if(window.deleteDrawSel) window.deleteDrawSel();
+    }
+  });
+  function closeAll(keep){
+    bar.querySelectorAll('.map-menu').forEach(m=>{
+      const p=m.querySelector('.menu-panel'), b=m.querySelector('.map-menu-btn');
+      const open=(m===keep);
+      if(p) p.classList.toggle('open', open);
+      if(b) b.setAttribute('aria-expanded', open?'true':'false');
+    });
+  }
+  bar.querySelectorAll('.map-menu').forEach(m=>{
+    const b=m.querySelector('.map-menu-btn');
+    if(!b) return;
+    b.addEventListener('click', e=>{
+      e.stopPropagation();
+      const p=m.querySelector('.menu-panel');
+      const willOpen = p && !p.classList.contains('open');
+      closeAll(willOpen ? m : null);
+    });
+  });
+  document.addEventListener('click', e=>{ if(!bar.contains(e.target)) closeAll(null); });
+  document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeAll(null); });
+})();

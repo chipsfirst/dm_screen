@@ -1,0 +1,141 @@
+/* Ч/б тайлы для карт: Dungeon Crawl Stone Soup (CC0) и game-icons.net (CC BY 3.0).
+   Файлы — assets/tiles/dcss и assets/tiles/icons. */
+window.MAP_TILES = [
+  { cat:'Двери', items:[
+    { id:'door', name:'Дверь', file:'dcss_color/door.png' },
+    { id:'door_clear', name:'Дверь светлая', file:'dcss_color/door_clear.png' },
+    { id:'door_broken', name:'Сломанная дверь', file:'dcss_color/door_broken.png' },
+    { id:'door_broken_crypt', name:'Дверь склепа', file:'dcss_color/door_broken_crypt.png' },
+    { id:'gate_closed', name:'Решётка', file:'dcss_color/gate_closed.png' },
+    { id:'gate_open', name:'Открытая решётка', file:'dcss_color/gate_open.png' },
+    { id:'gate_runed', name:'Рунная решётка', file:'dcss_color/gate_runed.png' }
+  ]},
+  { cat:'Лестницы', items:[
+    { id:'stairs_down', name:'Вниз', file:'dcss_color/stairs_down.png' },
+    { id:'stairs_up', name:'Вверх', file:'dcss_color/stairs_up.png' },
+    { id:'icon_stairs', name:'Лестница', file:'icons/icon_stairs.svg' },
+    { id:'icon_stairs2', name:'Ступени', file:'icons/icon_stairs2.svg' }
+  ]},
+  { cat:'Мебель', items:[
+    { id:'icon_chest', name:'Сундук', file:'icons/icon_chest.svg' },
+    { id:'icon_mimic_chest', name:'Мимик', file:'icons/icon_mimic_chest.svg' },
+    { id:'icon_barrel', name:'Бочка', file:'icons/icon_barrel.svg' },
+    { id:'icon_barrels', name:'Бочки', file:'icons/icon_barrels.svg' },
+    { id:'icon_table', name:'Стол', file:'icons/icon_table.svg' },
+    { id:'icon_round_table', name:'Круглый стол', file:'icons/icon_round_table.svg' },
+    { id:'icon_bed', name:'Кровать', file:'icons/icon_bed.svg' },
+    { id:'icon_bunk_beds', name:'Нары', file:'icons/icon_bunk_beds.svg' },
+    { id:'icon_shelf', name:'Шкаф', file:'icons/icon_shelf.svg' },
+    { id:'icon_throne', name:'Трон', file:'icons/icon_throne.svg' },
+    { id:'icon_crate', name:'Ящик', file:'icons/icon_crate.svg' },
+    { id:'icon_cargo_crate', name:'Груз', file:'icons/icon_cargo_crate.svg' },
+    { id:'icon_cauldron', name:'Котёл', file:'icons/icon_cauldron.svg' },
+    { id:'icon_anvil', name:'Наковальня', file:'icons/icon_anvil.svg' },
+    { id:'icon_banner', name:'Знамя', file:'icons/icon_banner.svg' },
+    { id:'icon_candles', name:'Свечи', file:'icons/icon_candles.svg' },
+    { id:'icon_torch', name:'Факел', file:'icons/icon_torch.svg' },
+    { id:'icon_sack', name:'Мешок', file:'icons/icon_sack.svg' },
+    { id:'icon_coffin', name:'Гроб', file:'icons/icon_coffin.svg' },
+    { id:'icon_tombstone', name:'Надгробие', file:'icons/icon_tombstone.svg' },
+    { id:'icon_campfire', name:'Костёр', file:'icons/icon_campfire.svg' }
+  ]},
+  { cat:'Декор', items:[
+    { id:'altar', name:'Алтарь', file:'dcss_color/altar.png' },
+    { id:'icon_altar', name:'Алтарь (знак)', file:'icons/icon_altar.svg' },
+    { id:'fountain', name:'Фонтан', file:'dcss_color/fountain.png' },
+    { id:'fountain_dry', name:'Сухой фонтан', file:'dcss_color/fountain_dry.png' },
+    { id:'fountain_blood', name:'Кровавый фонтан', file:'dcss_color/fountain_blood.png' },
+    { id:'fountain_sparkle', name:'Искрящий фонтан', file:'dcss_color/fountain_sparkle.png' },
+    { id:'icon_fountain', name:'Фонтан (знак)', file:'icons/icon_fountain.svg' },
+    { id:'flowers', name:'Цветы', file:'dcss_color/flowers.png' },
+    { id:'garden', name:'Сад', file:'dcss_color/garden.png' },
+    { id:'floor_decor', name:'Узорный пол', file:'dcss_color/floor_decor.png' },
+    { id:'shelf', name:'Полка', file:'dcss_color/shelf.png' },
+    { id:'shelf2', name:'Полка 2', file:'dcss_color/shelf2.png' },
+    { id:'shelf3', name:'Полка 3', file:'dcss_color/shelf3.png' },
+    { id:'sack', name:'Мешок', file:'dcss_color/sack.png' },
+    { id:'lantern', name:'Фонарь', file:'dcss_color/lantern.png' },
+    { id:'lamp', name:'Лампа', file:'dcss_color/lamp.png' },
+    { id:'horn', name:'Рог', file:'dcss_color/horn.png' },
+    { id:'crystal', name:'Кристалл', file:'dcss_color/crystal.png' },
+    { id:'vane', name:'Флюгер', file:'dcss_color/vane.png' }
+  ]},
+  { cat:'Статуи', items:[
+    { id:'statue_angel', name:'Ангел', file:'dcss_color/statue_angel.png' },
+    { id:'statue_dragon', name:'Дракон', file:'dcss_color/statue_dragon.png' },
+    { id:'statue_dwarf', name:'Дварф', file:'dcss_color/statue_dwarf.png' },
+    { id:'statue_cat', name:'Кот', file:'dcss_color/statue_cat.png' },
+    { id:'statue_centaur', name:'Кентавр', file:'dcss_color/statue_centaur.png' },
+    { id:'statue_elephant', name:'Слон', file:'dcss_color/statue_elephant.png' },
+    { id:'statue_hydra', name:'Гидра', file:'dcss_color/statue_hydra.png' },
+    { id:'statue_imp', name:'Бес', file:'dcss_color/statue_imp.png' },
+    { id:'statue_maw', name:'Пасть', file:'dcss_color/statue_maw.png' },
+    { id:'statue_iron', name:'Железная', file:'dcss_color/statue_iron.png' },
+    { id:'icon_statue', name:'Статуя (знак)', file:'icons/icon_statue.svg' }
+  ]},
+  { cat:'Ловушки', items:[
+    { id:'trap_plate', name:'Плита', file:'dcss_color/trap_plate.png' },
+    { id:'trap_shaft', name:'Шахта', file:'dcss_color/trap_shaft.png' },
+    { id:'trap_net', name:'Сеть', file:'dcss_color/trap_net.png' },
+    { id:'trap_alarm', name:'Сигнализация', file:'dcss_color/trap_alarm.png' },
+    { id:'trap_bolt', name:'Молния', file:'dcss_color/trap_bolt.png' },
+    { id:'trap_spear', name:'Копьё', file:'dcss_color/trap_spear.png' },
+    { id:'trap_passage', name:'Проход', file:'dcss_color/trap_passage.png' }
+  ]},
+  { cat:'Природа', items:[
+    { id:'tree', name:'Дерево', file:'dcss_color/tree.png' },
+    { id:'tree2', name:'Дерево 2', file:'dcss_color/tree2.png' },
+    { id:'tree3', name:'Дерево 3', file:'dcss_color/tree3.png' },
+    { id:'tree4', name:'Дерево 4', file:'dcss_color/tree4.png' },
+    { id:'tree5', name:'Дерево 5', file:'dcss_color/tree5.png' },
+    { id:'tree_dead', name:'Мёртвое дерево', file:'dcss_color/tree_dead.png' },
+    { id:'tree_dead2', name:'Мёртвое дерево 2', file:'dcss_color/tree_dead2.png' },
+    { id:'tree_dead3', name:'Мёртвое дерево 3', file:'dcss_color/tree_dead3.png' }
+  ]},
+  { cat:'Цифры', items:[
+    { id:'num0', name:'0', file:'digits/0.svg' },
+    { id:'num1', name:'1', file:'digits/1.svg' },
+    { id:'num2', name:'2', file:'digits/2.svg' },
+    { id:'num3', name:'3', file:'digits/3.svg' },
+    { id:'num4', name:'4', file:'digits/4.svg' },
+    { id:'num5', name:'5', file:'digits/5.svg' },
+    { id:'num6', name:'6', file:'digits/6.svg' },
+    { id:'num7', name:'7', file:'digits/7.svg' },
+    { id:'num8', name:'8', file:'digits/8.svg' },
+    { id:'num9', name:'9', file:'digits/9.svg' }
+  ]},
+  { cat:'Классы', items:[
+    { id:'class_warrior', name:'Воин', file:'classes/class_warrior.svg' },
+    { id:'class_bard', name:'Бард', file:'classes/class_bard.svg' },
+    { id:'class_barbarian', name:'Варвар', file:'classes/class_barbarian.svg' },
+    { id:'class_wizard', name:'Волшебник', file:'classes/class_wizard.svg' },
+    { id:'class_druid', name:'Друид', file:'classes/class_druid.svg' },
+    { id:'class_cleric', name:'Жрец', file:'classes/class_cleric.svg' },
+    { id:'class_monk', name:'Монах', file:'classes/class_monk.svg' },
+    { id:'class_paladin', name:'Паладин', file:'classes/class_paladin.svg' },
+    { id:'class_rogue', name:'Плут', file:'classes/class_rogue.svg' },
+    { id:'class_ranger', name:'Следопыт', file:'classes/class_ranger.svg' },
+    { id:'class_sorcerer', name:'Чародей', file:'classes/class_sorcerer.svg' },
+    { id:'class_warlock', name:'Колдун', file:'classes/class_warlock.svg' }
+  ]},
+  { cat:'Секреты', items:[
+    { id:'secret_door', name:'Скрытая дверь', file:'secrets/secret_door.svg' },
+    { id:'secret_book', name:'Тайник', file:'secrets/secret_book.svg' },
+    { id:'secret_hidden', name:'Скрытое', file:'secrets/secret_hidden.svg' },
+    { id:'secret_question', name:'Секрет (?)', file:'secrets/secret_question.svg' },
+    { id:'secret_exclaim', name:'Опасность (!)', file:'secrets/secret_exclaim.svg' }
+  ]},
+  { cat:'Монстры', items:[
+    { id:'monster_grasp', name:'Хватка', file:'monsters/monster_grasp.svg' },
+    { id:'monster_claws', name:'Когти', file:'monsters/monster_claws.svg' },
+    { id:'monster_paw', name:'След', file:'monsters/monster_paw.svg' },
+    { id:'monster_dragon', name:'Дракон', file:'monsters/monster_dragon.svg' },
+    { id:'monster_tentacle', name:'Щупальце', file:'monsters/monster_tentacle.svg' },
+    { id:'monster_spider', name:'Паук', file:'monsters/monster_spider.svg' },
+    { id:'monster_wolf', name:'Волк', file:'monsters/monster_wolf.svg' },
+    { id:'monster_goblin', name:'Гоблин', file:'monsters/monster_goblin.svg' },
+    { id:'monster_eye', name:'Взгляд', file:'monsters/monster_eye.svg' },
+    { id:'monster_skull', name:'Скелет', file:'monsters/monster_skull.svg' },
+    { id:'monster_footprint', name:'Отпечаток', file:'monsters/monster_footprint.svg' }
+  ]}
+];

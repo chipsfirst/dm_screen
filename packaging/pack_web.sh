@@ -24,6 +24,7 @@ DIRS=(
   js/app
   js/data
   assets/svg
+  assets/tiles
 )
 
 for f in "${FILES[@]}"; do

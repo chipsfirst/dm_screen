@@ -740,6 +740,7 @@ let mapGridOn = false;  // сетка отключена
 let mapGridStep = 18;   // шаг сетки, px
 let mapPlaceOn = false; // режим расстановки маркеров кликом
 let selectedMarkerId = null;
+let selectedPropId = null;
 let mapRulerOn = false;
 let mapFogMode = 'off';       // 'off' | 'hide' | 'reveal'
 let mapZoneType = 'none';     // 'none' | 'circle' | 'cone' | 'line' | 'cube'
@@ -765,6 +766,16 @@ function loadMap(){
   if(!activeMapId) activeMapId = maps[0].id;
   return true;
 }
+function normProp(p){
+  return {
+    id:String(p.id||('p'+Math.random().toString(36).slice(2,7))),
+    file:String(p.file||''),
+    x:+p.x||0, y:+p.y||0,
+    w:Math.max(0.25, Math.min(4, +p.w||1)),
+    rot:(((+p.rot||0)%360)+360)%360,
+    flip:!!p.flip
+  };
+}
 function normMap(m){
   return {
     id:String(m.id||('m'+Math.random().toString(36).slice(2,7))),
@@ -787,7 +798,8 @@ function normMap(m){
       x:+z.x||0, y:+z.y||0, r:Math.max(8, +z.r||60), rot:+z.rot||0,
       color: z.color||'#c0564f' })) : [],
     markers: Array.isArray(m.markers)? m.markers.map(normMarker) : [],
-    draw: Array.isArray(m.draw)? m.draw.map(normStroke) : []
+    draw: Array.isArray(m.draw)? m.draw.map(normStroke) : [],
+    props: Array.isArray(m.props)? m.props.map(normProp) : []
   };
 }
 function normMarker(t){
@@ -802,11 +814,19 @@ function normMarker(t){
     blockId: t.blockId||null, bestId: t.bestId||null };
 }
 function normStroke(s){
-  const base={ color:s.color||'#c9a227', width:+s.width||2 };
+  const base={ color:s.color||'#c9a227', width:+s.width||2, wall:!!s.wall, rot:+s.rot||0 };
   if(s.type==='rect' || s.type==='ellipse' || s.type==='corridor'){
     return Object.assign(base, { type:s.type,
       x:Math.max(0,+s.x||0), y:Math.max(0,+s.y||0),
       w:Math.max(1,+s.w||1), h:Math.max(1,+s.h||1) });
+  }
+  if(s.type==='cpath'){
+    return Object.assign(base, { type:'cpath', w:Math.max(2,+s.w||20),
+      pts: Array.isArray(s.pts)? s.pts.map(p=>[+p[0],+p[1]]) : [] });
+  }
+  if(s.type==='poly'){
+    return Object.assign(base, { type:'poly',
+      pts: Array.isArray(s.pts)? s.pts.map(p=>[+p[0],+p[1]]) : [] });
   }
   return Object.assign(base, { pts: Array.isArray(s.pts)? s.pts.map(p=>[+p[0],+p[1]]) : [] });
 }
@@ -866,7 +886,7 @@ function updateMapPenBtn(){
   const clr=document.getElementById('mapPenClear'); if(clr) clr.hidden = !mapPenOn;
   const mc=document.getElementById('mapCanvas'); if(mc){
     const cv=mc.querySelector('canvas.map-draw');
-    if(cv) cv.classList.toggle('drawing', !!mapPenOn);
+    if(cv) cv.classList.toggle('drawing', !!mapPenOn || mapDrawToolValue()==='select');
   }
 }
 
@@ -893,6 +913,7 @@ function renderMap(){
   stage.style.width=W+'px'; stage.style.height=H+'px';
   const wrapper=document.createElement('div');
   wrapper.className='map-zoom'+(m.shape==='square'?' shape-square':' shape-hex');
+  wrapper.classList.toggle('mono', mapMonoOn());
   wrapper.style.width=W+'px'; wrapper.style.height=H+'px';
   wrapper.style.position='relative';
   const cellPx = mapCellPx(m);
@@ -1014,6 +1035,51 @@ function renderMap(){
       el.addEventListener('pointercancel', up);
     });
   });
+  // пропсы (ассеты)
+  (m.props||[]).forEach(pr=>{
+    const el=document.createElement('img');
+    el.className='map-prop'+(pr.id===selectedPropId?' selected':'');
+    el.src='assets/tiles/'+pr.file+'?v=2';
+    el.draggable=false; el.alt='';
+    el.style.left=percent(pr.x,m.baseW)+'%';
+    el.style.top=percent(pr.y,m.baseH)+'%';
+    const d=Math.max(8, pr.w*cellPx);
+    el.style.width=d+'px'; el.style.height=d+'px';
+    el.style.transform='translate(-50%,-50%) rotate('+pr.rot+'deg)'+(pr.flip?' scaleX(-1)':'');
+    el.dataset.id=pr.id; el.title='Пропс';
+    wrapper.appendChild(el);
+    el.addEventListener('click', e=>{
+      e.stopPropagation();
+      selectedPropId = (selectedPropId===pr.id)? null : pr.id;
+      renderMap();
+    });
+    el.addEventListener('pointerdown', e=>{
+      if(mapPenOn) return;
+      if(e.button!==undefined && e.button!==0 && e.pointerType!=='touch') return;
+      e.preventDefault(); e.stopPropagation();
+      try{ el.setPointerCapture && el.setPointerCapture(e.pointerId); }catch(err){}
+      const sx=e.clientX, sy=e.clientY, ox=pr.x, oy=pr.y;
+      let moved=false;
+      const move=ev=>{
+        const dx=ev.clientX-sx, dy=ev.clientY-sy;
+        if(Math.abs(dx)>2 || Math.abs(dy)>2) moved=true;
+        let nx=Math.max(0,Math.min(m.baseW, ox + dx/z));
+        let ny=Math.max(0,Math.min(m.baseH, oy + dy/z));
+        const sp=snapPoint(m,nx,ny);
+        pr.x=sp.x; pr.y=sp.y;
+        el.style.left=percent(pr.x,m.baseW)+'%'; el.style.top=percent(pr.y,m.baseH)+'%';
+      };
+      const up=()=>{
+        el.removeEventListener('pointermove', move);
+        el.removeEventListener('pointerup', up);
+        el.removeEventListener('pointercancel', up);
+        if(moved){ saveMap(); renderMap(); }
+      };
+      el.addEventListener('pointermove', move);
+      el.addEventListener('pointerup', up);
+      el.addEventListener('pointercancel', up);
+    });
+  });
   // шаблоны зон (AoE)
   drawZones(wrapper, m);
 
@@ -1038,7 +1104,10 @@ function renderMap(){
   updateMapPenBtn();
   updateTokenPanel();
   if(window.updateMapMarkerCtl) window.updateMapMarkerCtl();
+  if(window.updatePropCtl) window.updatePropCtl();
   syncMapControls();
+  if(window.__msSync) window.__msSync();
+  if(window.updateDrawCtl) window.updateDrawCtl();
   // прокрутка после рендера — в пределах краёв карты
   requestAnimationFrame(()=>{
     mc.scrollLeft=m.scrollX||0; mc.scrollTop=m.scrollY||0;
@@ -1046,19 +1115,62 @@ function renderMap(){
   });
 }
 /* ── Шаблоны зон (AoE) ── */
-const ZONE_FEET = { circle: 20, cone: 15, line: 30, cube: 15 };
-function zoneRadiusPx(m, type){
-  const feet = ZONE_FEET[type] || 15;
+let zoneFeet = 20;
+function zoneRadiusPx(m){
+  const feet = Math.max(5, Math.min(240, zoneFeet||20));
   return Math.max(10, (feet / Math.max(1, m.feetPerCell||5)) * mapCellPx(m));
 }
 function placeZoneAt(m, x, y){
   const type = mapZoneType;
   if(type==='none') return;
   m.zones = m.zones || [];
-  m.zones.push({ id:'z'+Math.random().toString(36).slice(2,7), type, x, y,
-    r: zoneRadiusPx(m, type), rot: 0, color: type==='circle'?'#c0564f':(type==='cone'?'#e68a4a':(type==='line'?'#7fb3e6':'#86c48f')) });
+  const feet = Math.max(5, Math.min(240, zoneFeet||20));
+  m.zones.push({ id:'z'+Math.random().toString(36).slice(2,7), type, x, y, feet: feet,
+    r: zoneRadiusPx(m), rot: 0, color: type==='circle'?'#c0564f':(type==='cone'?'#e68a4a':(type==='line'?'#7fb3e6':'#86c48f')) });
   saveMap(); renderMap();
-  toast('Зона добавлена — тащите, чтобы переместить, двойной клик удаляет');
+  toast('Зона '+feet+' фт добавлена — тащите, чтобы переместить, Shift+тащите — повернуть, двойной клик удаляет');
+}
+function addZoneAtCenter(){
+  const m=curMap(); if(!m) return;
+  if(mapZoneType==='none'){ toast('Сначала выберите тип зоны'); return; }
+  const mc=document.getElementById('mapCanvas');
+  let x=m.baseW/2, y=m.baseH/2;
+  if(mc){
+    const z=Math.min(8, Math.max(0.05, mapFitScale(mc,m)*(m.userZoom||1)));
+    x=(mc.scrollLeft + mc.clientWidth/2)/z;
+    y=(mc.scrollTop + mc.clientHeight/2)/z;
+  }
+  placeZoneAt(m, Math.max(0, Math.min(m.baseW, x)), Math.max(0, Math.min(m.baseH, y)));
+  mapZoneType='none';
+  const zt=document.getElementById('mapZoneType'); if(zt) zt.value='none';
+}
+window.addZoneAtCenter = addZoneAtCenter;
+function openZoneDialog(){
+  const mbox=document.getElementById('zoneModal'); if(!mbox) return;
+  const cur = mapZoneType!=='none' ? mapZoneType : 'circle';
+  mbox.querySelectorAll('[data-ztype]').forEach(b=>b.classList.toggle('active', b.dataset.ztype===cur));
+  const ft=document.getElementById('zoneFeetModal'); if(ft) ft.value=zoneFeet;
+  if(typeof openModal==='function') openModal(mbox); else mbox.hidden=false;
+}
+function bindZoneDialog(){
+  const mbox=document.getElementById('zoneModal'); if(!mbox || mbox.dataset.bound) return;
+  mbox.dataset.bound='1';
+  function close(){ if(typeof closeModal==='function') closeModal(mbox); else mbox.hidden=true; }
+  const c=document.getElementById('zoneModalClose'); if(c) c.addEventListener('click', close);
+  const cancel=document.getElementById('zoneAddCancel'); if(cancel) cancel.addEventListener('click', close);
+  const types=Array.prototype.slice.call(mbox.querySelectorAll('[data-ztype]'));
+  types.forEach(b=>b.addEventListener('click', ()=>{ types.forEach(x=>x.classList.toggle('active', x===b)); }));
+  const add=document.getElementById('zoneAddConfirm');
+  if(add) add.addEventListener('click', ()=>{
+    const sel=types.find(b=>b.classList.contains('active')) || types[0];
+    const type=sel ? sel.dataset.ztype : 'circle';
+    const ft=document.getElementById('zoneFeetModal');
+    const feet=Math.max(5, Math.min(240, Math.round((+(ft&&ft.value)||20)/5)*5));
+    if(ft) ft.value=feet;
+    mapZoneType=type; zoneFeet=feet;
+    close();
+    addZoneAtCenter();
+  });
 }
 function zoneShapeEl(ns, z){
   const fill = (z.color||'#c0564f')+'55';
@@ -1078,8 +1190,8 @@ function zoneShapeEl(ns, z){
     return r;
   }
   if(z.type==='line'){
-    const rad=(z.rot||0)*Math.PI/180, L=z.r*2, W=z.r*0.12;
-    const dx=Math.cos(rad), dy=Math.sin(rad);
+    const L=z.r, W=z.r*0.12;
+    const dx=1, dy=0;
     const px=-dy*W/2, py=dx*W/2;
     const p=document.createElementNS(ns,'polygon');
     p.setAttribute('points', [
@@ -1090,7 +1202,7 @@ function zoneShapeEl(ns, z){
     return p;
   }
   // конус: сектор 53° от точки
-  const rad=(z.rot||0)*Math.PI/180, half=Math.PI*53/180/2;
+  const rad=0, half=Math.PI*53/180/2;
   const a1=rad-half, a2=rad+half;
   const x1=z.x+Math.cos(a1)*z.r, y1=z.y+Math.sin(a1)*z.r;
   const x2=z.x+Math.cos(a2)*z.r, y2=z.y+Math.sin(a2)*z.r;
@@ -1112,12 +1224,27 @@ function drawZones(wrapper, m){
     const el=zoneShapeEl(ns, z);
     el.classList.add('zone');
     el.dataset.zid=z.id;
+    el.setAttribute('transform', 'rotate('+((+z.rot||0))+' '+z.x+' '+z.y+')');
     el.addEventListener('mousedown', e=>{
       e.preventDefault(); e.stopPropagation();
+      const wr=wrapper.getBoundingClientRect();
+      const toBase=ev=>[ (ev.clientX-wr.left)/z0, (ev.clientY-wr.top)/z0 ];
+      if(e.shiftKey){
+        const b0=toBase(e);
+        const a0=Math.atan2(b0[1]-z.y, b0[0]-z.x);
+        const r0=+z.rot||0;
+        pointerDrag(e, ev=>{
+          const b1=toBase(ev);
+          const a1=Math.atan2(b1[1]-z.y, b1[0]-z.x);
+          z.rot=(((r0+(a1-a0)*180/Math.PI)%360)+360)%360;
+          el.setAttribute('transform', 'rotate('+z.rot+' '+z.x+' '+z.y+')');
+        }, ()=>{ saveMap(); renderMap(); });
+        return;
+      }
       const sx=e.clientX, sy=e.clientY, ox=z.x, oy=z.y;
       pointerDrag(e, ev=>{
         z.x=ox+(ev.clientX-sx)/z0; z.y=oy+(ev.clientY-sy)/z0;
-        el.setAttribute('transform', `translate(${z.x-ox},${z.y-oy})`);
+        el.setAttribute('transform', 'translate('+(z.x-ox)+','+(z.y-oy)+') rotate('+((+z.rot||0))+' '+ox+' '+oy+')');
       }, ()=>{ saveMap(); renderMap(); });
     });
     el.addEventListener('dblclick', e=>{
@@ -1228,8 +1355,15 @@ function syncMapControls(){
   });
   document.getElementById('mapZoneType')?.addEventListener('change', e=>{
     mapZoneType = e.target.value;
-    if(mapZoneType!=='none') toast('Кликните по карте, чтобы поставить зону');
+    if(mapZoneType!=='none'){
+      const sel=document.getElementById('mapDrawTool');
+      if(sel && sel.value!=='none'){ sel.value='none'; sel.dispatchEvent(new Event('change',{bubbles:true})); }
+      toast('Кликните по карте, чтобы поставить зону');
+    }
   });
+  const za=document.getElementById('mapZoneAdd');
+  if(za && !za.dataset.bound){ za.dataset.bound='1'; za.addEventListener('click', ()=> openZoneDialog()); }
+  bindZoneDialog();
   document.getElementById('mapZoneClear')?.addEventListener('click', ()=>{
     const m=curMap(); if(!m) return;
     m.zones=[]; saveMap(); renderMap(); toast('Зоны убраны');
@@ -1416,6 +1550,132 @@ function fitCanvas(wrapper,m,z){
   cv.style.width='100%'; cv.style.height='100%';
   cv.width=Math.round(m.baseW*(z||1)*dpr); cv.height=Math.round(m.baseH*(z||1)*dpr);
 }
+function polyCentroid(pts){
+  let x=0,y=0; pts.forEach(p=>{ x+=p[0]; y+=p[1]; });
+  return [x/pts.length, y/pts.length];
+}
+function offsetPolygon(pts, cx, cy, d){
+  return pts.map(p=>{
+    const dx=p[0]-cx, dy=p[1]-cy, len=Math.hypot(dx,dy)||1;
+    return [p[0]+dx/len*d, p[1]+dy/len*d];
+  });
+}
+function wallPaths(s, d){
+  const outer=new Path2D(), inner=new Path2D();
+  let bb=null;
+  if(s.type==='rect' || s.type==='corridor'){
+    outer.rect(s.x-d, s.y-d, s.w+2*d, s.h+2*d);
+    inner.rect(s.x+d, s.y+d, Math.max(1,s.w-2*d), Math.max(1,s.h-2*d));
+    bb={x:s.x-d, y:s.y-d, w:s.w+2*d, h:s.h+2*d};
+  } else if(s.type==='ellipse'){
+    const cx=s.x+s.w/2, cy=s.y+s.h/2, rx=Math.max(1,s.w/2), ry=Math.max(1,s.h/2);
+    outer.ellipse(cx,cy,rx+d,ry+d,0,0,Math.PI*2);
+    inner.ellipse(cx,cy,Math.max(1,rx-d),Math.max(1,ry-d),0,0,Math.PI*2);
+    bb={x:cx-rx-d, y:cy-ry-d, w:2*(rx+d), h:2*(ry+d)};
+  } else if(s.type==='poly' && s.pts && s.pts.length>=3){
+    const c=polyCentroid(s.pts);
+    const op=offsetPolygon(s.pts,c[0],c[1],d), ip=offsetPolygon(s.pts,c[0],c[1],-d);
+    op.forEach((p,i)=>{ i?outer.lineTo(p[0],p[1]):outer.moveTo(p[0],p[1]); }); outer.closePath();
+    ip.forEach((p,i)=>{ i?inner.lineTo(p[0],p[1]):inner.moveTo(p[0],p[1]); }); inner.closePath();
+    const xs=op.map(p=>p[0]), ys=op.map(p=>p[1]);
+    bb={x:Math.min.apply(null,xs), y:Math.min.apply(null,ys),
+        w:Math.max.apply(null,xs)-Math.min.apply(null,xs),
+        h:Math.max.apply(null,ys)-Math.min.apply(null,ys)};
+  }
+  return bb ? {outer:outer, inner:inner, bb:bb} : null;
+}
+let drawSel = -1;
+window.__drawSelIndex = -1;
+function setDrawSel(i){
+  drawSel = (typeof i==='number' && i>=0) ? i : -1;
+  window.__drawSelIndex = drawSel;
+  const mm=curMap(); window.__drawSelMap = mm?mm.id:null;
+  if(window.updateDrawCtl) window.updateDrawCtl();
+}
+window.drawSelectIndex = setDrawSel;
+window.deleteDrawSel = function(){
+  const m=curMap(); if(!m || drawSel<0 || !(m.draw||[])[drawSel]) return;
+  m.draw.splice(drawSel,1);
+  setDrawSel(-1);
+  saveMap(); renderMap();
+  if(typeof toast==='function') toast('Фигура удалена');
+};
+function shapeBBox(s){
+  if(!s) return {x:0,y:0,w:0,h:0};
+  if(s.pts && s.pts.length){
+    let x1=Infinity,y1=Infinity,x2=-Infinity,y2=-Infinity;
+    s.pts.forEach(p=>{ x1=Math.min(x1,p[0]); y1=Math.min(y1,p[1]); x2=Math.max(x2,p[0]); y2=Math.max(y2,p[1]); });
+    const pad = s.type==='cpath' ? Math.max(0,(+s.w||0)/2) : 0;
+    return {x:x1-pad, y:y1-pad, w:Math.max(1,x2-x1)+pad*2, h:Math.max(1,y2-y1)+pad*2};
+  }
+  return {x:+s.x||0, y:+s.y||0, w:Math.max(1,+s.w||1), h:Math.max(1,+s.h||1)};
+}
+function shapeHandles(bb){
+  const cx=bb.x+bb.w/2, cy=bb.y+bb.h/2;
+  return [['nw',bb.x,bb.y],['n',cx,bb.y],['ne',bb.x+bb.w,bb.y],['e',bb.x+bb.w,cy],
+          ['se',bb.x+bb.w,bb.y+bb.h],['s',cx,bb.y+bb.h],['sw',bb.x,bb.y+bb.h],['w',bb.x,cy]];
+}
+function pointInPoly(p, pts){
+  let inside=false;
+  for(let i=0,j=pts.length-1;i<pts.length;j=i++){
+    const xi=pts[i][0], yi=pts[i][1], xj=pts[j][0], yj=pts[j][1];
+    if(((yi>p[1])!==(yj>p[1])) && (p[0] < (xj-xi)*(p[1]-yi)/(yj-yi)+xi)) inside=!inside;
+  }
+  return inside;
+}
+function localPoint(s,p){
+  const rot=+s.rot||0;
+  if(!rot) return p;
+  const bb=shapeBBox(s);
+  const cx=bb.x+bb.w/2, cy=bb.y+bb.h/2, a=-rot*Math.PI/180;
+  const dx=p[0]-cx, dy=p[1]-cy;
+  return [cx+dx*Math.cos(a)-dy*Math.sin(a), cy+dx*Math.sin(a)+dy*Math.cos(a)];
+}
+function hitShape(s,p){
+  if(!s) return false;
+  const q=localPoint(s,p);
+  if(s.type==='rect'||s.type==='corridor') return q[0]>=s.x&&q[0]<=s.x+s.w&&q[1]>=s.y&&q[1]<=s.y+s.h;
+  if(s.type==='ellipse'){
+    const cx=s.x+s.w/2, cy=s.y+s.h/2, rx=Math.max(1,s.w/2), ry=Math.max(1,s.h/2);
+    return ((q[0]-cx)/rx)*((q[0]-cx)/rx)+((q[1]-cy)/ry)*((q[1]-cy)/ry)<=1;
+  }
+  if(s.type==='poly'&&s.pts&&s.pts.length>=3) return pointInPoly(q,s.pts);
+  if(s.type==='cpath'&&s.pts&&s.pts.length>=2){
+    const r=Math.max(4, (+s.w||0)/2);
+    for(let i=0;i<s.pts.length-1;i++){ if(distToSeg(q, s.pts[i], s.pts[i+1])<=r) return true; }
+    return false;
+  }
+  return false;
+}
+function offsetPolyline(pts, d, sign){
+  const res=[];
+  for(let i=0;i<pts.length;i++){
+    const p=pts[i];
+    let dirIn=null, dirOut=null;
+    if(i>0){ const a=pts[i-1], b=pts[i]; const dx=b[0]-a[0], dy=b[1]-a[1], L=Math.hypot(dx,dy)||1; dirIn=[dx/L,dy/L]; }
+    if(i<pts.length-1){ const a=pts[i], b=pts[i+1]; const dx=b[0]-a[0], dy=b[1]-a[1], L=Math.hypot(dx,dy)||1; dirOut=[dx/L,dy/L]; }
+    if(dirIn && dirOut){
+      const nIn=[-dirIn[1],dirIn[0]], nOut=[-dirOut[1],dirOut[0]];
+      const ax=p[0]+nIn[0]*d*sign, ay=p[1]+nIn[1]*d*sign;
+      const bx=p[0]+nOut[0]*d*sign, by=p[1]+nOut[1]*d*sign;
+      const den=dirIn[0]*dirOut[1]-dirIn[1]*dirOut[0];
+      if(Math.abs(den)<1e-6){ res.push([bx,by]); continue; }
+      const tt=((bx-ax)*dirOut[1]-(by-ay)*dirOut[0])/den;
+      res.push([ax+dirIn[0]*tt, ay+dirIn[1]*tt]);
+    } else {
+      const dir=dirOut||dirIn; if(!dir){ res.push([p[0],p[1]]); continue; }
+      res.push([p[0]-dir[1]*d*sign, p[1]+dir[0]*d*sign]);
+    }
+  }
+  return res;
+}
+function distToSeg(p,a,b){
+  const dx=b[0]-a[0], dy=b[1]-a[1];
+  const L2=dx*dx+dy*dy;
+  let t= L2 ? ((p[0]-a[0])*dx+(p[1]-a[1])*dy)/L2 : 0;
+  t=Math.max(0,Math.min(1,t));
+  return Math.hypot(p[0]-(a[0]+dx*t), p[1]-(a[1]+dy*t));
+}
 function drawStrokes(ctx,cv,m,z){
   if(!ctx) return;
   const dpr=window.devicePixelRatio||1;
@@ -1424,17 +1684,103 @@ function drawStrokes(ctx,cv,m,z){
   ctx.scale(dpr*(z||1), dpr*(z||1));
   ctx.lineCap='round'; ctx.lineJoin='round';
   (m.draw||[]).forEach(s=>{
-    const col=s.color||'#c9a227';
-    if(s.type==='rect' || s.type==='ellipse' || s.type==='corridor'){
-      ctx.strokeStyle=col; ctx.fillStyle=col+'2e'; ctx.lineWidth=Math.max(1,+s.width||2);
-      if(s.type==='rect'){
-        ctx.fillRect(s.x,s.y,s.w,s.h); ctx.strokeRect(s.x,s.y,s.w,s.h);
-      } else if(s.type==='ellipse'){
+    const rot=+s.rot||0;
+    if(rot){
+      const bb=shapeBBox(s);
+      const rcx=bb.x+bb.w/2, rcy=bb.y+bb.h/2;
+      ctx.save();
+      ctx.translate(rcx,rcy); ctx.rotate(rot*Math.PI/180); ctx.translate(-rcx,-rcy);
+    }
+    try{
+    if(s.type==='cpath'){
+      const cpts=s.pts||[], ct=Math.max(4, +s.w||0);
+      if(cpts.length>=2 && ct>0){
+        const cww=Math.max(6,(+s.width||2)*3);
+        ctx.save(); ctx.lineCap='butt'; ctx.lineJoin='miter';
+        ctx.strokeStyle=s.fill||'rgba(0,0,0,.06)'; ctx.lineWidth=ct;
+        ctx.beginPath(); cpts.forEach((p,i)=>{ i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]); }); ctx.stroke();
+        [1,-1].forEach(sgn=>{
+          const op=offsetPolyline(cpts, ct/2, sgn);
+          if(!op || op.length<2) return;
+          ctx.beginPath(); op.forEach((p,i)=>{ i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]); });
+          ctx.strokeStyle='#111'; ctx.lineWidth=cww; ctx.stroke();
+          ctx.strokeStyle='#fff'; ctx.lineWidth=Math.max(1, cww-3); ctx.stroke();
+        });
+        ctx.restore();
+      }
+      return;
+    }
+    const col=s.color||'#111';
+    const isShape = s.type==='rect' || s.type==='ellipse' || s.type==='corridor' || s.type==='poly';
+    if(isShape){
+      const fill = s.fill || (s.type==='corridor' ? 'rgba(0,0,0,.05)' : 'rgba(255,255,255,.5)');
+      if(s.wall===false){
         ctx.beginPath();
-        ctx.ellipse(s.x+s.w/2, s.y+s.h/2, Math.max(1,s.w/2), Math.max(1,s.h/2), 0, 0, Math.PI*2);
-        ctx.fill(); ctx.stroke();
+        if(s.type==='rect' || s.type==='corridor') ctx.rect(s.x,s.y,s.w,s.h);
+        else if(s.type==='ellipse') ctx.ellipse(s.x+s.w/2, s.y+s.h/2, Math.max(1,s.w/2), Math.max(1,s.h/2), 0, 0, Math.PI*2);
+        else if(s.type==='poly' && s.pts && s.pts.length>=3){ s.pts.forEach((p,i)=>{ i ? ctx.lineTo(p[0],p[1]) : ctx.moveTo(p[0],p[1]); }); ctx.closePath(); }
+        else return;
+        ctx.fillStyle=fill; ctx.fill();
+        if(s.type!=='corridor'){ ctx.strokeStyle=col; ctx.lineWidth=Math.max(1,+s.width||2); ctx.stroke(); }
+        return;
+      }
+      const ww=Math.max(6,(+s.width||2)*3);
+      const wp=wallPaths(s, ww/2);
+      if(!wp) return;
+      const openEnds = s.type==='corridor';
+      const horiz = s.w >= s.h;
+      ctx.fillStyle=fill;
+      if(openEnds) ctx.fillRect(s.x, s.y, s.w, s.h); else ctx.fill(wp.inner);
+      ctx.save();
+      let hatchBB;
+      if(openEnds){
+        const band=new Path2D();
+        band.rect(s.x, s.y, s.w, s.h);
+        band.rect(s.x+ww, s.y+ww, Math.max(1, s.w-2*ww), Math.max(1, s.h-2*ww));
+        ctx.clip(band, 'evenodd');
+        const strips=new Path2D();
+        if(horiz){
+          const sx=s.x+ww, sw=Math.max(1, s.w-2*ww);
+          strips.rect(sx, s.y, sw, ww); strips.rect(sx, s.y+s.h-ww, sw, ww);
+        } else {
+          const sy=s.y+ww, sh=Math.max(1, s.h-2*ww);
+          strips.rect(s.x, sy, ww, sh); strips.rect(s.x+s.w-ww, sy, ww, sh);
+        }
+        ctx.clip(strips);
+        hatchBB={x:s.x, y:s.y, w:s.w, h:s.h};
       } else {
-        ctx.fillRect(s.x,s.y,s.w,s.h); ctx.strokeRect(s.x,s.y,s.w,s.h);
+        const band=new Path2D(); band.addPath(wp.outer); band.addPath(wp.inner);
+        ctx.clip(band, 'evenodd');
+        hatchBB=wp.bb;
+      }
+      ctx.fillStyle='#fff'; ctx.fillRect(hatchBB.x, hatchBB.y, hatchBB.w, hatchBB.h);
+      ctx.strokeStyle='#111'; ctx.lineWidth=1;
+      ctx.beginPath();
+      const step=6, x0=hatchBB.x, y0=hatchBB.y, x1=x0+hatchBB.w, y1=y0+hatchBB.h;
+      for(let q=x0-y1; q<x1; q+=step){ ctx.moveTo(q,y0); ctx.lineTo(q+(y1-y0), y1); }
+      ctx.stroke();
+      ctx.restore();
+      ctx.strokeStyle='#111'; ctx.lineWidth=1.5;
+      if(openEnds){
+        ctx.beginPath();
+        if(horiz){
+          const a=s.y, b=s.y+ww, c=s.y+s.h-ww, d=s.y+s.h;
+          const x1=s.x+ww, x2=Math.max(x1, s.x+s.w-ww);
+          ctx.moveTo(x1,a); ctx.lineTo(x2,a);
+          ctx.moveTo(x1,b); ctx.lineTo(x2,b);
+          ctx.moveTo(x1,c); ctx.lineTo(x2,c);
+          ctx.moveTo(x1,d); ctx.lineTo(x2,d);
+        } else {
+          const a=s.x, b=s.x+ww, c=s.x+s.w-ww, d=s.x+s.w;
+          const y1=s.y+ww, y2=Math.max(y1, s.y+s.h-ww);
+          ctx.moveTo(a,y1); ctx.lineTo(a,y2);
+          ctx.moveTo(b,y1); ctx.lineTo(b,y2);
+          ctx.moveTo(c,y1); ctx.lineTo(c,y2);
+          ctx.moveTo(d,y1); ctx.lineTo(d,y2);
+        }
+        ctx.stroke();
+      } else {
+        ctx.stroke(wp.outer); ctx.stroke(wp.inner);
       }
       return;
     }
@@ -1443,8 +1789,31 @@ function drawStrokes(ctx,cv,m,z){
     ctx.beginPath();
     s.pts.forEach((p,i)=>{ i? ctx.lineTo(p[0],p[1]) : ctx.moveTo(p[0],p[1]); });
     ctx.stroke();
+    } finally { if(rot) ctx.restore(); }
   });
+  if(drawSel>=0 && window.__drawSelMap===m.id && (m.draw||[])[drawSel]){
+    const sel=m.draw[drawSel];
+    const bb=shapeBBox(sel), zz=z||1, hs=7/zz;
+    const rot=+sel.rot||0;
+    const rcx=bb.x+bb.w/2, rcy=bb.y+bb.h/2;
+    ctx.save();
+    if(rot){ ctx.translate(rcx,rcy); ctx.rotate(rot*Math.PI/180); ctx.translate(-rcx,-rcy); }
+    ctx.strokeStyle='#2a6fdb'; ctx.lineWidth=1.5/zz; ctx.setLineDash([6/zz,4/zz]);
+    ctx.strokeRect(bb.x,bb.y,bb.w,bb.h);
+    ctx.setLineDash([]);
+    ctx.fillStyle='#fff';
+    shapeHandles(bb).forEach(hh=>{ ctx.beginPath(); ctx.rect(hh[1]-hs/2, hh[2]-hs/2, hs, hs); ctx.fill(); ctx.stroke(); });
+    const rhy=bb.y-18/zz;
+    ctx.beginPath(); ctx.moveTo(rcx,bb.y); ctx.lineTo(rcx,rhy); ctx.stroke();
+    ctx.beginPath(); ctx.arc(rcx,rhy,5/zz,0,Math.PI*2); ctx.fill(); ctx.stroke();
+    ctx.restore();
+  }
   ctx.restore();
+}
+function mapWallsEnabled(){ return true; }
+function mapMonoOn(){
+  const el=document.getElementById('mapMono');
+  return el ? !!el.checked : false;
 }
 function mapDrawToolValue(){
   const el=document.getElementById('mapDrawTool');
@@ -1456,58 +1825,167 @@ function shapeFromDrag(tool, a, b, color, m){
     const p1=snapPoint(m,x1,y1), p2=snapPoint(m,x2,y2);
     x1=p1.x; y1=p1.y; x2=p2.x; y2=p2.y;
   }
-  return { type: tool==='room' ? 'rect' : (tool==='oval' ? 'ellipse' : 'corridor'),
-    x: Math.min(x1,x2), y: Math.min(y1,y2),
-    w: Math.abs(x2-x1), h: Math.abs(y2-y1),
-    color, width: 2 };
+  const sx=Math.min(x1,x2), sy=Math.min(y1,y2), sw=Math.abs(x2-x1), sh=Math.abs(y2-y1);
+  if(tool==='corridor'){
+    const ct=Math.max(4, Math.min(sw,sh));
+    const pts = sw>=sh ? [[sx, sy+sh/2],[sx+sw, sy+sh/2]] : [[sx+sw/2, sy],[sx+sw/2, sy+sh]];
+    return { type:'cpath', pts:pts, w:ct, color:'#111', fill:'rgba(0,0,0,.06)', width:2 };
+  }
+  return { type: tool==='room' ? 'rect' : 'ellipse',
+    x: sx, y: sy, w: sw, h: sh,
+    color:'#111', fill:'rgba(255,255,255,.5)', width: 2, wall: true };
 }
 function bindDraw(cv,wrapper,m,z){
   const dpr=window.devicePixelRatio||1;
   let drawing=false, curStroke=null, curShape=null, startPt=null, ctx=cv.getContext('2d');
+  let edit=null;
+  let polyPts=null, polyHover=null, polyColor=null;
   function toBase(e){
     const r=cv.getBoundingClientRect();
     return [ (e.clientX-r.left) * (m.baseW/r.width), (e.clientY-r.top) * (m.baseH/r.height) ];
   }
   function repaint(){
     const list=(m.draw||[]).slice();
+    if(polyPts && polyPts.length){
+      const pts=polyPts.concat(polyHover? [polyHover] : []);
+      if(pts.length>=2) list.push({ type:'poly', pts:pts, color:'#111', fill:'rgba(255,255,255,.5)', width:2, wall:true });
+    }
     if(curShape) list.push(curShape);
     drawStrokes(ctx,cv,{ draw:list },z);
+  }
+  function closePoly(){
+    if(polyPts && polyPts.length>=3){
+      m.draw.push({ type:'poly', pts:polyPts.slice(), color:'#111', fill:'rgba(255,255,255,.5)', width:2, wall:true });
+      saveMap(); toast('Полигон добавлен');
+    }
+    polyPts=null; polyHover=null; polyColor=null;
+    renderMap();
   }
   cv.addEventListener('pointerdown', e=>{
     const tool=mapDrawToolValue();
     if(tool==='none') return;
-    e.preventDefault(); cv.setPointerCapture&&cv.setPointerCapture(e.pointerId);
-    drawing=true;
+    e.preventDefault();
     const p=toBase(e);
+    if(tool==='select'){
+      const hb=Math.max(4, 10/(z||1));
+      const cur=(window.__drawSelIndex>=0)?(m.draw||[])[window.__drawSelIndex]:null;
+      if(cur){
+        const bb=shapeBBox(cur);
+        const pl=localPoint(cur,p);
+        const rh={x:bb.x+bb.w/2, y:bb.y-18/(z||1)};
+        if(Math.hypot(pl[0]-rh.x, pl[1]-rh.y) <= 12/(z||1)){
+          edit={mode:'rotate', idx:window.__drawSelIndex, start:p, rot0:+cur.rot||0, orig:JSON.parse(JSON.stringify(cur))};
+          cv.setPointerCapture&&cv.setPointerCapture(e.pointerId);
+          return;
+        }
+        const h=shapeHandles(bb).find(hh=>Math.abs(pl[0]-hh[1])<=hb && Math.abs(pl[1]-hh[2])<=hb);
+        if(h){
+          edit={mode:'resize', handle:h[0], idx:window.__drawSelIndex, start:p, orig:JSON.parse(JSON.stringify(cur))};
+          cv.setPointerCapture&&cv.setPointerCapture(e.pointerId);
+          return;
+        }
+      }
+      let hit=-1;
+      for(let i=(m.draw||[]).length-1;i>=0;i--){ if(hitShape(m.draw[i],p)){ hit=i; break; } }
+      setDrawSel(hit);
+      if(hit>=0){
+        edit={mode:'move', handle:null, idx:hit, start:p, orig:JSON.parse(JSON.stringify(m.draw[hit]))};
+        cv.setPointerCapture&&cv.setPointerCapture(e.pointerId);
+      } else repaint();
+      return;
+    }
+    if(tool==='poly'){
+      if(!polyPts){ polyPts=[]; polyColor=markerColor(); }
+      if(polyPts.length>=3){
+        const f=polyPts[0];
+        const rr=cv.getBoundingClientRect().width / Math.max(1,m.baseW) * 14;
+        if(Math.hypot(p[0]-f[0], p[1]-f[1]) <= rr){ closePoly(); return; }
+      }
+      polyPts.push(p); polyHover=p; repaint();
+      return;
+    }
+    cv.setPointerCapture&&cv.setPointerCapture(e.pointerId);
+    drawing=true;
     startPt=p;
     if(tool==='pen'){ curStroke={ color: markerColor(), width:2, pts:[p] }; }
     else { curShape=shapeFromDrag(tool, p, p, markerColor(), m); }
   });
   cv.addEventListener('pointermove', e=>{
+    if(edit){
+      e.preventDefault();
+      const p=toBase(e);
+      const s=(m.draw||[])[edit.idx];
+      if(!s){ edit=null; return; }
+      if(edit.mode==='rotate'){
+        const ob=shapeBBox(edit.orig);
+        const cx=ob.x+ob.w/2, cy=ob.y+ob.h/2;
+        const a0=Math.atan2(edit.start[1]-cy, edit.start[0]-cx);
+        const a1=Math.atan2(p[1]-cy, p[0]-cx);
+        let deg=edit.rot0 + (a1-a0)*180/Math.PI;
+        if(e.shiftKey) deg=Math.round(deg/15)*15;
+        s.rot=((deg%360)+360)%360;
+        repaint();
+        return;
+      }
+      const dx=p[0]-edit.start[0], dy=p[1]-edit.start[1];
+      if(edit.mode==='move'){
+        if(s.pts&&edit.orig.pts) s.pts=edit.orig.pts.map(pt=>[pt[0]+dx,pt[1]+dy]);
+        else { s.x=edit.orig.x+dx; s.y=edit.orig.y+dy; }
+      } else {
+        const o=edit.orig, h=edit.handle, ob=shapeBBox(o);
+        const rot0=+o.rot||0;
+        let pl=p;
+        if(rot0){
+          const cx=ob.x+ob.w/2, cy=ob.y+ob.h/2, a=-rot0*Math.PI/180;
+          const ddx=p[0]-cx, ddy=p[1]-cy;
+          pl=[cx+ddx*Math.cos(a)-ddy*Math.sin(a), cy+ddx*Math.sin(a)+ddy*Math.cos(a)];
+        }
+        let l=ob.x, t=ob.y, r=ob.x+ob.w, b=ob.y+ob.h;
+        if(h.indexOf('w')>=0) l=Math.min(pl[0], r-4);
+        if(h.indexOf('e')>=0) r=Math.max(pl[0], l+4);
+        if(h.indexOf('n')>=0) t=Math.min(pl[1], b-4);
+        if(h.indexOf('s')>=0) b=Math.max(pl[1], t+4);
+        if(s.pts&&edit.orig.pts){
+          const nb={x:l,y:t,w:r-l,h:b-t};
+          s.pts=edit.orig.pts.map(pt=>[nb.x+(pt[0]-ob.x)*(nb.w/ob.w||1), nb.y+(pt[1]-ob.y)*(nb.h/ob.h||1)]);
+        } else { s.x=l; s.y=t; s.w=Math.max(2,r-l); s.h=Math.max(2,b-t); }
+      }
+      repaint();
+      return;
+    }
+    const tool=mapDrawToolValue();
+    if(tool==='poly' && polyPts && polyPts.length){
+      polyHover=toBase(e); repaint(); return;
+    }
     if(!drawing) return;
     e.preventDefault();
     const p=toBase(e);
     if(curStroke){
       curStroke.pts.push(p);
       const [x,y]=p, prev=curStroke.pts[curStroke.pts.length-2]||p;
-      ctx.save(); ctx.scale(dpr,z||1); ctx.lineCap='round'; ctx.lineJoin='round';
+      ctx.save(); ctx.scale(dpr*(z||1), dpr*(z||1)); ctx.lineCap='round'; ctx.lineJoin='round';
       ctx.strokeStyle=curStroke.color; ctx.lineWidth=curStroke.width;
       ctx.beginPath(); ctx.moveTo(prev[0],prev[1]); ctx.lineTo(x,y); ctx.stroke(); ctx.restore();
       return;
     }
     if(curShape){
-      const tool=mapDrawToolValue();
-      // тянем от исходной точки в любую сторону — верх и влево тоже работают
       curShape=shapeFromDrag(tool, startPt || [curShape.x,curShape.y], p, curShape.color, m);
       repaint();
     }
   });
+  cv.addEventListener('dblclick', e=>{
+    if(mapDrawToolValue()==='poly' && polyPts){ e.preventDefault(); closePoly(); }
+  });
   const end=()=>{
+    if(edit){ edit=null; saveMap(); renderMap(); return; }
     if(!drawing) return;
     drawing=false;
     if(curStroke && curStroke.pts.length>1){ m.draw.push(curStroke); saveMap(); }
     if(curShape){
-      if(curShape.w>=4 && curShape.h>=4){ m.draw.push(curShape); saveMap(); }
+      const okShape = curShape.type==='cpath'
+        ? ((curShape.pts||[]).length>=2 && (+curShape.w||0)>=4)
+        : (curShape.w>=4 && curShape.h>=4);
+      if(okShape){ m.draw.push(curShape); saveMap(); }
       curShape=null; startPt=null; renderMap();
     }
     curStroke=null;
@@ -1517,10 +1995,7 @@ function bindDraw(cv,wrapper,m,z){
   cv.addEventListener('pointerleave', end);
 }
 function markerColor(){
-  // чередуем цвета маркеров/пера, чтобы новое было видно
-  const m=curMap(); if(!m) return '#c9a227';
-  const palette=['#c9a227','#7fb3e6','#c0564f','#86c48f','#c9a2e6','#e68a4a'];
-  return palette[(m.draw&&m.draw.length) % palette.length];
+  return '#111';
 }
 /* Создать квадратную карту на весь экран */
 function addFullScreenMap(){
@@ -1581,7 +2056,7 @@ function renderMapTabs(){
     saveMap(); renderMap();
   }));
   const addTab=document.getElementById('mapAddTab');
-  if(addTab) addTab.addEventListener('click', ()=> document.getElementById('mapFileInput').click());
+  if(addTab) addTab.addEventListener('click', ()=> openMapAddMenu(addTab));
   const fullBtn=document.getElementById('mapFull');
   if(fullBtn && !fullBtn.dataset.bound){ fullBtn.dataset.bound='1'; fullBtn.addEventListener('click', addFullScreenMap); }
   const urlBtn=document.getElementById('mapFromUrl');

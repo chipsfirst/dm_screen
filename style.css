@@ -333,10 +333,12 @@ html,body{height:100%}
   .map-toolbar{display:flex; gap:8px; align-items:center; padding:8px 18px; border-bottom:1px solid var(--line); flex-wrap:wrap; background:var(--panel)}
   .map-canvas{
     flex:1; position:relative; overflow:auto;
-    background-color:var(--bg);
+    background-color:#ffffff;
+    background-image:radial-gradient(rgba(0,0,0,.035) 1px, transparent 1px);
+    background-size:12px 12px;
     min-height:0; padding:12px;
   }
-  .map-canvas.has-bg{background-color:var(--bg)}
+  .map-canvas.has-bg{background-color:#ffffff}
   .map-canvas.locked{overflow:auto}
   .map-canvas{scrollbar-gutter:stable}
   .map-canvas::-webkit-scrollbar{width:12px; height:12px}
@@ -347,7 +349,7 @@ html,body{height:100%}
   /* сцена — реальный размер карты с учётом вписывания; ею ограничена прокрутка */
   .map-stage{position:relative; margin:0 auto}
   .map-zoom{position:absolute; top:0; left:0; transform-origin:0 0;
-    background-color:#f4f2ec;
+    background-color:#ffffff;
     box-shadow:0 6px 22px rgba(0,0,0,.28);
     outline:1px solid rgba(0,0,0,.18);
   }
@@ -358,18 +360,18 @@ html,body{height:100%}
   }
 
   .map-zoom.shape-square{
-    background-color:#f6f3ea;
+    background-color:#ffffff;
     background-image:
-      linear-gradient(rgba(80,86,96,.38) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(80,86,96,.38) 1px, transparent 1px);
+      linear-gradient(rgba(0,0,0,.16) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,0,0,.16) 1px, transparent 1px);
     background-size:var(--cell,40px) var(--cell,40px);
     background-repeat:repeat;
   }
 
   .map-grid{position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:2;
     background-image:
-      linear-gradient(rgba(200,210,220,.28) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(200,210,220,.28) 1px, transparent 1px);
+      linear-gradient(rgba(0,0,0,.09) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,0,0,.09) 1px, transparent 1px);
     background-size:var(--grid-step,18px) var(--grid-step,18px);
   }
   .map-canvas.no-grid .map-grid{display:none}
@@ -1794,3 +1796,99 @@ html[data-density="compact"] .block-foot{gap:4px}
 .rules-body summary{cursor:pointer; font-weight:600; font-size:14px; padding:6px 8px; border-radius:6px; list-style-position:inside}
 .rules-body summary:hover{background:var(--panel2)}
 .rules-body details > div{padding:6px 10px 10px; font-size:13px; line-height:1.55}
+
+/* ── Пропсы и палитра тайлов ─────────────── */
+.map-prop{position:absolute; transform-origin:center; z-index:5; cursor:grab; image-rendering:pixelated;
+  pointer-events:auto; filter:drop-shadow(0 2px 4px rgba(0,0,0,.45)); user-select:none}
+.map-prop.selected{outline:2px solid var(--accent2); outline-offset:2px; border-radius:4px}
+.tiles-body{display:flex; flex-direction:column; gap:10px; max-height:60vh; overflow:auto; padding:4px 2px}
+.tiles-cat{font-family:var(--font-head); color:var(--heading); font-size:14px; margin:4px 0 2px}
+.tiles-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(72px,1fr)); gap:6px}
+.tile-btn{display:flex; flex-direction:column; align-items:center; gap:4px; padding:6px; border:1px solid var(--line);
+  border-radius:8px; background:var(--panel2); color:var(--text); cursor:pointer}
+.tile-btn:hover{border-color:var(--accent)}
+.tile-btn img{width:44px; height:44px; image-rendering:pixelated; object-fit:contain}
+.tile-btn span{font-size:10px; color:var(--muted); text-align:center; line-height:1.15}
+.prop-size-row{display:flex; align-items:center; gap:6px}
+.prop-size-row .btn{flex:1}
+.prop-size-row span{min-width:34px; text-align:center; color:var(--muted)}
+
+/* ── Ч/б карта ─────────────── */
+.map-zoom.mono{filter:grayscale(1)}
+.map-zoom.mono .map-title{color:#111; background:rgba(255,255,255,.92); text-shadow:none}
+
+/* ── Боковая панель инструментов карты ─────────────── */
+#view-map{position:relative}
+.map-side{position:absolute; top:52px; right:12px; z-index:45; width:238px; max-height:calc(100% - 120px);
+  overflow:auto; background:var(--panel); border:1px solid var(--line); border-radius:12px;
+  box-shadow:0 14px 34px rgba(0,0,0,.45); padding:8px 10px; display:flex; flex-direction:column; gap:8px; font-size:12.5px}
+.map-side[hidden]{display:none}
+.ms-head{display:flex; align-items:center; justify-content:space-between; gap:8px}
+.ms-head strong{font-family:var(--font-head); font-size:14px; color:var(--heading)}
+.ms-close{background:none; border:none; color:var(--muted); cursor:pointer; font-size:13px; width:22px; height:22px; padding:0; border-radius:6px; line-height:1}
+.ms-close:hover{background:var(--line)}
+.ms-group{display:flex; flex-direction:column; gap:5px; border-top:1px solid var(--line); padding-top:7px}
+.ms-group:first-of-type{border-top:none; padding-top:0}
+.ms-group h4{margin:0; font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted)}
+.ms-row{display:flex; flex-wrap:wrap; gap:5px}
+.ms-row > *{min-width:0}
+.ms-row > select{flex:1 1 100%}
+.map-side select{width:100%; font-size:12px; padding:4px 6px}
+.map-side button{flex:1 1 calc(50% - 3px); width:auto; height:28px; padding:0 6px; font-size:11.5px;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.map-side .ms-close{flex:none; width:22px; height:22px; padding:0; border:none; background:none; font-size:13px; color:var(--muted); overflow:visible}
+.map-side .map-chk{display:flex; align-items:center; gap:5px; flex:1 1 100%; font-size:11.5px; color:var(--muted)}
+.map-side .map-chk input[type=checkbox]{width:auto; flex:none}
+.map-side .map-chk input[type=number]{width:48px; flex:none; padding:2px 4px; font-size:11.5px}
+.map-side .hint{display:block; font-size:10.5px; line-height:1.3; color:var(--muted)}
+.map-toolbar #mapToolsBtn.active{background:var(--sel); color:var(--sel-text); border-color:var(--card-edge-hi)}
+
+/* Меню «Добавить карту» */
+.map-add-menu{position:fixed; z-index:3000; background:#fff; border:1px solid #222; border-radius:10px; padding:4px; display:flex; flex-direction:column; min-width:210px; box-shadow:0 10px 30px rgba(0,0,0,.28); font-size:13px}
+.map-add-menu[hidden]{display:none}
+.map-add-menu button{display:block; width:100%; text-align:left; padding:8px 10px; border:0; background:transparent; border-radius:6px; font:inherit; color:#111; cursor:pointer}
+.map-add-menu button:hover,.map-add-menu button:focus-visible{background:#eee; outline:none}
+
+/* Сегментные иконки-кнопки панели карты */
+.ms-seg{display:flex; flex-wrap:wrap; gap:5px; width:100%}
+.ms-seg button{flex:1 1 calc(33% - 4px); font-size:10.5px; gap:3px}
+.ms-seg.two button{flex-basis:calc(50% - 3px)}
+.map-side button{display:inline-flex; align-items:center; justify-content:center; gap:4px}
+.map-side button .gi{width:13px; height:13px; flex:none}
+.map-side button.active{background:var(--sel); color:var(--sel-text); border-color:var(--card-edge-hi)}
+
+/* Верхняя панель меню карты */
+.map-menu-bar{display:flex; gap:6px; flex-wrap:wrap; align-items:center; position:relative; z-index:60}
+.map-menu{position:relative}
+.map-menu-btn{display:inline-flex; align-items:center; gap:6px; padding:6px 10px; font-size:13px; font-weight:600}
+.mm-caret{font-size:10px; opacity:.7}
+.map-menu .menu-panel{left:0; right:auto; top:calc(100% + 4px); min-width:252px; width:264px; padding:6px; gap:4px; z-index:300}
+.map-menu .menu-panel .ms-row{display:flex; flex-wrap:wrap; gap:5px}
+.map-menu .menu-panel select{width:100%; font-size:12px; padding:4px 6px}
+.map-menu .menu-panel button{flex:1 1 calc(50% - 3px); width:auto; height:28px; padding:0 6px; font-size:11.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:inline-flex; align-items:center; justify-content:center; gap:4px}
+.map-menu .menu-panel button .gi{width:13px; height:13px; flex:none}
+.map-menu .menu-panel .ms-seg button{flex-basis:calc(33% - 4px); font-size:10.5px}
+.map-menu .menu-panel .ms-seg.two button{flex-basis:calc(50% - 3px)}
+.map-menu .menu-panel .map-chk{display:flex; align-items:center; gap:5px; flex:1 1 100%; font-size:11.5px; color:var(--muted)}
+.map-menu .menu-panel .map-chk input[type=checkbox]{width:auto; flex:none}
+.map-menu .menu-panel .map-chk input[type=number]{width:48px; flex:none; padding:2px 4px; font-size:11.5px}
+.map-menu .menu-panel .hint{display:block; font-size:10.5px; line-height:1.3; color:var(--muted)}
+
+/* Панель выбранной фигуры */
+#drawCtl{left:14px; right:auto}
+#drawCtl .hint{display:block; font-size:10.5px; line-height:1.3; color:var(--muted)}
+
+/* Кнопки поворота фигуры */
+.draw-rot-row{display:flex; gap:6px}
+.draw-rot-row .btn{flex:1}
+
+/* Модалка добавления зоны */
+.zone-modal{width:400px}
+.zone-modal-body{padding:12px; display:flex; flex-direction:column; gap:10px}
+.zone-types{display:grid; grid-template-columns:1fr 1fr; gap:6px}
+.zone-types button{display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:8px 6px; font-size:13px;
+  border:1px solid var(--line); border-radius:8px; background:var(--panel2); color:var(--text); cursor:pointer}
+.zone-types button.active{background:linear-gradient(180deg,var(--sel),var(--sel2)); color:var(--sel-text); border-color:var(--card-edge-hi)}
+.zone-modal label{display:flex; align-items:center; gap:8px; font-size:13px; color:var(--muted)}
+.zone-modal input[type=number]{width:84px; padding:4px 6px; border:1px solid var(--line); border-radius:6px; background:var(--panel2); color:var(--text)}
+.zone-actions{display:flex; gap:8px; justify-content:flex-end; padding:0 12px 12px}
