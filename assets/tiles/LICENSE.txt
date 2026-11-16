@@ -10,3 +10,9 @@
 Иконки (assets/tiles/icons): game-icons.net, лицензия CC BY 3.0.
 Авторы: Delapouite (https://delapouite.com), Lorc (https://lorcblog.blogspot.com) и др.
 Требуется атрибуция: «Icons made by Delapouite, Lorc and others. Available on https://game-icons.net».
+
+Тайлы Kenney (assets/tiles/kenney): Tiny Dungeon и Tiny Town.
+Автор: Kenney (https://kenney.nl), лицензия CC0 1.0 (public domain).
+Источник: https://kenney.nl/assets/tiny-dungeon и https://kenney.nl/assets/tiny-town
+Копия получена из зеркала https://github.com/shorepine/kenney (2d/Tiny Dungeon, 2d/Tiny Town).
+Атрибуция не требуется; авторы просят по возможности указывать Kenney.

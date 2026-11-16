@@ -6,7 +6,7 @@
   const tabs = Array.prototype.slice.call(modal.querySelectorAll('[data-gen]'));
   let tab = 'treasure';
   let lastText = '', lastPicks = [];
-  const st = { band:'0-4', mode:'hoard', level:5, count:4, diff:'medium', habitat:'all', kind:'mixed' };
+  const st = { band:'0-4', mode:'hoard', level:5, count:4, diff:'medium', habitat:'all', kind:'mixed', nameCulture:'slavic', advKind:'all' };
 
   const d = n => 1 + Math.floor(Math.random()*n);
   const roll = (n, s) => { let t=0; for(let i=0;i<n;i++) t += d(s); return t; };
@@ -450,6 +450,43 @@
   }
 
   /* ── отрисовка ── */
+  let advRows = [];
+  function names(){
+    const tables = window.NAME_TABLES || {};
+    const key = st.nameCulture || 'slavic';
+    const c = tables[key] || tables.slavic || { label:'Имена', male:['Арин'], female:['Арина'], last:['Тихий'] };
+    const list = [];
+    for(let i=0;i<10;i++){
+      const male = Math.random() < 0.5;
+      list.push(pick(male ? c.male : c.female) + ' ' + pick(c.last));
+    }
+    return {
+      html: '<div class="gen-block"><b>'+esc(c.label)+'</b><div>'+list.map(esc).join('<br>')+'</div></div>',
+      text: 'Имена ('+c.label+'):\n'+list.join('\n')
+    };
+  }
+  function renderAdvList(){
+    const box = document.getElementById('advList'); if(!box) return;
+    const data = (window.ADVENTURE_CAST && window.ADVENTURE_CAST.list) || [];
+    const qEl = document.getElementById('advSearch');
+    const q = ((qEl && qEl.value) || '').trim().toLowerCase();
+    advRows = data.filter(x => (st.advKind==='all' || x.kind===st.advKind) &&
+      (!q || (x.n+' '+x.role+' '+x.adv).toLowerCase().includes(q)));
+    if(!advRows.length){ box.innerHTML = '<div class="lib-empty">Ничего не найдено.</div>'; return; }
+    box.innerHTML = advRows.map((x,i)=>'<div class="lib-row">'+
+      '<span class="lib-kind'+(x.kind==='monster'?' k-feat':'')+'">'+(x.kind==='monster'?'Монстр':'НПС')+'</span>'+
+      '<div class="lib-main"><div class="lib-title">'+esc(x.n)+'</div><div class="lib-meta">'+esc(x.role)+' · '+esc(x.adv)+'</div></div>'+
+      '<button type="button" class="lib-add" data-adv-add="'+i+'" title="Добавить карточку на ширму">＋</button></div>').join('')+
+      '<div class="hint" style="padding:8px 12px">'+esc((window.ADVENTURE_CAST && window.ADVENTURE_CAST.note) || '')+'</div>';
+  }
+  function addAdventureCard(x){
+    if(!x) return;
+    const kind = x.kind==='monster' ? 'Монстр' : 'НПС';
+    const text = 'Имя: '+x.n+'\nРоль: '+x.role+'\nИсточник: '+x.adv+'\n\nСтатблок: в книге приключения (в свободную лицензию не входит).';
+    addRuleBlock({ title: kind+': '+x.n, text });
+    toast('Карточка «'+x.n+'» добавлена');
+  }
+
   function render(){
     tabs.forEach(b => b.classList.toggle('on', b.dataset.gen === tab));
     if(tab === 'treasure'){
@@ -467,6 +504,17 @@
       body.innerHTML = '<div class="gen-row"><button class="btn" data-roll="quest">Сгенерировать квест</button></div><div id="genOut" class="gen-out"></div>';
     } else if(tab === 'npc'){
       body.innerHTML = '<div class="gen-row"><button class="btn" data-roll="npc">Сгенерировать НПС</button></div><div id="genOut" class="gen-out"></div>';
+    } else if(tab === 'names'){
+      const tables = window.NAME_TABLES || {};
+      body.innerHTML = '<div class="gen-row"><label>Культура</label><select data-st="nameCulture">'+
+        Object.keys(tables).map(k=>'<option value="'+k+'"'+(k===st.nameCulture?' selected':'')+'>'+esc(tables[k].label)+'</option>').join('')+
+        '</select><button class="btn" data-roll="names">10 имён</button></div>'+
+        '<div id="genOut" class="gen-out">Выберите культуру и нажмите «10 имён».</div>';
+    } else if(tab === 'adv'){
+      body.innerHTML = '<div class="gen-row"><input id="advSearch" type="search" placeholder="Поиск: имя, роль, приключение" style="flex:1;min-width:180px">'+
+        '<select data-st="advKind">'+[['all','Все'],['npc','НПС'],['monster','Монстры']].map(([v,t])=>'<option value="'+v+'"'+(v===st.advKind?' selected':'')+'>'+t+'</option>').join('')+'</select></div>'+
+        '<div class="gen-out" id="genOut"><div id="advList"></div></div>';
+      renderAdvList();
     } else if(tab === 'dungeon'){
       body.innerHTML = '<div class="gen-row"><button class="btn" data-roll="dungeon">Сгенерировать подземелье</button></div><div id="genOut" class="gen-out"></div>';
     } else {
@@ -490,6 +538,12 @@
   modal.addEventListener('click', e=>{
     const t = e.target.closest('[data-gen]');
     if(t){ tab = t.dataset.gen; render(); if(tab==='battle') ensureBestiary().then(()=>{ if(tab==='battle') fillHabitats(); }).catch(()=>{}); return; }
+    const adv = e.target.closest('[data-adv-add]');
+    if(adv){
+      const x = advRows[+adv.dataset.advAdd];
+      if(x){ addAdventureCard(x); adv.textContent='✓'; }
+      return;
+    }
     const a = e.target.closest('[data-add-last],[data-add-monster]');
     if(a){
       if(a.dataset.addLast !== undefined){
@@ -508,6 +562,7 @@
       else if(kind === 'battle'){ const o = battle(); lastText = o.text; out(o.html, false); }
       else if(kind === 'quest'){ const o = quest(); lastText = o.text; out(o.html, true); }
       else if(kind === 'npc'){ const o = npc(); lastText = o.text; out(o.html, true); }
+      else if(kind === 'names'){ const o = names(); lastText = o.text; out(o.html, true); }
       else if(kind === 'dungeon'){ const o = dungeon(); lastText = o.text; out(o.html, true); }
       else { const o = crit(kind); lastText = o.text; out(o.html, true); }
       return;
@@ -519,6 +574,7 @@
     const k = el.dataset.st;
     st[k] = (k==='level'||k==='count') ? (parseInt(el.value,10)||1) : el.value;
     if(k==='habitat' || k==='kind' || k==='diff') render();
+    if(k==='advKind') renderAdvList();
   });
 
   const openBtn = document.getElementById('btnGen');
@@ -530,6 +586,7 @@
   const closeBtn = document.getElementById('genClose');
   if(closeBtn) closeBtn.addEventListener('click', ()=> closeModal(modal));
   modal.addEventListener('click', e=>{ if(e.target === modal) closeModal(modal); });
+  modal.addEventListener('input', e=>{ if(e.target && e.target.id==='advSearch') renderAdvList(); });
 })();
 
 /* ═══ Совет мастеру ═══ */

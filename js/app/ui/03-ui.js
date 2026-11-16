@@ -24,7 +24,7 @@ function initCanvasEvents(){
   canvas.addEventListener('click', e=>{
     const t = e.target;
     // клик по заголовку блока — свернуть/развернуть
-    if(t.closest('[data-toggle]') && !t.closest('.block-title') && !t.closest('[data-action]')){
+    if(t.closest('[data-toggle]') && !t.closest('.block-title') && !t.closest('[data-action]') && !t.closest('[data-session-open]') && !t.closest('[data-link-open]') && !t.closest('[data-map-open]')){
       const blockEl=t.closest('.block');
       if(blockEl) toggleBlock(blockEl.dataset.id);
       return;
@@ -38,6 +38,14 @@ function initCanvasEvents(){
       doRoll('d20',1, (m>=0?`+${m}`:m));
       return;
     }
+    const linkOpen = t.closest('[data-link-open]');
+    if(linkOpen){ openLinkedBlock(linkOpen.dataset.linkOpen); return; }
+    const sessOpen = t.closest('[data-session-open]');
+    if(sessOpen){ openSessionById(sessOpen.dataset.sessionOpen); return; }
+    const mapOpen = t.closest('[data-map-open]');
+    if(mapOpen){ openMapMarker(mapOpen.dataset.mapOpen, mapOpen.dataset.mapMarker); return; }
+    const linkEdit = t.closest('[data-link-edit]');
+    if(linkEdit){ openLinksDialog(linkEdit.dataset.linkEdit); return; }
     const rollAll = t.closest('[data-action="rollAll"]');
     if(rollAll){
       const b=findBlock(rollAll.dataset.rollId); if(!b) return;
@@ -60,6 +68,8 @@ function initCanvasEvents(){
       else if(act.dataset.action==='expand'){ collapsed.delete(id); renderBlockOnly(id); save(); }
       else if(act.dataset.action==='battle'){ addBlockToBattle(findBlock(act.dataset.battleId)); }
       else if(act.dataset.action==='map'){ addBlockToMap(findBlock(act.dataset.mapId)); }
+      else if(act.dataset.action==='tpl'){ saveBlockAsTemplate(findBlock(act.dataset.tplId)); }
+      else if(act.dataset.action==='print'){ openPrintCard(findBlock(act.dataset.printId)); }
       return;
     }
     const resBtn = t.closest('[data-res-op]');
@@ -231,7 +241,22 @@ function removeBlock(id){
   const victim=blocks.find(b=>b.id===id);
   pushUndo('удаление блока «'+((victim&&victim.title)||'')+'»');
   blocks = blocks.filter(b=>b.id!==id);
-  blocks.forEach(b=>{ b.links = b.links.filter(x=>x!==id); });
+  blocks.forEach(b=>{
+    const was = Array.isArray(b.links) ? b.links : [];
+    const next = was.filter(x=> x!==id && !(victim && x===victim.title && !blocks.some(o=>o.id!==id && o.title===victim.title)));
+    if(next.length!==was.length) b.links = next;
+  });
+  try{
+    if(typeof sessions !== 'undefined' && Array.isArray(sessions)){
+      let changed = false;
+      sessions.forEach(s=>{
+        if(!Array.isArray(s.links)) return;
+        const next = s.links.filter(x=> x!==id);
+        if(next.length !== s.links.length){ s.links = next; changed = true; }
+      });
+      if(changed && typeof persistSessions === 'function') persistSessions();
+    }
+  }catch(e){}
   if(activeParentId===id) activeParentId=null;
   save(); render();
 }

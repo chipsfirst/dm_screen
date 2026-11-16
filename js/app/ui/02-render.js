@@ -124,6 +124,67 @@ function blockSummary(b){
     return (v!=null && String(v).trim()!=='') ? lbl+': '+String(v) : '';
   }).filter(Boolean).slice(0,3).join(' · ');
 }
+/* ═══ Связи между карточками ═══ */
+function linkTarget(v){
+  if(v==null) return null;
+  const s=String(v);
+  return blocks.find(b=>b.id===s) || blocks.find(b=>b.title===s) || null;
+}
+function linkedBlocksOf(b){
+  if(!b) return [];
+  const out=[], seen=new Set([b.id]);
+  const push=t=>{ if(t && !seen.has(t.id)){ seen.add(t.id); out.push(t); } };
+  (Array.isArray(b.links)?b.links:[]).forEach(v=> push(linkTarget(v)));
+  blocks.forEach(o=>{
+    if(seen.has(o.id)) return;
+    const arr=Array.isArray(o.links)?o.links:[];
+    if(arr.some(v=> v===b.id || v===b.title)) push(o);
+  });
+  return out.sort((a,c)=> String(a.title||'').localeCompare(String(c.title||''),'ru'));
+}
+let sessionsPeeked = false;
+function sessionsForBlock(b){
+  if(!b) return [];
+  try{
+    if(typeof sessions === 'undefined' || !Array.isArray(sessions)) return [];
+    if(!sessionsPeeked){
+      sessionsPeeked = true;
+      if(!sessionsInited && !sessions.length && typeof loadSessions === 'function') loadSessions();
+    }
+    return sessions.filter(s=> Array.isArray(s.links) && s.links.includes(b.id));
+  }catch(e){ return []; }
+}
+function mapMarkersForBlock(b){
+  try{
+    if(typeof maps === 'undefined' || !Array.isArray(maps)) return [];
+    const out=[];
+    maps.forEach(m=> (m.markers||[]).forEach(k=>{
+      if(k && k.blockId===b.id) out.push({map:m, marker:k});
+    }));
+    return out;
+  }catch(e){ return []; }
+}
+function mapRowHtml(b){
+  const list=mapMarkersForBlock(b);
+  if(!list.length) return '';
+  return `<div class="card-links card-map"><span class="cl-lbl">На карте</span>${list.map(({map,marker})=>`<button type="button" class="cl-chip" data-map-open="${map.id}" data-map-marker="${marker.id}" title="Перейти к метке на карте">${escapeHtml(map.name||'Карта')}: ${escapeHtml(marker.label||'метка')}</button>`).join('')}</div>`;
+}
+function sessionsRowHtml(b){
+  const list = sessionsForBlock(b);
+  if(!list.length) return '';
+  return `<div class="card-links card-sessions"><span class="cl-lbl">Сессии</span>${list.map(s=>`<button type="button" class="cl-chip" data-session-open="${s.id}" title="Открыть сессию">${escapeHtml(s.title||'Сессия')}</button>`).join('')}</div>`;
+}
+function linksHtml(b){
+  const list = linkedBlocksOf(b);
+  const chips = list.map(t=>{
+    const title = t.title || '(без названия)';
+    return `<button type="button" class="cl-chip" data-link-open="${t.id}" title="${escapeHtml((TYPE_LABEL[t.type]||'Карточка')+': '+title)}"><span>${escapeHtml(title)}</span></button>`;
+  }).join('');
+  return `<div class="card-links">
+    <span class="cl-lbl">Связи</span>${chips}
+    <button type="button" class="cl-add" data-link-edit="${b.id}" title="Добавить или убрать связи">＋ Связь</button>
+  </div>` + sessionsRowHtml(b) + mapRowHtml(b);
+}
 function blockCard(b){
   const open = !collapsed.has(b.id);
   const border = 'border-'+b.type;
@@ -131,6 +192,14 @@ function blockCard(b){
   const w = b.w || 820;
   const wide = blockIsWide(b) ? ' block-wide' : '';
   const sum = open ? '' : blockSummary(b);
+  const sessList = open ? [] : sessionsForBlock(b);
+  const sessBadge = sessList.length
+    ? `<button type="button" class="sess-badge" data-session-open="${sessList[0].id}" title="${escapeHtml(sessList.map(s=>s.title||'Сессия').join(', '))}">◈ ${sessList.length}</button>`
+    : '';
+  const mapList = open ? [] : mapMarkersForBlock(b);
+  const mapBadge = mapList.length
+    ? `<button type="button" class="sess-badge map-badge" data-map-open="${mapList[0].map.id}" data-map-marker="${mapList[0].marker.id}" title="${escapeHtml(mapList.map(x=>x.map.name||'Карта').join(', '))}">⌖ ${mapList.length}</button>`
+    : '';
   const li = `<div class="block ${border}${wide}" data-id="${b.id}" style="width:${w}px">
     <div class="block-head" data-toggle>
       <span class="collapse ${open?'':'collapsed'}">▸</span>
@@ -139,6 +208,8 @@ function blockCard(b){
         <span class="type-tag ${b.type}">${ttype}</span>
         ${b.type==='pc' ? blockHpBarHtml(b) : ''}
         ${sum ? `<span class="block-sum" title="${escapeHtml(sum)}">${escapeHtml(sum)}</span>` : ''}
+        ${sessBadge}
+        ${mapBadge}
         ${open ? '' : `<button class="del del-head" data-action="delete" data-id="${b.id}" title="Удалить блок" aria-label="Удалить блок">✕</button>`}
       </div>
     </div>
@@ -167,11 +238,17 @@ function blockFoot(b){
     ? `<button data-action="rollAll" data-roll-id="${b.id}" title="Бросить d20 по всем характеристикам">Бросок всех</button>`
     : '';
   const battleMap = (b.type==='pc'||b.type==='mob')
-    ? `<button data-action="battle" data-battle-id="${b.id}" title="Добавить в вкладку «Бой»">${gi('battle')} В бой</button><button data-action="map" data-map-id="${b.id}" title="Поставить на карту">${gi('map')} На карту</button>`
+    ? `<button data-action="battle" data-battle-id="${b.id}" title="Добавить во вкладку «Бой»">${gi('battle')} В бой</button><button data-action="map" data-map-id="${b.id}" title="Поставить на карту">${gi('map')} На карту</button>`
     : '';
+  const tplBtn = b.type!=='img'
+    ? `<button data-action="tpl" data-tpl-id="${b.id}" title="Сохранить карточку как шаблон">В шаблон</button>`
+    : '';
+  const printBtn = `<button data-action="print" data-print-id="${b.id}" title="Печать карточки или сохранение в PDF">${gi('export')} Печать</button>`;
   return `<div class="block-foot">
         ${rollAll}
         ${battleMap}
+        ${tplBtn}
+        ${printBtn}
         <span class="size-info" title="Ширина карточки">↔ <input class="resize-input" type="number" min="200" max="1600" step="20" value="${b.w||820}" data-width="${b.id}" title="Ширина блока, px"></span>
         <button class="del" data-action="delete">Удалить блок</button>
       </div>`;
@@ -182,7 +259,7 @@ function bodyHtml(b){
       <div class="card-notes">
         <div class="hint">Текстовая заметка к статблоку:</div>
         <textarea data-field="text" data-id="${b.id}" style="${autoTextareaStyle(b.text)}">${escapeHtml(b.text)}</textarea>
-      </div></div>
+      </div>${linksHtml(b)}</div>
       ${blockFoot(b)}`;
   }
   if(b.type==='pc' || b.type==='mob'){
@@ -207,7 +284,7 @@ function bodyHtml(b){
       ${b.type==='pc'?resourcesHtml(b):''}
       <textarea data-field="text" data-id="${b.id}" placeholder="Заметки…" style="${autoTextareaStyle(b.text)}">${escapeHtml(b.text)}</textarea>
     </div>`;
-    return `<div class="block-body"><div class="card-cols">${left}${right}</div></div>
+    return `<div class="block-body"><div class="card-cols">${left}${right}</div>${linksHtml(b)}</div>
       ${blockFoot(b)}`;
   }
   let inner='';
@@ -225,7 +302,7 @@ function bodyHtml(b){
     }
   }
   inner += `<textarea data-field="text" data-id="${b.id}" style="${autoTextareaStyle(b.text)}">${escapeHtml(b.text)}</textarea>`;
-  return `<div class="block-body">${inner}</div>
+  return `<div class="block-body">${inner}${linksHtml(b)}</div>
     ${blockFoot(b)}`;
 }
 /* ═══ Ресурсы (ячейки, патроны, вдохновение и т.п.) ═══ */

@@ -227,6 +227,7 @@
         <button id="addMobTop" class="only-monsters">＋ Добавить монстра</button>
         <button id="createMobTop" class="only-monsters"><span class="gi" data-gi="monsters"></span> Создать монстра</button>
         <button id="btnImportJsonTop" title="Импорт персонажа или монстра из JSON"><span class="gi" data-gi="import"></span> Из JSON</button>
+        <button id="tplOpenTop" title="Шаблоны карточек: сохранить заготовку и создать по ней новую"><span class="gi" data-gi="note"></span> Шаблоны</button>
         <span class="canvas-tools">
           <input id="canvasFilter" type="search" class="canvas-filter" placeholder="Фильтр по карточкам…" aria-label="Фильтр по карточкам">
           <span class="canvas-view" role="group" aria-label="Вид доски">
@@ -248,6 +249,7 @@
         <aside class="sessions-list">
           <div class="sessions-list-head">
             <button id="sessionNew" title="Новая сессия">＋ Сессия</button>
+            <button id="sessionTplBtn" title="Шаблоны сессий">Шаблоны</button>
           </div>
           <div id="sessionsList" class="sessions-list-items"></div>
         </aside>
@@ -307,6 +309,7 @@
             </select>
             <span class="acts-sep"></span>
             <button data-link="1" title="Ссылка"><span class="gi" data-gi="link"></span></button>
+            <button id="sessionCardLink" type="button" title="Вставить ссылку на карточку ([[название]])" aria-label="Вставить ссылку на карточку">[[ ]]</button>
             <button id="sessionImgBtn" type="button" title="Вставить картинку" aria-label="Вставить картинку">IMG</button>
             <input type="file" id="sessionImgInput" accept="image/*" class="hidden" aria-label="Выбрать картинку">
             <button data-cmd="removeFormat" title="Очистить форматирование">✕ фмт</button>
@@ -321,6 +324,7 @@
             <button id="sessionExportPdf" title="Экспорт в PDF (печать)">PDF</button>
             <button id="sessionDelete" title="Удалить сессию" class="del"><span class="gi" data-gi="trash"></span></button>
           </div>
+          <div class="session-links" id="sessionLinks"></div>
           <div id="sessionEditor" class="session-editor" contenteditable="true" spellcheck="false" aria-label="Текст сессии"></div>
         </div>
       </div>
@@ -375,6 +379,9 @@
         <button id="mapSnapShapes" title="Примагнитить нарисованное к сетке"><span class="gi" data-gi="magnet"></span> Привязать</button>
         <span class="hint" id="mapRulerLabel" hidden></span>
         <span class="hint" id="mapDrawHint">Как рисовать: выберите инструмент и протяните по карте — комната появится со стенами. Полигон: клики по вершинам, двойной клик — замкнуть. Ассеты ставятся в центр карты, затем их можно двигать.</span>
+        <button id="mapPresent" title="Показать карту игрокам: скрыть интерфейс и скрытые токены">Экран игроков</button>
+        <button id="mapUndo" title="Отменить действие на карте (Ctrl+Z)" disabled>↶</button>
+        <button id="mapRedo" title="Повторить действие (Ctrl+Shift+Z)" disabled>↷</button>
         <button id="mapMoreBtn" title="Дополнительные настройки" aria-expanded="false">⚙ Дополнительно</button>
         <input type="file" id="mapFileInput" accept="image/*" class="hidden" aria-label="Загрузка карты">
         <div class="map-adv" id="mapAdvanced" hidden>
@@ -388,6 +395,9 @@
           <label class="map-chk"><input type="checkbox" id="mapMono"> Чёрно-белая карта</label>
           <label class="map-chk">Клетка, px: <input type="number" id="mapCellPx" min="12" max="160" step="1" value="34"></label>
           <label class="map-chk">Клетка: <input type="number" id="mapFeet" min="1" max="60" step="1" value="5"> футов</label>
+          <label class="map-chk">Сетка X: <input type="number" id="mapGridOffX" min="-240" max="240" step="1" value="0"></label>
+          <label class="map-chk">Сетка Y: <input type="number" id="mapGridOffY" min="-240" max="240" step="1" value="0"></label>
+          <button id="mapCalibrate" title="Подогнать сетку под карту по двум точкам известного расстояния">Калибровать сетку</button>
           <select id="mapZoneType" title="Шаблон зоны (AoE)">
             <option value="none">Зоны: нет</option>
             <option value="circle">Зоны: круг</option>
@@ -402,6 +412,10 @@
             <option value="hide">Туман войны: закрыть</option>
             <option value="reveal">Туман войны: открыть</option>
           </select>
+          <label class="map-chk"><input type="checkbox" id="mapFogSoft"> Мягкий край</label>
+          <button id="mapFogHideAll" title="Закрыть туманом всю карту">Скрыть всё</button>
+          <button id="mapFogShowAll" title="Убрать туман со всей карты">Открыть всё</button>
+          <button id="mapFogRoom" title="Кликните по нарисованной комнате, чтобы открыть её">Открыть комнату</button>
           <button id="mapDrawClear" title="Очистить рисунок на карте"><span class="gi" data-gi="trash"></span> Очистить</button>
           <button id="mapExport" title="Сохранить карту в JSON-файл"><span class="gi" data-gi="export"></span> Сохранить</button>
           <button id="mapImport" title="Загрузить карту из JSON-файла"><span class="gi" data-gi="import"></span> Загрузить</button>
@@ -413,6 +427,7 @@
         <aside class="map-rail" id="mapTabs" aria-label="Список карт"></aside>
         <div class="map-canvas" id="mapCanvas"></div>
       </div>
+      <button id="mapPresentExit" hidden>Выйти из режима игрока</button>
 
       <div class="map-zoomctl" aria-label="Масштаб карты">
         <button id="mapZoomIn" title="Приблизить" aria-label="Приблизить">+</button>
@@ -428,7 +443,11 @@
         <label>ХП<input type="number" id="tokenHp" min="0" step="1"></label>
         <label>ХП макс.<input type="number" id="tokenHpMax" min="0" step="1"></label>
         <label>КД<input type="number" id="tokenAc" min="0" max="40" step="1"></label>
+        <details class="tok-conds-box"><summary>Состояния</summary><div id="tokenConds"></div></details>
+        <label class="map-chk"><input type="checkbox" id="tokenHidden"> Скрыт от игроков</label>
+        <button class="btn" id="tokenToBattle" type="button">В бой</button>
         <label>Цвет<input type="color" id="tokenColor"></label>
+        <div class="mp-layer-row"><button type="button" id="tokenFront" title="Поднять выше остальных токенов">Выше</button><button type="button" id="tokenBack" title="Опустить ниже остальных токенов">Ниже</button></div>
         <button class="del" id="tokenDelete">Удалить токен</button>
       </div>
       <div class="map-panel" id="markerCtl" hidden>
@@ -444,11 +463,13 @@
         <button class="btn" id="propRotR">⟳ Повернуть вправо</button>
         <button class="btn" id="propFlip">Отразить</button>
         <div class="prop-size-row"><button class="btn" id="propSizeM">−</button><span id="propSizeVal">1×</span><button class="btn" id="propSizeP">+</button></div>
+        <div class="mp-layer-row"><button type="button" id="propFront" title="Поднять выше остальных ассетов">Выше</button><button type="button" id="propBack" title="Опустить ниже остальных ассетов">Ниже</button></div>
         <button class="del" id="propDel">Удалить пропс</button>
       </div>
       <div class="map-panel" id="drawCtl" hidden>
         <div class="mp-head"><strong>Фигура</strong><button class="mp-close" id="drawCtlClose" title="Снять выделение">✕</button></div>
         <div class="draw-rot-row"><button class="btn" id="drawRotL" title="Повернуть на 15° против часовой">⟲ 15°</button><button class="btn" id="drawRotR" title="Повернуть на 15° по часовой">⟳ 15°</button></div>
+        <div class="mp-layer-row"><button type="button" id="drawFront" title="Поднять фигуру выше">Выше</button><button type="button" id="drawBack" title="Опустить фигуру ниже">Ниже</button></div>
         <button class="del" id="drawDelete"><span class="gi" data-gi="trash"></span> Удалить фигуру</button>
         <span class="hint">Тяните за края и углы — размер; за кружок сверху — поворот; внутри — перемещение. Delete — удалить.</span>
       </div>
@@ -495,7 +516,7 @@
           <button class="modal-close" id="tilesClose" title="Закрыть">✕</button>
         </div>
         <div class="tiles-body" id="tilesGrid"></div>
-        <div class="room-lib-foot hint">Тайлы DCSS (CC0). Клик — поставить в центр карты; дальше двигайте мышью.</div>
+        <div class="room-lib-foot hint">Тайлы DCSS и Kenney (CC0). Клик — поставить в центр карты; дальше двигайте мышью.</div>
       </div>
     </div>
     <div class="tabview" id="view-battle" hidden>
@@ -519,6 +540,7 @@
                 <span class="bs-title" id="battleStatTitle">Статблок</span>
                 <span class="bs-sub" id="battleStatSub"></span>
                 <span class="bs-spacer"></span>
+                <button class="bs-btn bs-btn-text" id="battleStatPrint" type="button" title="Печать статблока или сохранение в PDF" aria-label="Печать статблока">PDF</button>
                 <button class="bs-btn" id="battleStatGrow" type="button" title="Развернуть по высоте">⤢</button>
                 <button class="bs-btn" id="battleStatClose" type="button" title="Закрыть статблок" aria-label="Закрыть статблок">✕</button>
               </div>
@@ -591,7 +613,7 @@
             <span class="af-hint">Автор: Ролёвки от Вовки</span>
             <span class="af-hint" title="Иконки: Lorc, Delapouite — game-icons.net, CC BY 3.0">Иконки: game-icons.net</span>
             <span class="af-hint" title="Магические предметы SRD 5.2.1 — Wizards of the Coast, CC-BY-4.0">SRD 5.2.1 · CC-BY-4.0</span>
-            <span class="af-hint af-ver">Ширма мастера <span id="appVersion">1.3.5</span> · <a class="af-link" href="https://github.com/chipsfirst/dm_screen/releases" target="_blank" rel="noopener">что нового</a></span>
+            <span class="af-hint af-ver">Ширма мастера <span id="appVersion">1.4.0</span> · <a class="af-link" href="https://github.com/chipsfirst/dm_screen/releases" target="_blank" rel="noopener">что нового</a></span>
             <a class="af-link" href="https://boosty.to/vovkaroleplay" target="_blank" rel="noopener">Поддержать</a>
             <a class="af-link" href="https://github.com/chipsfirst/dm_screen" target="_blank" rel="noopener">Репозиторий на GitHub ↗</a>
           </span>
@@ -645,6 +667,7 @@
         <option value="all">Всё</option>
         <option value="spell">Заклинания</option>
         <option value="item">Предметы</option>
+        <option value="feat">Черты</option>
         <option value="rule">Правила</option>
       </select>
     </div>
@@ -681,6 +704,83 @@
       </select>
     </div>
     <div class="modal-results" id="shopResults"></div>
+  </div>
+</div>
+
+<!-- Связи между карточками -->
+<div class="modal" id="linksModal" hidden>
+  <div class="modal-box modal-md">
+    <div class="modal-head">
+      <strong id="linksTitle">Связи карточки</strong>
+      <button class="modal-close" id="linksClose">✕</button>
+    </div>
+    <div class="modal-search">
+      <input id="linksSearch" type="search" placeholder="Поиск карточки по названию…" aria-label="Поиск карточки">
+    </div>
+    <div class="modal-results" id="linksList"></div>
+    <div class="links-foot"><span class="hint">Отметьте карточки — связь появится в обеих. Работает и для персонажей, и для монстров.</span></div>
+  </div>
+</div>
+
+<!-- Шаблоны карточек -->
+<div class="modal" id="tplModal" hidden>
+  <div class="modal-box modal-md">
+    <div class="modal-head">
+      <strong><span class="gi" data-gi="note"></span> Шаблоны карточек</strong>
+      <button class="modal-close" id="tplClose">✕</button>
+    </div>
+    <div class="modal-search">
+      <input id="tplSearch" type="search" placeholder="Поиск шаблона…" aria-label="Поиск шаблона">
+    </div>
+    <div class="modal-results" id="tplList"></div>
+    <div class="links-foot"><span class="hint">Сохранить карточку как шаблон — кнопка «В шаблон» в её подвале.</span></div>
+  </div>
+</div>
+
+<!-- Шаблоны сессий -->
+<div class="modal" id="sessionTplModal" hidden>
+  <div class="modal-box modal-md">
+    <div class="modal-head">
+      <strong><span class="gi" data-gi="note"></span> Шаблоны сессий</strong>
+      <button class="modal-close" id="sessionTplClose">✕</button>
+    </div>
+    <div class="modal-search">
+      <input id="sessionTplSearch" type="search" placeholder="Поиск шаблона…" aria-label="Поиск шаблона сессии">
+    </div>
+    <div class="modal-results" id="sessionTplList"></div>
+    <div class="links-foot sess-tpl-foot">
+      <button id="sessionTplSave" type="button">Сохранить текущую сессию как шаблон</button>
+    </div>
+  </div>
+</div>
+
+<!-- Связи сессии с карточками -->
+<div class="modal" id="sessLinksModal" hidden>
+  <div class="modal-box modal-md">
+    <div class="modal-head">
+      <strong id="sessLinksTitle">Связи сессии</strong>
+      <button class="modal-close" id="sessLinksClose">✕</button>
+    </div>
+    <div class="modal-search">
+      <input id="sessLinksSearch" type="search" placeholder="Поиск карточки по названию…" aria-label="Поиск карточки">
+    </div>
+    <div class="modal-results" id="sessLinksList"></div>
+    <div class="links-foot"><span class="hint" id="sessLinksHint">Отметьте карточки, связанные с сессией.</span></div>
+  </div>
+</div>
+
+<!-- Предпросмотр печати -->
+<div class="modal" id="printModal" hidden>
+  <div class="modal-box print-box">
+    <div class="modal-head">
+      <strong id="printTitle">Печать</strong>
+      <button class="modal-close" id="printClose">✕</button>
+    </div>
+    <div class="print-scroll" id="printSheetWrap"></div>
+    <div class="print-foot">
+      <span class="hint">В диалоге печати выберите принтер или «Сохранить как PDF».</span>
+      <button id="printDo">Печать / PDF</button>
+    </div>
   </div>
 </div>
 
@@ -864,6 +964,8 @@
       <button class="gen-tab" data-gen="battle">Бой</button>
       <button class="gen-tab" data-gen="quest">Квесты</button>
       <button class="gen-tab" data-gen="npc">НПС</button>
+      <button class="gen-tab" data-gen="names">Имена</button>
+      <button class="gen-tab" data-gen="adv">Приключения</button>
       <button class="gen-tab" data-gen="dungeon">Подземелья</button>
     </div>
     <div class="modal-results" id="genBody"></div>
@@ -982,27 +1084,33 @@
   </div>
 </div>
 
-<script src="js/data/shop-data.js?v=1.3.5"></script>
-<script src="js/data/shop-catalog-data.js?v=1.3.5"></script>
-<script src="js/data/app-data.js?v=1.3.5"></script>
-<script src="js/data/books-data.js?v=1.3.5"></script>
-<script src="js/data/srd-data.js?v=1.3.5"></script>
-<script src="js/data/srd-chars-data.js?v=1.3.5"></script>
-<script src="js/data/tiles-data.js?v=1.3.5"></script>
-<script src="js/icons.js?v=1.3.5"></script>
-<script src="js/app/core/01-state.js?v=1.3.5"></script>
-<script src="js/app/ui/02-render.js?v=1.3.5"></script>
-<script src="js/app/ui/03-ui.js?v=1.3.5"></script>
-<script src="js/app/ui/04-events.js?v=1.3.5"></script>
-<script src="js/app/data/05-rules.js?v=1.3.5"></script>
-<script src="js/app/ui/06-modals.js?v=1.3.5"></script>
-<script src="js/app/data/07-bestiary.js?v=1.3.5"></script>
-<script src="js/app/data/08-content.js?v=1.3.5"></script>
-<script src="js/app/media/09-music.js?v=1.3.5"></script>
-<script src="js/app/media/10-map.js?v=1.3.5"></script>
-<script src="js/app/ui/11-search.js?v=1.3.5"></script>
-<script src="js/app/pages/12-sessions.js?v=1.3.5"></script>
-<script src="js/app/pages/13-battle.js?v=1.3.5"></script>
-<script src="js/app/pages/14-generators.js?v=1.3.5"></script>
+<script src="js/data/shop-data.js?v=1.4.0"></script>
+<script src="js/data/shop-catalog-data.js?v=1.4.0"></script>
+<script src="js/data/app-data.js?v=1.4.0"></script>
+<script src="js/data/books-data.js?v=1.4.0"></script>
+<script src="js/data/srd-data.js?v=1.4.0"></script>
+<script src="js/data/srd-chars-data.js?v=1.4.0"></script>
+<script src="js/data/feats-data.js?v=1.4.0"></script>
+<script src="js/data/adventure-cast.js?v=1.4.0"></script>
+<script src="js/data/tiles-data.js?v=1.4.0"></script>
+<script src="js/icons.js?v=1.4.0"></script>
+<script src="js/app/core/01-state.js?v=1.4.0"></script>
+<script src="js/app/ui/02-render.js?v=1.4.0"></script>
+<script src="js/app/ui/03-ui.js?v=1.4.0"></script>
+<script src="js/app/ui/04-events.js?v=1.4.0"></script>
+<script src="js/app/data/05-rules.js?v=1.4.0"></script>
+<script src="js/app/ui/06-modals.js?v=1.4.0"></script>
+<script src="js/app/data/07-bestiary.js?v=1.4.0"></script>
+<script src="js/app/data/08-content.js?v=1.4.0"></script>
+<script src="js/app/media/09-music.js?v=1.4.0"></script>
+<script src="js/app/media/10-map.js?v=1.4.0"></script>
+<script src="js/app/ui/11-search.js?v=1.4.0"></script>
+<script src="js/app/pages/12-sessions.js?v=1.4.0"></script>
+<script src="js/app/pages/13-battle.js?v=1.4.0"></script>
+<script src="js/app/pages/14-generators.js?v=1.4.0"></script>
+<script src="js/app/ui/15-cards.js?v=1.4.0"></script>
+<script src="js/app/ui/16-print.js?v=1.4.0"></script>
+<script src="js/app/ui/17-sessions-ext.js?v=1.4.0"></script>
+<script src="js/app/ui/18-map-ext.js?v=1.4.0"></script>
 </body>
 </html>

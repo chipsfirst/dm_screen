@@ -214,8 +214,10 @@ function renderLib(){
   const matchQ = t => !q || normalizeLib(t).includes(q);
 
   const spells=(LIB&&LIB.spells)||[], items=(LIB&&LIB.items)||[];
+  const feats=(window.SRD_FEATS&&window.SRD_FEATS.feats)||[];
   if(inKind('spell')) spells.forEach(sp=>{ if(matchQ(sp.n+' '+sp.sc)) rows.push({kind:'spell', sp}); });
   if(inKind('item'))  items.forEach(it=>{ if(matchQ(it.n)) rows.push({kind:'item', it}); });
+  if(inKind('feat'))  feats.forEach(f=>{ if(matchQ((f.n||'')+' '+(f.en||'')+' '+(f.d||''))) rows.push({kind:'feat', feat:f}); });
   if(inKind('rule'))  RULES_FOR_LIB.forEach(r=>{ if(matchQ(r.title+' '+r.text)) rows.push({kind:'rule', rule:r}); });
 
   if(!rows.length){ libResults.innerHTML=`<div class="lib-empty">Ничего не найдено. Попробуйте другое слово.</div>`; return; }
@@ -248,6 +250,18 @@ function renderLib(){
           <div class="lib-meta">${escapeHtml(meta)}</div>
         </div>${addBtn}</div>`;
     }
+    if(r.kind==='feat'){
+      const f=r.feat;
+      const cat=(window.SRD_FEATS&&window.SRD_FEATS.catLabel&&window.SRD_FEATS.catLabel[f.cat])||'Черта';
+      const meta=[cat, f.prereq].filter(Boolean).join(' · ');
+      return `<div class="lib-row" data-type="librow">
+        <span class="lib-kind k-feat">Черта</span>
+        <div class="lib-main">
+          <div class="lib-title">${escapeHtml(f.n)}${f.en?` <span class="lib-en">${escapeHtml(f.en)}</span>`:''}</div>
+          <div class="lib-meta">${escapeHtml(meta)}</div>
+          <div class="lib-p">${escapeHtml(String(f.d||'').replace(/\s+/g,' ').slice(0,140))}${String(f.d||'').length>140?'…':''}</div>
+        </div>${addBtn}</div>`;
+    }
     const rl=r.rule;
     return `<div class="lib-row" data-type="librow">
       <span class="lib-kind k-rule">Прав.</span>
@@ -267,6 +281,7 @@ function renderLib(){
       const r=rows[idx];
       if(r.kind==='spell') addSpellBlock(r.sp);
       else if(r.kind==='item') addItemBlock(r.it);
+      else if(r.kind==='feat') addFeatBlock(r.feat);
       else if(r.kind==='rule') addRuleBlock(r.rule);
     });
   });
@@ -297,6 +312,17 @@ function addRuleBlock(r){
   b.text = r.text||'';
   blocks.push(b);
   save(); render();
+}
+function addFeatBlock(f){
+  if(!f) return;
+  const meta = window.SRD_FEATS || {};
+  const cat = (meta.catLabel && meta.catLabel[f.cat]) || 'Черта';
+  let txt = `Категория: ${cat}`;
+  if(f.prereq) txt += `\nТребование: ${f.prereq}`;
+  if(f.en) txt += `\nОригинал: ${f.en}`;
+  txt += `\n\n${f.d||''}`;
+  txt += `\n\nИсточник: ${meta.source||'SRD 5.2.1 (CC-BY-4.0)'}`;
+  addRuleBlock({ title:'Черта: '+f.n, text:txt });
 }
 
 /* ═══ Dice ═══ */
@@ -410,6 +436,41 @@ document.getElementById('fileInput').addEventListener('change', e=>{
         if(Array.isArray(data.battleLog)){ try{ localStorage.setItem('shirma_battle_log_v1', JSON.stringify(data.battleLog.slice(0,200))); battleLog=data.battleLog.slice(0,200); extra=true; }catch(e){} }
         if(data.battleTurn && typeof data.battleTurn==='object'){ try{ localStorage.setItem('shirma_battle_turn_v1', JSON.stringify(data.battleTurn)); battleTurn=data.battleTurn; extra=true; }catch(e){} }
         if(data.music && typeof data.music==='object' && musicMetaRestore(data.music)) extra=true;
+        if(Array.isArray(data.templates)){
+          try{
+            const okTypes=['pc','mob','note','rule','img'];
+            const tpls=data.templates.slice(0,60).filter(t=> t && typeof t==='object' && t.name).map(t=>({
+              id:'t'+Math.random().toString(36).slice(2,9),
+              name:String(t.name||'Шаблон').slice(0,80),
+              type:okTypes.includes(t.type)?t.type:'note',
+              props:(t.props && typeof t.props==='object') ? Object.fromEntries(Object.entries(t.props).slice(0,30).map(([k,v])=>[String(k).slice(0,60),String(v==null?'':v).slice(0,200)])) : {},
+              stats:Array.isArray(t.stats) && t.stats.length===6 ? t.stats.map(v=>Math.max(1,Math.min(30,Math.round(+v)||10))) : [10,10,10,10,10,10],
+              res:Array.isArray(t.res) ? t.res.slice(0,20).map(r=>({ name:String(r&&r.name||'').slice(0,40), cur:Math.max(0,Math.round(+(r&&r.cur))||0), max:Math.max(0,Math.round(+(r&&r.max))||0) })) : [],
+              attack:String(t.attack||'').slice(0,20),
+              damage:String(t.damage||'').slice(0,40),
+              mdata:(t.mdata && typeof t.mdata==='object') ? t.mdata : null,
+              text:String(t.text||'').slice(0,5000),
+              w:Math.max(200,Math.min(1600,+t.w||820)),
+              created:+t.created||Date.now()
+            }));
+            localStorage.setItem('shirma_templates_v1', JSON.stringify(tpls));
+            if(typeof blockTemplates!=='undefined') blockTemplates=tpls;
+            if(tpls.length) extra=true;
+          }catch(e){}
+        }
+        if(Array.isArray(data.sessionTemplates)){
+          try{
+            const st=data.sessionTemplates.slice(0,20).filter(t=> t && typeof t==='object' && t.name).map(t=>({
+              id:'st'+Math.random().toString(36).slice(2,9),
+              name:String(t.name).slice(0,80),
+              html:String(t.html||'').slice(0,200000),
+              created:+t.created||Date.now()
+            }));
+            localStorage.setItem('shirma_session_templates_v1', JSON.stringify(st));
+            if(typeof sessTemplates!=='undefined') sessTemplates=st;
+            extra=true;
+          }catch(e){}
+        }
         if(extra){ toast('Восстановлены сессии/карта/бой — применяю…'); setTimeout(()=>location.reload(), 700); }
       }
     }catch(err){ uiAlert('Ошибка чтения файла'); }

@@ -214,7 +214,7 @@ function buildBackupPayload(){
   try{ battleLogData = JSON.parse(localStorage.getItem('shirma_battle_log_v1')||'null'); }catch(e){}
   let turn = null;
   try{ turn = JSON.parse(localStorage.getItem('shirma_battle_turn_v1')||'null'); }catch(e){}
-  return { version:5, exported:Date.now(), blocks, media, sessions, map, battle, battleLog: battleLogData, battleTurn: turn, music: musicMetaSnapshot() };
+  return { version:5, exported:Date.now(), blocks, media, sessions, map, battle, battleLog: battleLogData, battleTurn: turn, music: musicMetaSnapshot(), templates: (typeof blockTemplates!=='undefined' ? blockTemplates : []), sessionTemplates: (()=>{ try{ return JSON.parse(localStorage.getItem('shirma_session_templates_v1')||'[]'); }catch(e){ return []; } })() };
 }
 function scheduleDirSave(){
   if(!saveDirHandle) return;
@@ -346,6 +346,9 @@ document.addEventListener('keydown', e=>{
   if(!((e.ctrlKey||e.metaKey) && !e.shiftKey && e.key.toLowerCase()==='z')) return;
   const t=e.target;
   if(t && (t.closest('input,textarea') || t.isContentEditable)) return; // не мешаем undo в редакторе
+  if(typeof currentTab!=='undefined' && currentTab==='map' && typeof mapUndoStep==='function'){
+    e.preventDefault(); mapUndoStep(); return;
+  }
   e.preventDefault(); undoLast();
 });
 function findBlock(id){ return blocks.find(b=>b.id===id); }

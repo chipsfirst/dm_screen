@@ -141,10 +141,11 @@ async function renameMap(id){
   m.name=(t.trim()||'Карта').slice(0,40); saveMap(); renderMap();
 }
 function mapRulerToggle(){
-  mapRulerOn=!mapRulerOn; rulerPt=null;
+  mapRulerOn=!mapRulerOn; rulerPt=null; rulerPts=[];
   const b=document.getElementById('mapRuler'); if(b) b.classList.toggle('active', !!mapRulerOn);
-  const l=document.getElementById('mapRulerLabel'); if(l){ l.hidden=!mapRulerOn; l.textContent=mapRulerOn?'Клик №1…':''; }
-  if(mapRulerOn) toast('Линейка: кликните начало, затем конец');
+  const l=document.getElementById('mapRulerLabel'); if(l){ l.hidden=!mapRulerOn; l.textContent=mapRulerOn?'Кликните точку маршрута':''; }
+  if(mapRulerOn) toast('Линейка: кликайте точки маршрута, Esc — сбросить');
+  renderMap();
 }
 function mapDuplicate(){
   const m=curMap(); if(!m) return;
@@ -371,12 +372,40 @@ function openMapAddMenu(btn){
     snapShapes.addEventListener('click', ()=>{
       const m=curMap(); if(!m) return;
       const cell=mapCellPx(m);
+      const ox=+m.cellOffX||0, oy=+m.cellOffY||0;
+      const shapes=(m.draw||[]).slice();
+      if(!shapes.length){ toast('На карте пока нечего выравнивать'); return; }
+      // Сгенерированное подземелье: сдвигаем весь рисунок целиком,
+      // иначе комнаты разъезжаются с коридорами и двери превращаются в клетки.
+      const hasPaths=shapes.some(s=> s.type==='cpath' || s.type==='poly');
+      if(hasPaths){
+        let minX=Infinity, minY=Infinity;
+        const acc=(x,y)=>{ if(x<minX) minX=x; if(y<minY) minY=y; };
+        shapes.forEach(s=>{
+          if(s.type==='rect'||s.type==='ellipse'||s.type==='corridor'){ acc(s.x,s.y); }
+          else if(Array.isArray(s.pts)){ s.pts.forEach(p=> acc(p[0],p[1])); }
+        });
+        if(!isFinite(minX)||!isFinite(minY)){ toast('Не удалось определить границы рисунка'); return; }
+        const dx=ox + Math.round((minX-ox)/cell)*cell - minX;
+        const dy=oy + Math.round((minY-oy)/cell)*cell - minY;
+        if(Math.abs(dx)<0.5 && Math.abs(dy)<0.5){ toast('Подземелье уже стоит по сетке'); return; }
+        shapes.forEach(s=>{
+          if(s.type==='rect'||s.type==='ellipse'||s.type==='corridor'){ s.x+=dx; s.y+=dy; }
+          else if(Array.isArray(s.pts)){ s.pts=s.pts.map(p=>[p[0]+dx,p[1]+dy]); }
+        });
+        saveMap(); renderMap(); toast('Подземелье выровнено целиком — комнаты и коридоры не разъехались');
+        return;
+      }
       let n=0;
-      (m.draw||[]).forEach(s=>{
+      shapes.forEach(s=>{
+        if(s.wall===false) return; // двери и декор не трогаем
         if(s.type==='rect' || s.type==='ellipse' || s.type==='corridor'){
-          const nx=Math.round(s.x/cell)*cell, ny=Math.round(s.y/cell)*cell;
+          if((+s.w||0) < cell*0.6 || (+s.h||0) < cell*0.6) return;
+          const nx=ox + Math.round((s.x-ox)/cell)*cell, ny=oy + Math.round((s.y-oy)/cell)*cell;
           const nw=Math.max(cell, Math.round(s.w/cell)*cell), nh=Math.max(cell, Math.round(s.h/cell)*cell);
-          if(nx!==s.x || ny!==s.y || nw!==s.w || nh!==s.h){ s.x=nx; s.y=ny; s.w=nw; s.h=nh; n++; }
+          if(Math.abs(nx-s.x)>0.5 || Math.abs(ny-s.y)>0.5 || Math.abs(nw-s.w)>0.5 || Math.abs(nh-s.h)>0.5){
+            s.x=nx; s.y=ny; s.w=nw; s.h=nh; n++;
+          }
         }
       });
       if(!n){ toast('Фигуры уже стоят по сетке'); return; }
@@ -511,19 +540,22 @@ function openMapAddMenu(btn){
         const m=curMap(); if(!m) return;
         const w=MC.querySelector('.map-zoom'); if(!w) return;
         const r=w.getBoundingClientRect();
-        const z=mapFitScale(MC, m);
+        const z=mapFitScale(MC, m) * (m.userZoom||1);
         const x=(e.clientX-r.left)/z, y=(e.clientY-r.top)/z;
         if(x<0||y<0||x>m.baseW||y>m.baseH) return;
         if(mapRulerOn){
-          if(!rulerPt){ rulerPt={x:x,y:y}; const l=document.getElementById('mapRulerLabel'); if(l) l.textContent='Клик №2 — конец измерения'; }
-          else{
-            const px=Math.hypot(x-rulerPt.x, y-rulerPt.y);
-            const cells=Math.round(px / Math.max(1,mapCellPx(m)) * 10)/10;
-            const feet=Math.round(cells * Math.max(1, m.feetPerCell||5));
-            const l=document.getElementById('mapRulerLabel'); if(l){ l.hidden=true; l.textContent=''; }
-            toast('Расстояние: '+feet+' фт ('+cells+' кл.)');
-            rulerPt=null; renderMap();
-          }
+          if(!Array.isArray(rulerPts)) rulerPts=[];
+          rulerPts.push({x:x, y:y});
+          const n=rulerPts.length;
+          const cell=Math.max(1,mapCellPx(m)), fpc=Math.max(1,m.feetPerCell||5);
+          const segPx = n>1 ? Math.hypot(x-rulerPts[n-2].x, y-rulerPts[n-2].y) : 0;
+          let totalPx=0;
+          for(let i=1;i<rulerPts.length;i++) totalPx += Math.hypot(rulerPts[i].x-rulerPts[i-1].x, rulerPts[i].y-rulerPts[i-1].y);
+          const segFt=Math.round(segPx/cell*fpc), totalFt=Math.round(totalPx/cell*fpc);
+          const l=document.getElementById('mapRulerLabel');
+          if(l){ l.hidden=false; l.textContent = n===1 ? 'Точка 1 — кликните следующую' : ('Точек: '+n+' · отрезок '+segFt+' фт · всего '+totalFt+' фт'); }
+          toast(n===1 ? 'Линейка: точка 1' : 'Всего: '+totalFt+' фт');
+          renderMap();
           return;
         }
         if(mapPlaceOn){ const sp=snapPoint(m,x,y); placeMarkerAt(sp.x,sp.y); return; }
@@ -665,10 +697,16 @@ function openMapAddMenu(btn){
     function makeRoom(node){
       const mgn=cell*1.2;
       const maxW=Math.max(cell*2.4, node.w-mgn*2), maxH=Math.max(cell*2.4, node.h-mgn*2);
-      const w=Math.min(maxW, cell*(2.4+Math.random()*2.6));
-      const h=Math.min(maxH, cell*(2.4+Math.random()*2.6));
-      const x=node.x+(node.w-w)/2 + (Math.random()-0.5)*Math.min(cell, Math.max(0,maxW-w));
-      const y=node.y+(node.h-h)/2 + (Math.random()-0.5)*Math.min(cell, Math.max(0,maxH-h));
+      let w=Math.min(maxW, cell*(2.4+Math.random()*2.6));
+      let h=Math.min(maxH, cell*(2.4+Math.random()*2.6));
+      w=Math.max(cell*2, Math.round(w/cell)*cell);
+      h=Math.max(cell*2, Math.round(h/cell)*cell);
+      let x=node.x+(node.w-w)/2 + (Math.random()-0.5)*Math.min(cell, Math.max(0,maxW-w));
+      let y=node.y+(node.h-h)/2 + (Math.random()-0.5)*Math.min(cell, Math.max(0,maxH-h));
+      x=Math.round(x/cell)*cell;
+      y=Math.round(y/cell)*cell;
+      x=Math.max(0, Math.min(m.baseW-w, x));
+      y=Math.max(0, Math.min(m.baseH-h, y));
       const room={ type:'rect', x:x, y:y, w:w, h:h, color:'#111', fill:'rgba(255,255,255,.5)', width:2, wall:true };
       m.draw.push(room); return room;
     }

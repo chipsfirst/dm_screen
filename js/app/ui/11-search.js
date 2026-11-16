@@ -57,13 +57,19 @@ function renderGo(qRaw){
   (bestAll||[]).forEach(m=>{ if(hit((m.n||'')+' '+(m.en||'')+' '+(m.type||''))) push({kind:'monster',label:(m.n||''),meta:m.type||'',mon:m}); });
   ((LIB&&LIB.spells)||[]).forEach(sp=>{ if(hit((sp.n||'')+' '+(sp.sc||'')+' '+(sp.cls||''))) push({kind:'spell',label:sp.n,meta:(sp.l!==undefined?('Ур.'+sp.l+' · '):'')+(sp.sc||''),sp}); });
   ((LIB&&LIB.items)||[]).forEach(it=>{ if(hit(it.n||'')) push({kind:'item',label:it.n,meta:it.t||'',it}); });
+  ((window.SRD_FEATS&&window.SRD_FEATS.feats)||[]).forEach(f=>{
+    if(hit((f.n||'')+' '+(f.en||'')+' '+(f.d||''))){
+      const cat=(window.SRD_FEATS.catLabel&&window.SRD_FEATS.catLabel[f.cat])||'Черта';
+      push({kind:'feat',label:f.n,meta:[cat,f.prereq].filter(Boolean).join(' · '),feat:f});
+    }
+  });
   ((window.SHOP)||[]).forEach(it=>{
     if(hit((it.n||'')+' '+(it.c||'')+' '+(it.rarity||'')+' '+(it.d||'')))
       push({kind:'shop',label:it.n,meta:[it.c,it.v].filter(Boolean).join(' · '),shop:it});
   });
   RULES_FOR_LIB.forEach(r=>{ if(hit((r.title||'')+' '+(r.text||''))) push({kind:'rule',label:r.title,meta:'Правила',rule:r}); });
   if(!rows.length){ goResults.innerHTML='<div class="lib-empty">Ничего не найдено.</div>'; return; }
-  const badge={block:'Блок',monster:'Монстр',spell:'Закл.',item:'Предм.',shop:'Магазин',rule:'Прав.'};
+  const badge={block:'Блок',monster:'Монстр',spell:'Закл.',item:'Предм.',shop:'Магазин',feat:'Черта',rule:'Прав.'};
   const canAdd = r => r.kind!=='block';
   goResults.innerHTML = rows.map((r,i)=>`<div class="lib-row go-row" data-go="${i}">
     <span class="lib-kind">${badge[r.kind]||''}</span>
@@ -89,6 +95,7 @@ function addGoItem(r){
   if(r.kind==='monster'){ addMonsterBlock(r.mon); toast('Монстр добавлен на ширму'); }
   else if(r.kind==='spell'){ addSpellBlock(r.sp); toast('Заклинание добавлено на ширму'); }
   else if(r.kind==='item'){ addItemBlock(r.it); toast('Предмет добавлен на ширму'); }
+  else if(r.kind==='feat'){ addFeatBlock(r.feat); toast('Черта добавлена на ширму'); }
   else if(r.kind==='shop'){ addItemBlock({ n:r.shop.n, t:r.shop.c, v:r.shop.v, w:r.shop.w, d:r.shop.d }); toast('Предмет добавлен на ширму'); }
   else if(r.kind==='rule'){ addRuleBlock(r.rule); toast('Правило добавлено на ширму'); }
 }

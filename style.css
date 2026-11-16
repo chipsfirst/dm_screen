@@ -357,6 +357,7 @@ html,body{height:100%}
     background-image:url("assets/hex.svg");
     background-repeat:repeat;
     background-size:var(--cell,34.641px) var(--cell-h,60px);
+    background-position:var(--grid-off-x,0) var(--grid-off-y,0);
   }
 
   .map-zoom.shape-square{
@@ -366,6 +367,7 @@ html,body{height:100%}
       linear-gradient(90deg, rgba(0,0,0,.16) 1px, transparent 1px);
     background-size:var(--cell,40px) var(--cell,40px);
     background-repeat:repeat;
+    background-position:var(--grid-off-x,0) var(--grid-off-y,0);
   }
 
   .map-grid{position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:2;
@@ -373,6 +375,7 @@ html,body{height:100%}
       linear-gradient(rgba(0,0,0,.09) 1px, transparent 1px),
       linear-gradient(90deg, rgba(0,0,0,.09) 1px, transparent 1px);
     background-size:var(--grid-step,18px) var(--grid-step,18px);
+    background-position:var(--grid-off-x,0) var(--grid-off-y,0);
   }
   .map-canvas.no-grid .map-grid{display:none}
   .map-title{position:absolute; top:6px; left:6px; z-index:3; pointer-events:auto; cursor:pointer;
@@ -782,6 +785,8 @@ html,body{height:100%}
   .lib-row .lib-kind.k-spell{color:#7fb3e6; border-color:#7fb3e6}
   .lib-row .lib-kind.k-item{color:#e6b93c; border-color:#e6b93c}
   .lib-row .lib-kind.k-rule{color:#86c48f; border-color:#86c48f}
+  .lib-row .lib-kind.k-feat{color:#c9a3e6; border-color:#c9a3e6}
+  .lib-en{font-size:11px; color:var(--muted); font-weight:400; margin-left:4px}
   .lib-row .lib-main{flex:1; min-width:0}
   .lib-row .lib-title{font-weight:600; font-size:14px}
   .lib-row .lib-meta{color:var(--muted); font-size:12px; margin-top:2px}
@@ -2177,3 +2182,116 @@ html[data-density="compact"] .block-foot{gap:4px}
   .stat:nth-child(6n){border-right:none}
   .stat:nth-child(n+4){border-top:none; margin-top:0; padding-top:0}
 }
+
+/* Броски из статблока и длительность статусов */
+.sc-badge.ab{cursor:pointer}
+.sc-badge.ab:hover{border-color:var(--accent2); background:var(--panel)}
+.sc-saves{display:inline-flex; flex-wrap:wrap; gap:4px}
+.sc-save{font-size:11px; padding:1px 7px; border-radius:10px; background:var(--panel2); border:1px solid var(--line); color:var(--text); cursor:pointer}
+.sc-save:hover{border-color:var(--accent2); color:var(--accent2)}
+.sc-atk{margin-left:4px; font-size:10px; padding:1px 6px; border-radius:9px; background:var(--panel2); border:1px solid var(--line); color:var(--muted); cursor:pointer; vertical-align:middle}
+.sc-atk:hover{color:var(--accent); border-color:var(--accent)}
+.bp-active{display:flex; flex-wrap:wrap; gap:4px}
+.bt-palette .bt-status{display:inline-flex; align-items:center; gap:4px; padding:1px 6px; border-radius:11px; background:var(--panel2); border:1px solid var(--line); font-size:12px}
+.bt-palette .bt-status-del{background:none; border:none; color:var(--muted); cursor:pointer; font-size:10px; padding:0; line-height:1}
+.bt-palette .bt-status-del:hover{color:var(--danger)}
+.bt-palette .bt-turns{width:auto; max-width:56px; padding:1px 2px; font-size:10px; border-radius:4px; background:var(--panel); border:1px solid var(--line); color:var(--muted)}
+
+/* Связи карточек и шаблоны */
+.card-links{display:flex; flex-wrap:wrap; align-items:center; gap:5px; padding:2px 2px 6px}
+.cl-lbl{font-size:10px; letter-spacing:.07em; text-transform:uppercase; color:var(--muted); margin-right:2px}
+.cl-chip{display:inline-flex; align-items:center; max-width:230px; padding:2px 9px; font-size:12px; line-height:1.5; border-radius:999px; border:1px solid var(--line); background:var(--panel2); color:var(--text); cursor:pointer; box-shadow:none}
+.cl-chip span{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.cl-chip:hover{border-color:var(--accent2); color:var(--accent2)}
+.cl-add{font-size:12px; padding:2px 9px; border-radius:999px; border:1px dashed var(--line); background:transparent; color:var(--muted); cursor:pointer; box-shadow:none}
+.cl-add:hover{color:var(--text); border-color:var(--accent2)}
+.links-foot{padding:8px 14px 12px; border-top:1px solid var(--line)}
+.lx-group{font-size:10px; letter-spacing:.07em; text-transform:uppercase; color:var(--muted); padding:10px 12px 3px}
+.lx-row{display:flex; align-items:center; gap:9px; width:100%; text-align:left; padding:7px 12px; border:0; border-radius:7px; background:transparent; color:var(--text); cursor:pointer; box-shadow:none}
+.lx-row:hover{background:var(--panel2)}
+.lx-check{flex:none; width:17px; height:17px; border:1px solid var(--line); border-radius:4px; display:grid; place-items:center; font-size:11px; line-height:1; color:#141414}
+.lx-row.on .lx-check{background:var(--accent2); border-color:var(--accent2)}
+.lx-main{flex:1; min-width:0; display:flex; flex-direction:column; gap:1px}
+.lx-title{font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.lx-meta{font-size:11px; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.tpl-row, .sess-tpl-row{align-items:center}
+.tpl-add,.tpl-del{display:inline-flex; align-items:center; justify-content:center; flex:none; width:26px; height:26px; padding:0; border-radius:6px; border:1px solid var(--line); background:var(--panel2); color:var(--text); cursor:pointer; box-shadow:none; font-size:14px; line-height:1; font-family:inherit}
+.tpl-add{color:var(--accent2); font-size:16px}
+.tpl-add:hover{border-color:var(--accent2)}
+.tpl-del:hover{border-color:var(--danger); color:var(--danger)}
+
+/* Печать карточки и статблока */
+.print-box{width:min(880px,96vw); max-height:92vh}
+.print-scroll{flex:1 1 auto; min-height:0; overflow:auto; padding:18px; background:var(--panel2)}
+.print-sheet{width:210mm; max-width:100%; margin:0 auto; background:#fff; color:#1d1b18; padding:12mm; box-sizing:border-box;
+  box-shadow:0 10px 30px rgba(0,0,0,.35); font-size:13.5px; line-height:1.45;
+  --text:#1d1b18; --muted:#5d5549; --line:#d7d0c3; --divider:#e6dfd1; --panel:#fff; --panel2:#f8f4ea;
+  --accent:#8a6a2c; --accent2:#8a6a2c; --danger:#a63b32; --card-edge:#c9bfa8;
+  --btn-text:#1d1b18; --btn-bg:#fff; --btn-border:#c9bfa8}
+.print-sheet .ps-title{font-size:24px; line-height:1.15; margin:0 0 3px; color:#1d1b18}
+.print-sheet .ps-sub{font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:#6b6355; margin-bottom:12px}
+.print-sheet .ps-val{font-weight:600}
+.print-sheet .ps-pre{white-space:pre-wrap; font-weight:400; margin:4px 0 0}
+.print-sheet .ps-link{font-weight:600; color:#1d1b18; margin-right:7px}
+.print-sheet button{display:none!important}
+.print-sheet .card-cols{display:block!important}
+.print-sheet .card-col-right{margin-top:10px}
+.print-sheet .hint{color:#6b6355}
+.print-sheet .mob-ab{border-color:#d7d0c3}
+.print-sheet .res-chip{background:#f8f4ea; border-color:#d7d0c3}
+.print-sheet img{max-width:100%}
+.print-foot{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 16px; border-top:1px solid var(--divider); flex:0 0 auto}
+.print-foot .hint{flex:1; min-width:0}
+.bs-btn-text{width:auto; min-width:34px; padding:0 6px; font-size:10px; letter-spacing:.04em}
+
+@page{size:A4; margin:12mm}
+@media print{
+  html, body{background:#fff!important; height:auto!important; overflow:visible!important}
+  body>*{display:none!important}
+  #printModal{display:block!important; position:static!important; inset:auto!important; background:none!important; padding:0!important; z-index:auto!important; overflow:visible!important}
+  #printModal .modal-box{display:block!important; width:auto!important; max-width:none!important; max-height:none!important; height:auto!important;
+    box-shadow:none!important; border:0!important; border-radius:0!important; background:#fff!important; overflow:visible!important}
+  #printModal .modal-head, #printModal .print-foot{display:none!important}
+  #printModal .print-scroll{overflow:visible!important; padding:0!important; background:#fff!important; max-height:none!important}
+  .print-sheet{width:auto!important; max-width:none!important; margin:0!important; padding:0!important; box-shadow:none!important; border:0!important; font-size:11pt; line-height:1.4}
+  .print-sheet .card-cols{display:block!important}
+  .print-sheet .mob-section, .print-sheet .stats{break-inside:avoid}
+}
+
+/* Сессии: шаблоны и связи с карточками */
+.sessions-list-head{display:flex; gap:6px}
+.sessions-list-head button{flex:1; width:auto}
+.session-links{display:flex; flex-wrap:wrap; align-items:center; gap:5px; padding:6px 10px; border-bottom:1px solid var(--line); min-height:30px}
+.session-links[hidden]{display:none}
+.session-links .cl-chip{font-size:12px}
+.sess-tpl-foot{display:flex; justify-content:flex-end}
+.sess-tpl-row .lib-kind{white-space:nowrap}
+.session-editor a.sess-card-link{color:var(--accent2); text-decoration:underline dotted; cursor:pointer}
+.session-editor a.sess-card-link:hover{color:var(--accent)}
+.sess-badge{margin-left:4px; padding:1px 7px; border-radius:10px; border:1px solid var(--line); background:var(--panel2); color:var(--accent2); font-size:11px; line-height:1.5; cursor:pointer; box-shadow:none}
+.sess-badge:hover{border-color:var(--accent2); color:var(--accent)}
+.session-editor .sess-tip{border-left:2px solid var(--accent2); padding:2px 0 2px 9px; margin:8px 0; color:var(--muted); font-style:italic}
+.map-canvas.calibrating .map-zoom{cursor:crosshair}
+#mapCalibrate.active{border-color:var(--accent2); color:var(--accent2)}
+.map-token.multi, .map-marker.multi, .map-prop.multi{outline:2px dashed var(--accent2); outline-offset:2px}
+.mp-layer-row{display:flex; gap:6px; margin:6px 0}
+.mp-layer-row button{flex:1}
+.map-token .tok-conds{position:absolute; left:50%; top:-9px; transform:translateX(-50%); display:flex; gap:2px; z-index:4}
+.map-token .tok-conds .ci{width:14px; height:14px; border-radius:50%; border:1px solid rgba(0,0,0,.55); display:grid; place-items:center; color:#fff; overflow:hidden}
+.map-token .tok-conds .ci svg{width:10px; height:10px; fill:#fff; display:block}
+.map-token .tok-conds .ci.more{font-size:8px; line-height:1; background:#2c3036; color:#fff; font-weight:700}
+.map-token.hidden-dm{opacity:.45; outline:1px dashed var(--muted); outline-offset:2px}
+.tok-cond{display:flex; align-items:center; gap:6px; font-size:12px; margin:2px 0}
+.tok-conds-box summary{cursor:pointer; font-size:12px; color:var(--muted); margin:4px 0}
+/* Режим игрока */
+body.map-present .topbar,
+body.map-present .map-toolbar,
+body.map-present .map-rail,
+body.map-present .map-zoomctl,
+body.map-present .map-panel{display:none!important}
+body.map-present #view-map{position:fixed; inset:0; z-index:1000; background:#000; padding:0; margin:0}
+body.map-present .map-layout{height:100vh}
+body.map-present .map-canvas{height:100vh}
+#mapPresentExit{position:fixed; top:12px; right:14px; z-index:1002; background:rgba(20,22,26,.85); color:#f1e9d6; border:1px solid rgba(255,255,255,.25); border-radius:8px; padding:7px 12px; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,.4)}
+#mapPresentExit:hover{border-color:var(--accent2); color:var(--accent2)}
+#mapPresent.active{border-color:var(--accent2); color:var(--accent2)}

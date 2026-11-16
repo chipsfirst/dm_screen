@@ -1,5 +1,6 @@
-/* Ч/б тайлы для карт: Dungeon Crawl Stone Soup (CC0) и game-icons.net (CC BY 3.0).
-   Файлы — assets/tiles/dcss и assets/tiles/icons. */
+/* Тайлы для карт: Dungeon Crawl Stone Soup (CC0), Kenney Tiny Dungeon/Tiny Town (CC0)
+   и game-icons.net (CC BY 3.0). Файлы — assets/tiles/dcss*, assets/tiles/kenney, assets/tiles/icons.
+   Лицензии и атрибуция — assets/tiles/LICENSE.txt. */
 window.MAP_TILES = [
   { cat:'Двери', items:[
     { id:'door', name:'Дверь', file:'dcss_color/door.png' },
@@ -137,5 +138,163 @@ window.MAP_TILES = [
     { id:'monster_eye', name:'Взгляд', file:'monsters/monster_eye.svg' },
     { id:'monster_skull', name:'Скелет', file:'monsters/monster_skull.svg' },
     { id:'monster_footprint', name:'Отпечаток', file:'monsters/monster_footprint.svg' }
+  ]},
+  { cat:'Пол', items:[
+    { id:'floor_stone0', name:'Камень 1', file:'dcss_color/limestone0.png' },
+    { id:'floor_stone1', name:'Камень 2', file:'dcss_color/limestone1.png' },
+    { id:'floor_stone2', name:'Камень 3', file:'dcss_color/limestone2.png' },
+    { id:'floor_sandstone0', name:'Песчаник 1', file:'dcss_color/sandstone_floor0.png' },
+    { id:'floor_sandstone1', name:'Песчаник 2', file:'dcss_color/sandstone_floor1.png' },
+    { id:'floor_sandstone2', name:'Песчаник 3', file:'dcss_color/sandstone_floor2.png' },
+    { id:'floor_crypt0', name:'Склеп 1', file:'dcss_color/crypt0.png' },
+    { id:'floor_crypt1', name:'Склеп 2', file:'dcss_color/crypt1.png' },
+    { id:'floor_crypt2', name:'Склеп 3', file:'dcss_color/crypt2.png' },
+    { id:'floor_dirt0', name:'Земля 1', file:'dcss_color/grey_dirt0.png' },
+    { id:'floor_dirt1', name:'Земля 2', file:'dcss_color/grey_dirt1.png' },
+    { id:'floor_dirt2', name:'Земля 3', file:'dcss_color/grey_dirt2.png' },
+    { id:'floor_grass0', name:'Трава 1', file:'dcss_color/necropolis_grass_1.png' },
+    { id:'floor_grass1', name:'Трава 2', file:'dcss_color/necropolis_grass_2.png' },
+    { id:'floor_grass2', name:'Трава 3', file:'dcss_color/necropolis_grass_3.png' },
+    { id:'floor_sand0', name:'Песок 1', file:'dcss_color/sand1.png' },
+    { id:'floor_sand1', name:'Песок 2', file:'dcss_color/sand2.png' },
+    { id:'floor_sand2', name:'Песок 3', file:'dcss_color/sand3.png' }
+  ]},
+  { cat:'Стены', items:[
+    { id:'wall_brick0', name:'Кирпич 1', file:'dcss_color/brick_brown0.png' },
+    { id:'wall_brick1', name:'Кирпич 2', file:'dcss_color/brick_brown1.png' },
+    { id:'wall_brick2', name:'Кирпич 3', file:'dcss_color/brick_brown2.png' },
+    { id:'wall_brick3', name:'Кирпич 4', file:'dcss_color/brick_brown3.png' },
+    { id:'wall_brick_dark0', name:'Тёмный кирпич 1', file:'dcss_color/brick_dark_1_0.png' },
+    { id:'wall_brick_dark1', name:'Тёмный кирпич 2', file:'dcss_color/brick_dark_1_1.png' },
+    { id:'wall_brick_dark2', name:'Тёмный кирпич 3', file:'dcss_color/brick_dark_1_2.png' },
+    { id:'wall_brick_dark3', name:'Тёмный кирпич 4', file:'dcss_color/brick_dark_1_3.png' },
+    { id:'wall_sandstone0', name:'Песчаник-стена 1', file:'dcss_color/sandstone_wall0.png' },
+    { id:'wall_sandstone1', name:'Песчаник-стена 2', file:'dcss_color/sandstone_wall1.png' },
+    { id:'wall_sandstone2', name:'Песчаник-стена 3', file:'dcss_color/sandstone_wall2.png' },
+    { id:'wall_sandstone3', name:'Песчаник-стена 4', file:'dcss_color/sandstone_wall3.png' },
+    { id:'wall_crypt0', name:'Скала-склеп 1', file:'dcss_color/rock_wall_crypt0.png' },
+    { id:'wall_crypt1', name:'Скала-склеп 2', file:'dcss_color/rock_wall_crypt1.png' },
+    { id:'wall_crypt2', name:'Скала-склеп 3', file:'dcss_color/rock_wall_crypt2.png' },
+    { id:'wall_crypt3', name:'Скала-склеп 4', file:'dcss_color/rock_wall_crypt3.png' }
+  ]},
+  { cat:'Вода', items:[
+    { id:'water_shallow', name:'Мелководье', file:'dcss_color/shallow_water.png' },
+    { id:'water_deep', name:'Глубокая вода', file:'dcss_color/deep_water.png' },
+    { id:'water_shallow_murky', name:'Мутное мелководье', file:'dcss_color/shallow_water_murky.png' },
+    { id:'water_deep_murky', name:'Мутная глубина', file:'dcss_color/deep_water_murky.png' }
+  ]},
+  { cat:'Деревья', items:[
+    { id:'tree_new0', name:'Дерево 1', file:'dcss_color/tree1.png' },
+    { id:'tree_new1', name:'Дерево 2', file:'dcss_color/tree2.png' },
+    { id:'tree_new2', name:'Дерево 3', file:'dcss_color/tree3.png' },
+    { id:'tree_new3', name:'Дерево 4', file:'dcss_color/tree4.png' },
+    { id:'tree_new4', name:'Дерево 5', file:'dcss_color/tree5.png' },
+    { id:'tree_new5', name:'Дерево 6', file:'dcss_color/tree6.png' },
+    { id:'tree_dead_new0', name:'Мёртвое дерево 1', file:'dcss_color/tree_dead1.png' },
+    { id:'tree_dead_new1', name:'Мёртвое дерево 2', file:'dcss_color/tree_dead2.png' },
+    { id:'tree_dead_new2', name:'Мёртвое дерево 3', file:'dcss_color/tree_dead3.png' },
+    { id:'tree_petrified0', name:'Окаменевшее дерево 1', file:'dcss_color/tree_petrified1.png' },
+    { id:'tree_petrified1', name:'Окаменевшее дерево 2', file:'dcss_color/tree_petrified2.png' }
+  ]},
+  { cat:'Двери и проходы', items:[
+    { id:'door_closed', name:'Закрытая дверь', file:'dcss_color/closed_door.png' },
+    { id:'door_open', name:'Открытая дверь', file:'dcss_color/open_door.png' },
+    { id:'door_clear2', name:'Светлая дверь', file:'dcss_color/closed_clear_door.png' },
+    { id:'door_runed', name:'Рунная дверь', file:'dcss_color/runed_door.png' },
+    { id:'door_broken2', name:'Сломанная дверь', file:'dcss_color/broken_door.png' }
+  ]},
+  { cat:'Ловушки (варианты)', items:[
+    { id:'trap_plate2', name:'Нажимная плита', file:'dcss_color/pressure_plate.png' },
+    { id:'trap_spears2', name:'Копья', file:'dcss_color/spear.png' },
+    { id:'trap_bolts2', name:'Дротики', file:'dcss_color/bolt.png' },
+    { id:'trap_net2', name:'Сеть', file:'dcss_color/net.png' },
+    { id:'trap_shaft2', name:'Шахта', file:'dcss_color/shaft.png' },
+    { id:'trap_alarm3', name:'Сигнализация', file:'dcss_color/alarm.png' }
+  ]},
+  { cat:'Магазины', items:[
+    { id:'shop_general2', name:'Магазин (общий)', file:'dcss_color/shop_general.png' },
+    { id:'shop_food2', name:'Магазин еды', file:'dcss_color/shop_food.png' },
+    { id:'shop_weapon2', name:'Оружейная', file:'dcss_color/shop_weapon.png' },
+    { id:'shop_armour', name:'Броня', file:'dcss_color/shop_armour.png' }
+  ]},
+  { cat:'Декор (природа)', items:[
+    { id:'decor_flowers0', name:'Цветы 1', file:'dcss_color/flower_patch_0.png' },
+    { id:'decor_flowers1', name:'Цветы 2', file:'dcss_color/flower_patch_1.png' },
+    { id:'decor_flowers2', name:'Цветы 3', file:'dcss_color/flower_patch_2.png' },
+    { id:'decor_garden', name:'Сад', file:'dcss_color/garden_patch.png' }
+  ]},
+  { cat:'Tiny Dungeon: пол и стены', items:[
+    { id:'kdn_floor1', name:'Пол: тёмная заливка', file:'kenney/dungeon_floor_1.png' },
+    { id:'kdn_floor2', name:'Пол с каймой', file:'kenney/dungeon_floor_2.png' },
+    { id:'kdn_floor3', name:'Тёмный пол', file:'kenney/dungeon_floor_3.png' },
+    { id:'kdn_floor4', name:'Плитка', file:'kenney/dungeon_floor_4.png' },
+    { id:'kdn_floor5', name:'Заливка 1', file:'kenney/dungeon_floor_5.png' },
+    { id:'kdn_floor6', name:'Заливка 2', file:'kenney/dungeon_floor_6.png' },
+    { id:'kdn_floor7', name:'Заливка 3', file:'kenney/dungeon_floor_7.png' },
+    { id:'kdn_floor8', name:'Заливка 4', file:'kenney/dungeon_floor_8.png' },
+    { id:'kdn_wall1', name:'Стена 1', file:'kenney/dungeon_wall_1.png' },
+    { id:'kdn_wall2', name:'Стена 2', file:'kenney/dungeon_wall_2.png' },
+    { id:'kdn_wall3', name:'Стена 3', file:'kenney/dungeon_wall_3.png' },
+    { id:'kdn_wall4', name:'Стена 4', file:'kenney/dungeon_wall_4.png' },
+    { id:'kdn_wall5', name:'Стена 5', file:'kenney/dungeon_wall_5.png' },
+    { id:'kdn_wall6', name:'Стена 6', file:'kenney/dungeon_wall_6.png' },
+    { id:'kdn_stairs1', name:'Стена-полоса 1', file:'kenney/dungeon_stairs_1.png' },
+    { id:'kdn_stairs2', name:'Стена-полоса 2', file:'kenney/dungeon_stairs_2.png' },
+    { id:'kdn_stairs3', name:'Стена-полоса 3', file:'kenney/dungeon_stairs_3.png' },
+    { id:'kdn_stairs4', name:'Стена-полоса 4', file:'kenney/dungeon_stairs_4.png' }
+  ]},
+  { cat:'Tiny Dungeon: двери и скарб', items:[
+    { id:'kdn_door1', name:'Дверь 1', file:'kenney/dungeon_door_1.png' },
+    { id:'kdn_door2', name:'Дверь 2', file:'kenney/dungeon_door_2.png' },
+    { id:'kdn_door3', name:'Дверь 3', file:'kenney/dungeon_door_3.png' },
+    { id:'kdn_door4', name:'Дверь 4', file:'kenney/dungeon_door_4.png' },
+    { id:'kdn_door5', name:'Дверь 5', file:'kenney/dungeon_door_5.png' },
+    { id:'kdn_barrel', name:'Бочка', file:'kenney/dungeon_barrel.png' },
+    { id:'kdn_altar', name:'Алтарь', file:'kenney/dungeon_altar.png' },
+    { id:'kdn_bench', name:'Скамья', file:'kenney/dungeon_bench.png' },
+    { id:'kdn_anvil', name:'Наковальня', file:'kenney/dungeon_anvil.png' },
+    { id:'kdn_table', name:'Стол', file:'kenney/dungeon_table.png' },
+    { id:'kdn_chest1', name:'Сундук 1', file:'kenney/dungeon_chest_1.png' },
+    { id:'kdn_chest2', name:'Сундук 2', file:'kenney/dungeon_chest_2.png' },
+    { id:'kdn_torch1', name:'Факел 1', file:'kenney/dungeon_torch_1.png' },
+    { id:'kdn_torch2', name:'Факел 2', file:'kenney/dungeon_torch_2.png' },
+    { id:'kdn_torch3', name:'Факел 3', file:'kenney/dungeon_torch_3.png' }
+  ]},
+  { cat:'Tiny Town: природа', items:[
+    { id:'ktn_grass1', name:'Трава 1', file:'kenney/town_grass_1.png' },
+    { id:'ktn_grass2', name:'Трава 2', file:'kenney/town_grass_2.png' },
+    { id:'ktn_grass3', name:'Трава 3', file:'kenney/town_grass_3.png' },
+    { id:'ktn_dirt1', name:'Земля 1', file:'kenney/town_dirt_1.png' },
+    { id:'ktn_dirt2', name:'Земля 2', file:'kenney/town_dirt_2.png' },
+    { id:'ktn_dirt3', name:'Земля 3', file:'kenney/town_dirt_3.png' },
+    { id:'ktn_dirt4', name:'Земля 4', file:'kenney/town_dirt_4.png' },
+    { id:'ktn_tree1', name:'Дерево 1', file:'kenney/town_tree_1.png' },
+    { id:'ktn_tree2', name:'Дерево 2', file:'kenney/town_tree_2.png' },
+    { id:'ktn_tree3', name:'Дерево 3', file:'kenney/town_tree_3.png' },
+    { id:'ktn_tree4', name:'Дерево 4', file:'kenney/town_tree_4.png' },
+    { id:'ktn_tree5', name:'Дерево 5', file:'kenney/town_tree_5.png' },
+    { id:'ktn_tree6', name:'Дерево 6', file:'kenney/town_tree_6.png' },
+    { id:'ktn_bush1', name:'Куст 1', file:'kenney/town_bush_1.png' },
+    { id:'ktn_bush2', name:'Куст 2', file:'kenney/town_bush_2.png' }
+  ]},
+  { cat:'Tiny Town: двор и дома', items:[
+    { id:'ktn_fence1', name:'Забор 1', file:'kenney/town_fence_1.png' },
+    { id:'ktn_fence2', name:'Забор 2', file:'kenney/town_fence_2.png' },
+    { id:'ktn_house1', name:'Дом (часть) 1', file:'kenney/town_house_1.png' },
+    { id:'ktn_house2', name:'Дом (часть) 2', file:'kenney/town_house_2.png' },
+    { id:'ktn_house3', name:'Дом (часть) 3', file:'kenney/town_house_3.png' },
+    { id:'ktn_house4', name:'Дом (часть) 4', file:'kenney/town_house_4.png' },
+    { id:'ktn_house5', name:'Дом (часть) 5', file:'kenney/town_house_5.png' },
+    { id:'ktn_house6', name:'Дом (часть) 6', file:'kenney/town_house_6.png' },
+    { id:'ktn_house7', name:'Дом (часть) 7', file:'kenney/town_house_7.png' },
+    { id:'ktn_house8', name:'Дом (часть) 8', file:'kenney/town_house_8.png' },
+    { id:'ktn_well', name:'Колодец', file:'kenney/town_well.png' },
+    { id:'ktn_sign', name:'Вывеска', file:'kenney/town_sign.png' },
+    { id:'ktn_cart1', name:'Телега 1', file:'kenney/town_cart_1.png' },
+    { id:'ktn_cart2', name:'Телега 2', file:'kenney/town_cart_2.png' }
+  ]},
+  { cat:'Алтари', items:[
+    { id:'altar_ecumenical', name:'Алтарь', file:'dcss_color/ecumenical.png' },
+    { id:'altar_unknown', name:'Неизвестный алтарь', file:'dcss_color/unknown.png' }
   ]}
 ];

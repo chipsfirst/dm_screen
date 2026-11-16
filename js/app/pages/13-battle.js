@@ -44,6 +44,9 @@ function loadBattle(){
       side: p.side==='char'?'char':'opp', ac: numField(p.ac), hp: numField(p.hp), hpMax: numField(p.hpMax), init: numField(p.init),
       atk: p.atk===undefined ? '' : numField(p.atk),
       statuses: Array.isArray(p.statuses) ? p.statuses.slice(0,20).map(x=>String(x)) : [],
+      statusTurns: (p.statusTurns && typeof p.statusTurns === 'object')
+        ? Object.fromEntries(Object.entries(p.statusTurns).filter(([k,v])=> typeof v==='number' && v>0).slice(0,20))
+        : {},
       acts: Array.isArray(p.acts) ? p.acts.slice(0,40).map(a=>({tag:String(a.tag||''),text:String(a.text||'')})) : [],
       applied: Array.isArray(p.applied) ? p.applied.slice(0,40).map(x=>String(x)) : [],
       srcId: p.srcId ? String(p.srcId) : '',
@@ -112,6 +115,29 @@ function renderBattleTurn(){
   label.textContent = 'Раунд ' + battleTurn.round + (cur ? ' · ' + cur.name : '');
   label.title = cur ? ('Сейчас ходит: ' + cur.name) : 'Текущий раунд';
 }
+function parseSaves(str){
+  const out = [];
+  String(str||'').split(/[,;]/).forEach(part=>{
+    const m = part.trim().match(/^([А-Яа-яЁёA-Za-z][А-Яа-яЁёA-Za-z .\-]*?)\s*([+\-−]\s*\d+)$/);
+    if(m) out.push({ label: m[1].trim(), bonus: parseInt(m[2].replace('−','-').replace(/\s/g,''),10) });
+  });
+  return out;
+}
+function attackBonusOf(text){
+  const s = String(text||'');
+  let m = s.match(/(?:атак[аиуе]|попаданию)\s*:?\s*([+\-−]\s*\d+)/i);
+  if(!m) m = s.match(/([+\-−]\s*\d+)\s+к\s+попаданию/i);
+  return m ? parseInt(m[1].replace('−','-').replace(/\s/g,''),10) : null;
+}
+function battleRoll(p, label, bonus){
+  if(!p) return;
+  const roll = doOneD20();
+  const b = +bonus || 0;
+  const total = roll + b;
+  const mod = (b >= 0 ? '+' : '') + b;
+  try{ showRollPopup(total, `d20 (${roll}) ${mod}`); }catch(e){}
+  battleLogPush(`«${p.name}» — ${label}: d20 ${roll} ${mod} = ${total}`);
+}
 function statBlockOf(p){
   if(!p || !p.srcId || typeof findBlock !== 'function') return null;
   try{
@@ -149,12 +175,14 @@ function pcStatBlockHtml(p, b){
       <div class="sc-badge hp"><span class="l">ХП</span><span class="v">${escapeHtml(hpVal)}${(hpMax && hpVal!=='—')?`<span class="m">/${escapeHtml(String(hpMax))}</span>`:''}</span></div>
       ${lvl?`<div class="sc-badge"><span class="l">Уровень</span><span class="v">${escapeHtml(lvl)}</span></div>`:''}
       ${sp?`<div class="sc-badge wide"><span class="l">Скорость</span><span class="v small">${escapeHtml(sp)}</span></div>`:''}`;
-  const abilityCells = stats.length ? stats.slice(0,6).map((v,i)=>`<div class="sc-badge ab"><span class="l">${names[i]||''}</span><span class="v">${escapeHtml(String(v))}<span class="m">${modOf(v)}</span></span></div>`).join('') : '';
+  const abilityCells = stats.length ? stats.slice(0,6).map((v,i)=>`<div class="sc-badge ab" data-ab-roll="${names[i]||''}" data-ab-mod="${modOf(v)}" title="Проверка ${names[i]||''}"><span class="l">${names[i]||''}</span><span class="v">${escapeHtml(String(v))}<span class="m">${modOf(v)}</span></span></div>`).join('') : '';
   const topRow = `<div class="sc-top">${badges}${abilityCells}</div>`;
   const initLine = (val('Инициатива')||val('Иниц')||p.init!=='') ? `<div class="sc-line"><b>Инициатива</b> ${escapeHtml(val('Инициатива')||val('Иниц')||String(p.init))}</div>` : '';
   const atk = (b.attack!=null && b.attack!=='') ? String(b.attack) : (p.atk!=='' && p.atk!=null ? String(p.atk) : '');
   const dmg = (b.damage!=null) ? String(b.damage) : '';
-  const attackLine = (atk || dmg) ? `<div class="sc-line"><b>Атака</b> ${atk?`<b class="hit-atk">${escapeHtml(atk)}</b>`:'—'}${dmg?` <span class="sc-dot">·</span> <b>Урон</b> ${highlightAct(dmg)}`:''}</div>` : '';
+  const atkNum = parseInt(String(atk).replace('+','').replace('−','-'),10);
+  const atkBtn = isFinite(atkNum) ? ` <button type="button" class="sc-atk" data-atk-bonus="${atkNum}" data-act-name="Атака" title="Бросок атаки">d20</button>` : '';
+  const attackLine = (atk || dmg) ? `<div class="sc-line"><b>Атака</b> ${atk?`<b class="hit-atk">${escapeHtml(atk)}</b>`:'—'}${atkBtn}${dmg?` <span class="sc-dot">·</span> <b>Урон</b> ${highlightAct(dmg)}`:''}</div>` : '';
   const skip = new Set(['КД','AC','Броня КК','Скорость','Speed','Уровень','Ур.','ХП','HP','Инициатива','Иниц']);
   const propLines = Object.entries(pr).filter(([k,v])=>!skip.has(k) && String(v||'').trim()).map(([k,v])=>`<div class="sc-line"><b>${escapeHtml(k)}</b> ${escapeHtml(String(v))}</div>`).join('');
   const res = Array.isArray(b.res) && b.res.length ? `<div class="sc-sec">Ресурсы</div><div class="sc-res">${b.res.map(r=>`<span class="sc-res-chip">${escapeHtml(r.name||'Ресурс')} <b>${r.cur}/${r.max}</b></span>`).join('')}</div>` : '';
@@ -179,7 +207,7 @@ function statBlockHtml(p){
       <div class="sc-badge hp"><span class="l">ХП</span><span class="v">${escapeHtml(String(p.hp))}</span></div>
       ${cr?`<div class="sc-badge"><span class="l">ОП</span><span class="v">${escapeHtml(cr)}</span></div>`:''}
       ${md.sp?`<div class="sc-badge wide"><span class="l">Скорость</span><span class="v small">${escapeHtml(md.sp)}</span></div>`:''}`;
-  const abilityCells = stats.length ? stats.slice(0,6).map((v,i)=>`<div class="sc-badge ab"><span class="l">${names[i]||''}</span><span class="v">${escapeHtml(String(v))}<span class="m">${modOf(v)}</span></span></div>`).join('') : '';
+  const abilityCells = stats.length ? stats.slice(0,6).map((v,i)=>`<div class="sc-badge ab" data-ab-roll="${names[i]||''}" data-ab-mod="${modOf(v)}" title="Проверка ${names[i]||''}"><span class="l">${names[i]||''}</span><span class="v">${escapeHtml(String(v))}<span class="m">${modOf(v)}</span></span></div>`).join('') : '';
   const topRow = `<div class="sc-top">${badgesInner}${abilityCells}</div>`;
   const initLine = md.init ? `<div class="sc-line"><b>Инициатива</b> ${escapeHtml(md.init)}</div>` : '';
   const actHtml = a => {
@@ -187,7 +215,9 @@ function statBlockHtml(p){
     const rawTag = (a && typeof a==='object' && a.tag) ? a.tag : '';
     const tag = /^действ/i.test(rawTag) ? '' : rawTag;
     const sp = (typeof splitAct==='function') ? splitAct(txt) : {name:txt, body:''};
-    return `<div class="act"><span class="an">${tag?escapeHtml(tag)+' — ':''}${escapeHtml(sp.name)}.</span> ${highlightAct(sp.body)}</div>`;
+    const ab = attackBonusOf(txt);
+    const abBtn = (ab !== null && isFinite(ab)) ? ` <button type="button" class="sc-atk" data-atk-bonus="${ab}" data-act-name="${escapeHtml(sp.name)}" title="Бросок атаки: d20 ${ab>=0?'+':''}${ab}">d20</button>` : '';
+    return `<div class="act"><span class="an">${tag?escapeHtml(tag)+' — ':''}${escapeHtml(sp.name)}.</span> ${highlightAct(sp.body)}${abBtn}</div>`;
   };
   let actsBlock = '';
   if(acts.length){
@@ -201,7 +231,11 @@ function statBlockHtml(p){
       actsBlock = `<div class="sc-sec">Действия</div><div class="sc-acts">${acts.map(actHtml).join('')}</div>`;
     }
   }
-  const meta = line('Навыки', md.sk) + line('Чувства', md.sen) + line('Языки', md.lang) + line('Спасброски', md.sav) + line('Защита', md.imm);
+  const saves = parseSaves(md.sav);
+  const savesLine = saves.length
+    ? `<div class="sc-line"><b>Спасброски</b> <span class="sc-saves">${saves.map(sv=>`<button type="button" class="sc-save" data-save-label="${escapeHtml(sv.label)}" data-save-bonus="${sv.bonus}" title="Спасбросок ${escapeHtml(sv.label)}">${escapeHtml(sv.label)} ${sv.bonus>=0?'+':''}${sv.bonus}</button>`).join('')}</span></div>`
+    : line('Спасброски', md.sav);
+  const meta = line('Навыки', md.sk) + line('Чувства', md.sen) + line('Языки', md.lang) + savesLine + line('Защита', md.imm);
   const hint = !b ? `<div class="hint">Участник добавлен вручную — подробного статблока нет.</div>` : '';
   const extra = meta ? `<div class="sc-extra">${meta}</div>` : '';
   if(wide) return `<div class="stat-card wide">${topRow}${initLine}${actsBlock}${extra}${hint}</div>`;
@@ -241,6 +275,20 @@ function closeStatBlock(){
   battleStatBid = null;
 }
 
+function battleTickStatuses(p){
+  if(!p || !p.statusTurns) return false;
+  let changed = false;
+  Object.keys(p.statusTurns).forEach(name=>{
+    const left = Math.max(0, (+p.statusTurns[name]||0) - 1);
+    if(left > 0){ p.statusTurns[name] = left; return; }
+    delete p.statusTurns[name];
+    const idx = (p.statuses||[]).indexOf(name);
+    if(idx >= 0) p.statuses.splice(idx,1);
+    battleLogPush(`«${p.name}»: статус «${name}» закончился`);
+    changed = true;
+  });
+  return changed;
+}
 function battleNextTurn(){
   if(!battleParts.length){ toast('В бою никого нет'); return; }
   const sorted = battleSorted();
@@ -248,7 +296,8 @@ function battleNextTurn(){
   i = i < 0 ? 0 : i + 1;
   if(i >= sorted.length){ i = 0; battleTurn.round += 1; }
   battleTurn.turnId = sorted[i].id;
-  saveBattleTurn(); renderBattle();
+  battleTickStatuses(sorted[i]);
+  saveBattle(); saveBattleTurn(); renderBattle();
   battleLogPush('Раунд ' + battleTurn.round + ' · ход: ' + sorted[i].name);
 }
 function applyBattleDamage(inp){
@@ -415,7 +464,7 @@ function addBlockToBattle(b){
   const acts = side==='opp' ? ((md.acts||[]).map(a=>({tag:String(a.tag||''),text:String(a.text||'')}))) : [];
   const hpNum = numField(hp);
   battleParts.push({ srcId: b.id, id:uniq(), name:String(name).slice(0,60), side,
-    ac: numField(ac), hp: hpNum, hpMax: hpNum, init: numField(init), atk: '', acts, applied: [], statuses: [] });
+    ac: numField(ac), hp: hpNum, hpMax: hpNum, init: numField(init), atk: '', acts, applied: [], statuses: [], statusTurns: {} });
   saveBattle(); renderBattle();
   toast('«'+name+'» добавлен(а) в бой');
   showTab('battle');
@@ -426,7 +475,7 @@ function battleAdd(side, preset){
     : (side==='opp' ? 'Противник' : 'Персонаж');
   const same = battleParts.filter(p => p.name === base || p.name.indexOf(base + ' ') === 0).length;
   const name = (same ? base + ' ' + (same + 1) : base).slice(0,60);
-  const rec = { id:uniq(), name, side, ac:'', hp:'', hpMax:'', init:'', atk:'', acts:[], applied:[], statuses:[] };
+  const rec = { id:uniq(), name, side, ac:'', hp:'', hpMax:'', init:'', atk:'', acts:[], applied:[], statuses:[], statusTurns:{} };
   battleParts.push(rec);
   battleSelId = rec.id;
   saveBattle(); renderBattle();
@@ -448,7 +497,8 @@ function toggleStatus(bid, name){
   if(!p) return;
   if(!Array.isArray(p.statuses)) p.statuses = [];
   const i = p.statuses.indexOf(name);
-  if(i>=0) p.statuses.splice(i,1); else p.statuses.push(name);
+  if(i>=0){ p.statuses.splice(i,1); if(p.statusTurns) delete p.statusTurns[name]; }
+  else p.statuses.push(name);
   saveBattle(); renderBattle();
   battleLogPush(`«${p.name}»: ${i>=0?'снят статус':'статус'} «${name}»`);
 }
@@ -478,6 +528,18 @@ function renderStatusPalette(bid, anchor){
     <div class="bp-grid">
       ${BATTLE_STATUSES.map((st,i)=>`<button type="button" class="${on.includes(st)?'on':''}" data-pst="${escapeHtml(st)}"><span class="num">${i+1}</span>${escapeHtml(st)}</button>`).join('')}
     </div>
+    ${on.length ? `<div class="bp-sub">Активные</div><div class="bp-active">${on.map(st=>{
+      const turns = p.statusTurns || {};
+      const t = Math.max(0, +turns[st] || 0);
+      const base = [0,1,2,3,4,5,10];
+      const opts = base.includes(t) ? base : base.concat([t]).sort((a,b)=>a-b);
+      return `<span class="bt-status">${escapeHtml(st)}
+        <select class="bt-turns" data-turns-bid="${p.id}" data-turns-status="${escapeHtml(st)}" title="Осталось раундов; ∞ — до снятия">
+          ${opts.map(n=>`<option value="${n}"${n===t?' selected':''}>${n===0?'∞':n+' р.'}</option>`).join('')}
+        </select>
+        <button type="button" class="bt-status-del" data-status-del-pal="${p.id}" data-name="${escapeHtml(st)}" title="Снять статус">✕</button>
+      </span>`;
+    }).join('')}</div>` : ''}
     ${acts.length ? `<div class="bp-sub">Действия</div><div class="bp-acts">${acts.map((a,i)=>`<button type="button" class="bp-act-row" data-bp-act="${i}" title="${escapeHtml(a.text)}">${a.tag?`<span class="bp-tag">${escapeHtml(a.tag)}</span>`:''}<span class="bp-act-txt">${highlightAct(a.text)}</span><span class="bp-act-go" aria-hidden="true">📝</span></button>`).join('')}</div>` : ''}
     ${applied.length ? `<div class="bp-sub">Эффекты</div><div class="bp-chips">${applied.map((t,i)=>`<span class="bt-chip">${escapeHtml(t)}<button type="button" class="bt-chip-del" data-achip="${p.id}" data-ai="${i}" title="Убрать">✕</button></span>`).join('')}</div>` : ''}
   `;
@@ -510,10 +572,33 @@ function paletteIsOpen(){
 function bindBattleKeyboard(){
   const pal = document.getElementById('battleStatusPalette');
   if(pal){
+    pal.addEventListener('change', e=>{
+      const sel = e.target.closest('[data-turns-status]');
+      if(!sel) return;
+      const p = battleParts.find(x=>x.id===sel.dataset.turnsBid);
+      if(!p) return;
+      p.statusTurns = p.statusTurns || {};
+      const n = Math.max(0, +sel.value || 0);
+      if(n > 0) p.statusTurns[sel.dataset.turnsStatus] = n;
+      else delete p.statusTurns[sel.dataset.turnsStatus];
+      saveBattle();
+      renderStatusPalette(p.id, paletteAnchor);
+    });
     pal.addEventListener('click', e=>{
       e.stopPropagation();
       const bid = paletteBid;
       if(e.target.closest('[data-bp-close]')){ closeStatusPalette(); return; }
+      const stDel = e.target.closest('[data-status-del-pal]');
+      if(stDel){
+        const p = battleParts.find(x=>x.id===stDel.dataset.statusDelPal);
+        if(p && Array.isArray(p.statuses)){
+          p.statuses = p.statuses.filter(x=> x!==stDel.dataset.name);
+          if(p.statusTurns) delete p.statusTurns[stDel.dataset.name];
+          saveBattle(); renderBattle();
+          renderStatusPalette(p.id, paletteAnchor);
+        }
+        return;
+      }
       const stBtn = e.target.closest('[data-bp-stat]');
       if(stBtn){
         const p = battleParts.find(x=>x.id===stBtn.dataset.bpStat);
@@ -836,6 +921,17 @@ function bindBattle(){
     qn.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); pushNote(); } });
     if(qa) qa.addEventListener('click', pushNote);
   }
+  const statBodyEl = document.getElementById('battleStatBody');
+  if(statBodyEl) statBodyEl.addEventListener('click', e=>{
+    const p = battleParts.find(x=>x.id === battleStatBid);
+    if(!p) return;
+    const ab = e.target.closest('[data-ab-roll]');
+    if(ab){ battleRoll(p, 'проверка ' + ab.dataset.abRoll, +ab.dataset.abMod); return; }
+    const sv = e.target.closest('[data-save-bonus]');
+    if(sv){ battleRoll(p, 'спасбросок ' + sv.dataset.saveLabel, +sv.dataset.saveBonus); return; }
+    const at = e.target.closest('[data-atk-bonus]');
+    if(at){ battleRoll(p, 'атака' + (at.dataset.actName ? ' «' + at.dataset.actName + '»' : ''), +at.dataset.atkBonus); return; }
+  });
   const statBox = document.getElementById('battleStat');
   if(statBox){
     const statClose = document.getElementById('battleStatClose');

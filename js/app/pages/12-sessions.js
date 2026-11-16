@@ -6,7 +6,10 @@ let sessionsInited = false;
 
 function loadSessions(){
   const data = safeParseRaw(localStorage.getItem(STORE_SESSIONS), 'shirma_sessions');
-  if(Array.isArray(data)){ sessions=data; return sessions.length>0; }
+  if(Array.isArray(data)){
+    sessions = data.map(s=> Object.assign({}, s, { links: Array.isArray(s.links) ? s.links.filter(x=>typeof x==='string') : [] }));
+    return sessions.length>0;
+  }
   sessions=[]; return false;
 }
 /* Резервная копия сессий в IndexedDB (не ограничена квотой localStorage) */
@@ -104,18 +107,29 @@ function selectSession(id){
   if(ed) ed.innerHTML = hydrateSessionHtml(s.html||'');
   const sv=document.getElementById('sessionSaved'); if(sv) sv.textContent='';
   renderSessionsList();
+  if(typeof renderSessionLinks==='function') renderSessionLinks();
 }
-function newSession(silent){
+function openSessionById(id){
+  if(!findSession(id)) return;
+  showTab('sessions');
+  ensureSessions();
+  selectSession(id);
+}
+function newSession(silent, opts){
+  const o=opts||{};
   const now=Date.now();
-  const s={ id:'s'+now.toString(36)+Math.random().toString(36).slice(2,6), title:'Сессия '+new Date(now).toLocaleDateString('ru-RU'), html:'', updated:now };
+  const s={ id:'s'+now.toString(36)+Math.random().toString(36).slice(2,6),
+    title:o.title || ('Сессия '+new Date(now).toLocaleDateString('ru-RU')),
+    html:o.html||'', links:[], updated:now };
   sessions.unshift(s);
   persistSessions();
   activeSessionId=s.id;
   const titleEl=document.getElementById('sessionTitle');
   const ed=document.getElementById('sessionEditor');
   if(titleEl) titleEl.value=s.title;
-  if(ed) ed.innerHTML='';
+  if(ed) ed.innerHTML=s.html||'';
   renderSessionsList();
+  if(typeof renderSessionLinks==='function') renderSessionLinks();
   if(!silent){ scheduleSaveSessions(); }
 }
 function bindSessionControls(){
@@ -461,7 +475,11 @@ function htmlToMarkdown(html){
       case 'code': return '`'+inner+'`';
       case 'pre': return '\n```\n'+node.textContent.replace(/\n+$/,'')+'\n```\n';
       case 'blockquote': return '\n> '+inner.trim().replace(/\n/g,'\n> ')+'\n';
-      case 'a': return '['+inner+']('+(node.getAttribute('href')||'')+')';
+      case 'a': {
+        const cid=node.getAttribute('data-card-open');
+        if(cid) return '[['+inner.trim()+']]';
+        return '['+inner+']('+(node.getAttribute('href')||'')+')';
+      }
       case 'img': return '!['+(node.getAttribute('alt')||'')+']('+(node.getAttribute('src')||'')+')';
       case 'ul': return '\n'+Array.from(node.children).map(li=>'- '+li.textContent.trim()).join('\n')+'\n';
       case 'ol': return '\n'+Array.from(node.children).map((li,i)=>(i+1)+'. '+li.textContent.trim()).join('\n')+'\n';
@@ -529,12 +547,18 @@ document.addEventListener('click', e=>{
 });
 function exportSessionMd(){
   const s=findSession(activeSessionId); if(!s){ uiAlert('Нет активной сессии'); return; }
-  const md='# '+(s.title||'Сессия')+'\n\n'+htmlToMarkdown(hydrateSessionHtml(s.html||''));
+  let md='# '+(s.title||'Сессия')+'\n\n'+htmlToMarkdown(hydrateSessionHtml(s.html||''));
+  const linked=(s.links||[]).map(id=> (typeof findBlock==='function'? findBlock(id):null)).filter(Boolean);
+  if(linked.length) md += '\n\n## Связанные карточки\n'+linked.map(b=>'- '+(b.title||'Карточка')).join('\n');
   downloadFile(safeFileName(s.title)+'.md', md, 'text/markdown;charset=utf-8');
 }
 function exportSessionPdf(){
   const s=findSession(activeSessionId); if(!s){ uiAlert('Нет активной сессии'); return; }
   const bodyHtml=hydrateSessionHtml(s.html||'');
+  const linked=(s.links||[]).map(id=> (typeof findBlock==='function'? findBlock(id):null)).filter(Boolean);
+  const linkedHtml = linked.length
+    ? `<h2>Связанные карточки</h2><ul>${linked.map(b=>'<li>'+escapeHtml(b.title||'Карточка')+'</li>').join('')}</ul>`
+    : '';
   const html = `<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8"><title>${escapeHtml(s.title||'Сессия')}</title>
     <style>
       body{font-family:-apple-system,"Segoe UI",Roboto,sans-serif;color:#111;max-width:800px;margin:24px auto;padding:0 20px;line-height:1.6;font-size:14px}
@@ -543,7 +567,7 @@ function exportSessionPdf(){
       pre{background:#f4f4f4;padding:10px;border-radius:6px;white-space:pre-wrap;font-size:12px}
       code{background:#f4f4f4;padding:1px 4px;border-radius:3px}
       a{color:#1155cc} img{max-width:100%}
-    </style></head><body><h1>${escapeHtml(s.title||'Сессия')}</h1>${bodyHtml}</body></html>`;
+    </style></head><body><h1>${escapeHtml(s.title||'Сессия')}</h1>${bodyHtml}${linkedHtml}</body></html>`;
   if(window.__TAURI__ && window.__TAURI__.dialog){
     saveFile(safeFileName(s.title||'Сессия')+'.html', html, 'text/html;charset=utf-8');
     toast('Файл сохранён — откройте его в браузере и напечатайте в PDF');

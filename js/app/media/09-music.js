@@ -895,6 +895,7 @@ let mapRulerOn = false;
 let mapFogMode = 'off';       // 'off' | 'hide' | 'reveal'
 let mapZoneType = 'none';     // 'none' | 'circle' | 'cone' | 'line' | 'cube'
 let rulerPt = null;     // {x,y} точка начала измерения (в координатах карты)
+let rulerPts = [];      // маршрут линейки
 
 function curMap(){ return maps.find(m=>m.id===activeMapId) || null; }
 function loadMap(){
@@ -939,10 +940,14 @@ function normMap(m){
     auto: !!m.auto,
     snap: !!m.snap,
     cellPx: Math.max(12, Math.min(160, +m.cellPx || 34.641)),
+    cellOffX: Math.max(-240, Math.min(240, +m.cellOffX || 0)),
+    cellOffY: Math.max(-240, Math.min(240, +m.cellOffY || 0)),
     feetPerCell: Math.max(1, Math.min(60, +m.feetPerCell || 5)),
     fogOn: !!m.fogOn,
+    fogSoft: !!m.fogSoft,
     fog: Array.isArray(m.fog)? m.fog.map(s=>({ mode: s.mode==='hide'?'hide':'reveal',
-      width: Math.max(8, +s.width||60), pts: Array.isArray(s.pts)? s.pts.map(p=>[+p[0],+p[1]]) : [] })) : [],
+      type: s.type==='fill'? 'fill' : 'stroke',
+      width: Math.max(0, +s.width||60), pts: Array.isArray(s.pts)? s.pts.map(p=>[+p[0],+p[1]]) : [] })) : [],
     zones: Array.isArray(m.zones)? m.zones.map(z=>({ id:String(z.id||('z'+Math.random().toString(36).slice(2,7))),
       type: ['circle','cone','line','cube'].includes(z.type)? z.type : 'circle',
       x:+z.x||0, y:+z.y||0, r:Math.max(8, +z.r||60), rot:+z.rot||0,
@@ -961,6 +966,8 @@ function normMarker(t){
     rot: (+t.rot===45? 45 : 0),
     hp: num(t.hp), hpMax: num(t.hpMax),
     ac: (t.ac===undefined||t.ac===null||t.ac==='')? '' : String(t.ac).slice(0,6),
+    conds: Array.isArray(t.conds)? t.conds.filter(c=>typeof c==='string').slice(0,8) : [],
+    hidden: !!t.hidden,
     blockId: t.blockId||null, bestId: t.bestId||null };
 }
 function normStroke(s){
@@ -998,7 +1005,10 @@ function defaultScreenMap(name){
     zoom:1, userZoom:1, scrollX:0, scrollY:0, markers:[], draw:[], fog:[], zones:[] };
 }
 
-function saveMap(){ try{ localStorage.setItem(STORE_MAP, JSON.stringify(maps)); }catch(e){} }
+function saveMap(){
+  if(typeof mapUndoObserve==='function'){ try{ mapUndoObserve(); }catch(e){} }
+  try{ localStorage.setItem(STORE_MAP, JSON.stringify(maps)); }catch(e){}
+}
 
 /* При изменении окна карта пересчитывает вписывание (с задержкой) */
 let mapResizeTimer = null;
@@ -1069,6 +1079,8 @@ function renderMap(){
   const cellPx = mapCellPx(m);
   wrapper.style.setProperty('--cell', cellPx.toFixed(2)+'px');
   wrapper.style.setProperty('--cell-h', (cellPx*1.73205).toFixed(2)+'px');
+  wrapper.style.setProperty('--grid-off-x', ((m.cellOffX||0)*z).toFixed(2)+'px');
+  wrapper.style.setProperty('--grid-off-y', ((m.cellOffY||0)*z).toFixed(2)+'px');
   stage.appendChild(wrapper);
   mc.appendChild(stage);
   if(mapGridOn){
@@ -1082,9 +1094,33 @@ function renderMap(){
   titleEl.textContent=m.name;
   titleEl.addEventListener('click', e=>{ e.stopPropagation(); renameMap(m.id); });
   wrapper.appendChild(titleEl);
-  // линейка (визуал)
-  if(mapRulerOn && rulerPt){
-    const li=document.createElement('div'); li.className='map-ruler'; wrapper.appendChild(li);
+  // линейка (маршрут)
+  if(mapRulerOn && Array.isArray(rulerPts) && rulerPts.length){
+    const NS='http://www.w3.org/2000/svg';
+    const svg=document.createElementNS(NS,'svg');
+    svg.setAttribute('class','map-route');
+    svg.setAttribute('viewBox','0 0 '+m.baseW+' '+m.baseH);
+    svg.setAttribute('preserveAspectRatio','none');
+    svg.style.cssText='position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:4';
+    if(rulerPts.length>1){
+      const line=document.createElementNS(NS,'polyline');
+      line.setAttribute('points', rulerPts.map(p=>p.x+','+p.y).join(' '));
+      line.setAttribute('fill','none');
+      line.setAttribute('stroke','#e8c766');
+      line.setAttribute('stroke-width','2');
+      line.setAttribute('stroke-dasharray','7 5');
+      line.setAttribute('vector-effect','non-scaling-stroke');
+      svg.appendChild(line);
+    }
+    rulerPts.forEach((p,i)=>{
+      const c=document.createElementNS(NS,'circle');
+      c.setAttribute('cx',p.x); c.setAttribute('cy',p.y);
+      c.setAttribute('r','4'); c.setAttribute('vector-effect','non-scaling-stroke');
+      c.setAttribute('fill', i===0?'#7fb3e6':'#e8c766');
+      c.setAttribute('stroke','#15181c'); c.setAttribute('stroke-width','1');
+      svg.appendChild(c);
+    });
+    wrapper.appendChild(svg);
   }
   const lbl=document.getElementById('mapZoomLabel'); if(lbl) lbl.textContent=Math.round(z*100)+'%';
 
@@ -1103,13 +1139,15 @@ function renderMap(){
 
   // маркеры и токены
   (m.markers||[]).forEach(k=>{
+    if(k.hidden && typeof mapPresentOn!=='undefined' && mapPresentOn) return;
     const sel = k.id===selectedMarkerId;
+    const multi = (typeof mapMultiSel!=='undefined' && mapMultiSel.has(k.id));
     const isToken = k.kind==='pc' || k.kind==='mob';
     const el=document.createElement('div');
     if(isToken){
       const cell = mapCellPx(m);
       const d = Math.round(cell * (k.size===2 ? 1.8 : 0.92));
-      el.className='map-token'+(sel?' selected':'')+(k.kind==='mob'?' npc':'');
+      el.className='map-token'+(sel?' selected':'')+(multi?' multi':'')+(k.kind==='mob'?' npc':'')+(k.hidden?' hidden-dm':'');
       el.style.width=d+'px'; el.style.height=d+'px';
       el.style.left=percent(k.x,m.baseW)+'%'; el.style.top=percent(k.y,m.baseH)+'%';
       el.style.background=k.color||'#7fb3e6';
@@ -1128,11 +1166,29 @@ function renderMap(){
         fill.style.width=Math.max(0,Math.min(100, Math.round((Number(k.hp||0)/Math.max(1,Number(k.hpMax)))*100)))+'%';
         bar.appendChild(fill); el.appendChild(bar);
       }
+      if(Array.isArray(k.conds) && k.conds.length){
+        const cb=document.createElement('div'); cb.className='tok-conds';
+        k.conds.slice(0,4).forEach(c=>{
+          const d=document.createElement('span');
+          d.className='ci'; d.title=c;
+          d.style.background=(MAP_COND_COLORS[c]||'#c9a227');
+          d.innerHTML=gi(MAP_COND_ICONS[c]||'effects');
+          cb.appendChild(d);
+        });
+        if(k.conds.length>4){
+          const more=document.createElement('span');
+          more.className='ci more';
+          more.textContent='+'+(k.conds.length-4);
+          more.title=k.conds.slice(4).join(', ');
+          cb.appendChild(more);
+        }
+        el.appendChild(cb);
+      }
       const lbl=document.createElement('div'); lbl.className='tok-name'; lbl.textContent=k.label;
       el.appendChild(lbl);
     } else {
       const linked = !!k.blockId && (blocks||[]).some(b=>b.id===k.blockId);
-      el.className='map-marker'+(sel?' selected':'')+(linked?' has-note':'');
+      el.className='map-marker'+(sel?' selected':'')+(multi?' multi':'')+(linked?' has-note':'');
       el.style.left=percent(k.x,m.baseW)+'%'; el.style.top=percent(k.y,m.baseH)+'%';
       el.style.background=k.color||'#7fb3e6';
       el.dataset.id=k.id;
@@ -1146,6 +1202,11 @@ function renderMap(){
     el.addEventListener('click', e=>{
       e.stopPropagation();
       if(el.__dragged){ el.__dragged=false; return; }
+      if(e.shiftKey && typeof mapMultiSel!=='undefined'){
+        if(mapMultiSel.has(k.id)) mapMultiSel.delete(k.id); else mapMultiSel.add(k.id);
+        renderMap(); return;
+      }
+      if(typeof mapMultiSel!=='undefined' && mapMultiSel.size) mapMultiSel.clear();
       if(!isToken && !e.shiftKey && k.blockId && (blocks||[]).some(b=>b.id===k.blockId)){
         if(typeof openMarkerNote==='function'){ openMarkerNote(m,k); return; }
       }
@@ -1164,10 +1225,29 @@ function renderMap(){
       e.preventDefault(); e.stopPropagation();
       try{ el.setPointerCapture && el.setPointerCapture(e.pointerId); }catch(err){}
       const sx=e.clientX, sy=e.clientY, ox=k.x, oy=k.y;
+      const group = (typeof mapMultiSel!=='undefined' && mapMultiSel.has(k.id) && mapMultiSel.size>1);
+      let g0=null;
+      if(group){
+        g0=[...mapMultiSel].map(id=>{
+          const it=(m.markers||[]).find(x=>x.id===id) || (m.props||[]).find(x=>x.id===id);
+          return it ? {it, x:it.x, y:it.y} : null;
+        }).filter(Boolean);
+      }
       let moved=false;
       const move=ev=>{
         const dx=ev.clientX-sx, dy=ev.clientY-sy;
         if(Math.abs(dx)>2 || Math.abs(dy)>2) moved=true;
+        if(g0 && g0.length>1){
+          g0.forEach(o=>{
+            const nx=Math.max(0,Math.min(m.baseW, o.x + dx/z));
+            const ny=Math.max(0,Math.min(m.baseH, o.y + dy/z));
+            const sp=snapPoint(m, nx, ny);
+            o.it.x=sp.x; o.it.y=sp.y;
+            const node=wrapper.querySelector('[data-id="'+o.it.id+'"]');
+            if(node){ node.style.left=percent(o.it.x,m.baseW)+'%'; node.style.top=percent(o.it.y,m.baseH)+'%'; }
+          });
+          return;
+        }
         let nx=Math.max(0,Math.min(m.baseW, ox + dx/z));
         let ny=Math.max(0,Math.min(m.baseH, oy + dy/z));
         const sp=snapPoint(m, nx, ny);
@@ -1188,7 +1268,8 @@ function renderMap(){
   // пропсы (ассеты)
   (m.props||[]).forEach(pr=>{
     const el=document.createElement('img');
-    el.className='map-prop'+(pr.id===selectedPropId?' selected':'');
+    const multiP = (typeof mapMultiSel!=='undefined' && mapMultiSel.has(pr.id));
+    el.className='map-prop'+(pr.id===selectedPropId?' selected':'')+(multiP?' multi':'');
     el.src='assets/tiles/'+pr.file+'?v=2';
     el.draggable=false; el.alt='';
     el.style.left=percent(pr.x,m.baseW)+'%';
@@ -1200,6 +1281,11 @@ function renderMap(){
     wrapper.appendChild(el);
     el.addEventListener('click', e=>{
       e.stopPropagation();
+      if(e.shiftKey && typeof mapMultiSel!=='undefined'){
+        if(mapMultiSel.has(pr.id)) mapMultiSel.delete(pr.id); else mapMultiSel.add(pr.id);
+        renderMap(); return;
+      }
+      if(typeof mapMultiSel!=='undefined' && mapMultiSel.size) mapMultiSel.clear();
       selectedPropId = (selectedPropId===pr.id)? null : pr.id;
       renderMap();
     });
@@ -1209,10 +1295,29 @@ function renderMap(){
       e.preventDefault(); e.stopPropagation();
       try{ el.setPointerCapture && el.setPointerCapture(e.pointerId); }catch(err){}
       const sx=e.clientX, sy=e.clientY, ox=pr.x, oy=pr.y;
+      const group = (typeof mapMultiSel!=='undefined' && mapMultiSel.has(pr.id) && mapMultiSel.size>1);
+      let g0=null;
+      if(group){
+        g0=[...mapMultiSel].map(id=>{
+          const it=(m.markers||[]).find(x=>x.id===id) || (m.props||[]).find(x=>x.id===id);
+          return it ? {it, x:it.x, y:it.y} : null;
+        }).filter(Boolean);
+      }
       let moved=false;
       const move=ev=>{
         const dx=ev.clientX-sx, dy=ev.clientY-sy;
         if(Math.abs(dx)>2 || Math.abs(dy)>2) moved=true;
+        if(g0 && g0.length>1){
+          g0.forEach(o=>{
+            const nx=Math.max(0,Math.min(m.baseW, o.x + dx/z));
+            const ny=Math.max(0,Math.min(m.baseH, o.y + dy/z));
+            const sp=snapPoint(m,nx,ny);
+            o.it.x=sp.x; o.it.y=sp.y;
+            const node=wrapper.querySelector('[data-id="'+o.it.id+'"]');
+            if(node){ node.style.left=percent(o.it.x,m.baseW)+'%'; node.style.top=percent(o.it.y,m.baseH)+'%'; }
+          });
+          return;
+        }
         let nx=Math.max(0,Math.min(m.baseW, ox + dx/z));
         let ny=Math.max(0,Math.min(m.baseH, oy + dy/z));
         const sp=snapPoint(m,nx,ny);
@@ -1421,16 +1526,21 @@ function drawFog(ctx, fog, m, z){
   ctx.save();
   ctx.scale(dpr*(z||1), dpr*(z||1));
   ctx.lineCap='round'; ctx.lineJoin='round';
+  if(m.fogSoft) ctx.filter='blur(3px)';
   (m.fog||[]).forEach(s=>{
     if(!s.pts || !s.pts.length) return;
     const reveal = s.mode==='reveal';
     ctx.globalCompositeOperation = reveal ? 'destination-out' : 'source-over';
     ctx.strokeStyle = reveal ? 'rgba(0,0,0,1)' : 'rgba(10,12,16,0.94)';
     ctx.fillStyle = ctx.strokeStyle;
-    ctx.lineWidth = Math.max(6, +s.width||60);
+    ctx.lineWidth = Math.max(1, +s.width||60);
     ctx.beginPath();
-    if(s.pts.length===1){
-      ctx.arc(s.pts[0][0], s.pts[0][1], ctx.lineWidth/2, 0, Math.PI*2);
+    if(s.type==='fill' && s.pts.length>=3){
+      s.pts.forEach((p,i)=> i? ctx.lineTo(p[0],p[1]) : ctx.moveTo(p[0],p[1]));
+      ctx.closePath();
+      ctx.fill();
+    } else if(s.pts.length===1){
+      ctx.arc(s.pts[0][0], s.pts[0][1], Math.max(3, ctx.lineWidth/2), 0, Math.PI*2);
       ctx.fill();
     } else {
       s.pts.forEach((p,i)=> i? ctx.lineTo(p[0],p[1]) : ctx.moveTo(p[0],p[1]));
@@ -1488,7 +1598,10 @@ function syncMapControls(){
   const sh=document.getElementById('mapShape'); if(sh) sh.value = m.shape==='square'?'square':'hex';
   const sn=document.getElementById('mapSnap'); if(sn) sn.checked = !!m.snap;
   const cp=document.getElementById('mapCellPx'); if(cp) cp.value = Math.round(mapCellPx(m));
+  const ox=document.getElementById('mapGridOffX'); if(ox) ox.value = Math.round(m.cellOffX||0);
+  const oy=document.getElementById('mapGridOffY'); if(oy) oy.value = Math.round(m.cellOffY||0);
   const fm=document.getElementById('mapFogMode'); if(fm) fm.value = mapFogMode;
+  const fs=document.getElementById('mapFogSoft'); if(fs) fs.checked = !!m.fogSoft;
   const ft=document.getElementById('mapFeet'); if(ft) ft.value = String(Math.round(m.feetPerCell||5));
   const zt=document.getElementById('mapZoneType'); if(zt) zt.value = mapZoneType;
 }
@@ -1547,6 +1660,10 @@ function syncTokenToBlock(k){
   if(!b) return;
   const max=Math.max(0, Math.round(+k.hpMax||0));
   if(max){ b.props = b.props || {}; b.props['ХП'] = String(max); }
+  if(k.ac!==null && k.ac!==undefined && String(k.ac).trim()!==''){
+    b.props = b.props || {};
+    b.props[b.type==='mob' ? 'КД' : 'Броня КК'] = String(k.ac);
+  }
   if(k.hp!==null && k.hp!==undefined && max){
     b.dmg = Math.max(0, max - Math.max(0, Math.round(+k.hp||0)));
   }
@@ -1569,6 +1686,10 @@ function syncBlockToTokens(b){
   return n;
 }
 
+const MAP_CONDS = ['Сбит с ног','Отравлен','Испуган','Оглушён','Ослеплён','Схвачен','Недееспособен','Замедлен'];
+const MAP_COND_COLORS = { 'Сбит с ног':'#c98a4b','Отравлен':'#6aa84f','Испуган':'#8e7cc3','Оглушён':'#e6b93c','Ослеплён':'#8a8a8a','Схвачен':'#c0564f','Недееспособен':'#a63b32','Замедлен':'#4a90d9' };
+const MAP_COND_ICONS = { 'Сбит с ног':'cond-prone','Отравлен':'cond-poisoned','Испуган':'cond-frightened','Оглушён':'cond-stunned','Ослеплён':'cond-blinded','Схвачен':'cond-grappled','Недееспособен':'cond-incapacitated','Замедлен':'cond-slowed' };
+
 /* Панель выбранного токена (персонаж/монстр на карте) */
 function curToken(){
   const m=curMap();
@@ -1588,6 +1709,12 @@ function updateTokenPanel(){
   const hp=document.getElementById('tokenHp'); if(hp) hp.value = (k.hp===null||k.hp===undefined)?'':k.hp;
   const hm=document.getElementById('tokenHpMax'); if(hm) hm.value = (k.hpMax===null||k.hpMax===undefined)?'':k.hpMax;
   const ac=document.getElementById('tokenAc'); if(ac) ac.value = k.ac||'';
+  const cb=document.getElementById('tokenConds');
+  if(cb){
+    cb.innerHTML = MAP_CONDS.map(c=>`<label class="tok-cond"><input type="checkbox" data-tcond="${escapeHtml(c)}" ${Array.isArray(k.conds)&&k.conds.includes(c)?'checked':''}> <span>${escapeHtml(c)}</span></label>`).join('');
+  }
+  const hd=document.getElementById('tokenHidden'); if(hd) hd.checked=!!k.hidden;
+  const tb=document.getElementById('tokenToBattle'); if(tb) tb.disabled=!k.blockId;
 }
 (function bindTokenPanel(){
   const pnl=document.getElementById('tokenPanel'); if(!pnl) return;
@@ -1656,21 +1783,22 @@ function tokenInitials(label){
 function snapPoint(m, x, y){
   if(!m || !m.snap) return {x:x, y:y};
   const cell = mapCellPx(m);
+  const ox = +m.cellOffX || 0, oy = +m.cellOffY || 0;
   if(m.shape==='square'){
-    const cx = cell/2 + Math.round((x-cell/2)/cell)*cell;
-    const cy = cell/2 + Math.round((y-cell/2)/cell)*cell;
+    const cx = ox + cell/2 + Math.round((x-ox-cell/2)/cell)*cell;
+    const cy = oy + cell/2 + Math.round((y-oy-cell/2)/cell)*cell;
     return {x:Math.max(0,Math.min(m.baseW,cx)), y:Math.max(0,Math.min(m.baseH,cy))};
   }
   // гекс: ближайший центр по осевым координатам
   const w = cell, h = cell*Math.sqrt(3);       // плоский гекс
-  const col = Math.round(x / w);
+  const col = Math.round((x-ox) / w);
   const rowOff = (col % 2) ? h/2 : 0;
-  const row = Math.round((y - rowOff) / h);
+  const row = Math.round((y-oy-rowOff) / h);
   const cands = [];
   for(let dc=-1; dc<=1; dc++){
     for(let dr=-1; dr<=1; dr++){
       const c = col+dc, r = row+dr;
-      const cx = c*w, cy = r*h + ((c%2)? h/2 : 0);
+      const cx = ox + c*w, cy = oy + r*h + ((c%2)? h/2 : 0);
       cands.push({x:cx, y:cy, d:(cx-x)**2 + (cy-y)**2});
     }
   }
