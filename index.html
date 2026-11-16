@@ -180,6 +180,10 @@
         <section class="home-card home-updates">
           <h2>Обновления</h2>
           <ul>
+            <li><span class="upd-date">16.11.2026</span><span>Бой: компактный трекер — одна строка на участника, статусы в поповере, быстрая заметка над журналом и статблок монстра или персонажа в нижней панели.</span></li>
+            <li><span class="upd-date">16.11.2026</span><span>Ширма и монстры: 2–4 колонки, фильтр по карточкам, разделы «Персонажи / Заметки / Правила», режим списка, сводки в свёрнутых карточках и облегчённое оформление.</span></li>
+            <li><span class="upd-date">16.11.2026</span><span>Музыка: длительность каждого трека и общая, перетаскивание треков за ручку, строка воспроизведения с перемоткой и play/pause прямо в списке.</span></li>
+            <li><span class="upd-date">16.11.2026</span><span>Бестиарий: исправлены имена в статблоках World of Warcraft — вместо «вау» подставляются «Ледяная Скорбь», «Шлем Господства» и другие; у Артаса поправлены падежи.</span></li>
             <li><span class="upd-date">11.11.2026</span><span>Карта: генератор подземелий с комнатами и коридорами, штрихованные стены и проёмы на стыках; верхнее меню «Рисование / Объекты / Создать / Сетка / Зоны / Ещё».</span></li>
             <li><span class="upd-date">11.11.2026</span><span>Карта: 115 ассетов — мебель, двери, классы, цифры, секреты и монстры; ассеты DCSS теперь цветные, а чёрно-белый режим остался опцией.</span></li>
             <li><span class="upd-date">11.11.2026</span><span>Карта: фигуры и коридоры можно выделять, двигать, менять размер, поворачивать и удалять; комнаты и подземелья вставляются из библиотеки.</span></li>
@@ -223,6 +227,19 @@
         <button id="addMobTop" class="only-monsters">＋ Добавить монстра</button>
         <button id="createMobTop" class="only-monsters"><span class="gi" data-gi="monsters"></span> Создать монстра</button>
         <button id="btnImportJsonTop" title="Импорт персонажа или монстра из JSON"><span class="gi" data-gi="import"></span> Из JSON</button>
+        <span class="canvas-tools">
+          <input id="canvasFilter" type="search" class="canvas-filter" placeholder="Фильтр по карточкам…" aria-label="Фильтр по карточкам">
+          <span class="canvas-view" role="group" aria-label="Вид доски">
+            <button type="button" data-view="grid" title="Сетка карточек">▦</button>
+            <button type="button" data-view="list" title="Список одной колонкой">☰</button>
+          </span>
+          <span class="canvas-cols" role="group" aria-label="Число колонок">
+            <button type="button" data-cols="2" title="Две колонки">2</button>
+            <button type="button" data-cols="3" title="Три колонки">3</button>
+            <button type="button" data-cols="4" title="Четыре колонки">4</button>
+          </span>
+          <button id="canvasCollapseAll" type="button" title="Свернуть или развернуть все карточки">Свернуть всё</button>
+        </span>
       </div>
       <div class="canvas" id="canvas"></div>
     </div>
@@ -491,13 +508,29 @@
           <button id="battleNextTurn" title="Следующий ход (N)">Следующий ▸</button>
           <button id="battleClear" title="Убрать всех участников">✕ Очистить</button>
           <button id="battleStatesBtn" title="Эффекты состояний и реакции монстров"><span class="gi" data-gi="effects"></span> Состояния</button>
-          <span class="bt-hint" tabindex="0" data-tip="↑↓ — выбор карточки, Enter — свернуть/развернуть, S — статусы, D — урон, Shift+Del — убрать">↑↓ · Enter · S · D</span>
+          <span class="bt-hint" tabindex="0" data-tip="↑↓ — выбор карточки, Enter или S — статусы и действия, D — урон, Shift+Del — убрать">↑↓ · Enter · S · D</span>
           <div id="battleStatusPalette" class="bt-palette" hidden aria-label="Быстрые статусы"></div>
         </div>
         <div class="battle-body">
-          <div id="battleList" class="battle-list"></div>
+          <div class="battle-main">
+            <div id="battleList" class="battle-list"></div>
+            <section class="battle-stat" id="battleStat" hidden aria-label="Статблок монстра">
+              <div class="bs-head">
+                <span class="bs-title" id="battleStatTitle">Статблок</span>
+                <span class="bs-sub" id="battleStatSub"></span>
+                <span class="bs-spacer"></span>
+                <button class="bs-btn" id="battleStatGrow" type="button" title="Развернуть по высоте">⤢</button>
+                <button class="bs-btn" id="battleStatClose" type="button" title="Закрыть статблок" aria-label="Закрыть статблок">✕</button>
+              </div>
+              <div class="bs-body" id="battleStatBody"></div>
+            </section>
+          </div>
           <aside class="battle-log">
             <div class="battle-log-head"><span>Журнал боя</span><button id="battleLogClear" title="Очистить журнал" aria-label="Очистить журнал">✕</button></div>
+            <div class="battle-note">
+              <input id="battleQuickNote" type="text" placeholder="Короткая заметка на бой…" aria-label="Короткая заметка на бой">
+              <button id="battleQuickNoteAdd" type="button" title="Добавить в журнал" aria-label="Добавить в журнал">＋</button>
+            </div>
             <div id="battleLogItems" class="battle-log-items"></div>
           </aside>
         </div>
@@ -512,6 +545,7 @@
         <button id="musicPlayAll" title="Играть выбранный плейлист">▶ Играть</button>
         <label class="music-vol-wrap" title="Громкость музыки">
           <span class="music-vol-ico" aria-hidden="true">♪</span>
+          <span class="music-vol-lbl">Громкость</span>
           <input type="range" id="mbVol" class="music-vol" min="0" max="100" step="1" value="80" aria-label="Громкость музыки">
         </label>
         <label class="music-chk" title="Перемешать треки"><input type="checkbox" id="musicShuffle"> случайно</label>
@@ -541,6 +575,14 @@
           <div id="musicTracks" class="music-tracks"></div>
         </section>
       </div>
+      <div class="music-now" id="musicNow" hidden>
+        <button class="mn-btn" id="mnPlay" type="button" title="Играть/пауза" aria-label="Играть/пауза">▶</button>
+        <span class="mn-title" id="mnTitle">—</span>
+        <span class="mn-time" id="mnCur">0:00</span>
+        <input class="mn-seek" id="mnSeek" type="range" min="0" max="1000" step="1" value="0" aria-label="Позиция воспроизведения">
+        <span class="mn-time" id="mnDur">0:00</span>
+        <button class="mn-btn mn-stop" id="mnStop" type="button" title="Остановить и скрыть" aria-label="Остановить">✕</button>
+      </div>
     </div>
         <footer class="app-footer">
           <span class="af-title">Ширма мастера для D&amp;D 5.5</span>
@@ -549,7 +591,7 @@
             <span class="af-hint">Автор: Ролёвки от Вовки</span>
             <span class="af-hint" title="Иконки: Lorc, Delapouite — game-icons.net, CC BY 3.0">Иконки: game-icons.net</span>
             <span class="af-hint" title="Магические предметы SRD 5.2.1 — Wizards of the Coast, CC-BY-4.0">SRD 5.2.1 · CC-BY-4.0</span>
-            <span class="af-hint af-ver">Ширма мастера <span id="appVersion">1.3.4</span> · <a class="af-link" href="https://github.com/chipsfirst/dm_screen/releases" target="_blank" rel="noopener">что нового</a></span>
+            <span class="af-hint af-ver">Ширма мастера <span id="appVersion">1.3.5</span> · <a class="af-link" href="https://github.com/chipsfirst/dm_screen/releases" target="_blank" rel="noopener">что нового</a></span>
             <a class="af-link" href="https://boosty.to/vovkaroleplay" target="_blank" rel="noopener">Поддержать</a>
             <a class="af-link" href="https://github.com/chipsfirst/dm_screen" target="_blank" rel="noopener">Репозиторий на GitHub ↗</a>
           </span>
@@ -940,27 +982,27 @@
   </div>
 </div>
 
-<script src="js/data/shop-data.js?v=1.3.4"></script>
-<script src="js/data/shop-catalog-data.js?v=1.3.4"></script>
-<script src="js/data/app-data.js?v=1.3.4"></script>
-<script src="js/data/books-data.js?v=1.3.4"></script>
-<script src="js/data/srd-data.js?v=1.3.4"></script>
-<script src="js/data/srd-chars-data.js?v=1.3.4"></script>
-<script src="js/data/tiles-data.js?v=1.3.4"></script>
-<script src="js/icons.js?v=1.3.4"></script>
-<script src="js/app/core/01-state.js?v=1.3.4"></script>
-<script src="js/app/ui/02-render.js?v=1.3.4"></script>
-<script src="js/app/ui/03-ui.js?v=1.3.4"></script>
-<script src="js/app/ui/04-events.js?v=1.3.4"></script>
-<script src="js/app/data/05-rules.js?v=1.3.4"></script>
-<script src="js/app/ui/06-modals.js?v=1.3.4"></script>
-<script src="js/app/data/07-bestiary.js?v=1.3.4"></script>
-<script src="js/app/data/08-content.js?v=1.3.4"></script>
-<script src="js/app/media/09-music.js?v=1.3.4"></script>
-<script src="js/app/media/10-map.js?v=1.3.4"></script>
-<script src="js/app/ui/11-search.js?v=1.3.4"></script>
-<script src="js/app/pages/12-sessions.js?v=1.3.4"></script>
-<script src="js/app/pages/13-battle.js?v=1.3.4"></script>
-<script src="js/app/pages/14-generators.js?v=1.3.4"></script>
+<script src="js/data/shop-data.js?v=1.3.5"></script>
+<script src="js/data/shop-catalog-data.js?v=1.3.5"></script>
+<script src="js/data/app-data.js?v=1.3.5"></script>
+<script src="js/data/books-data.js?v=1.3.5"></script>
+<script src="js/data/srd-data.js?v=1.3.5"></script>
+<script src="js/data/srd-chars-data.js?v=1.3.5"></script>
+<script src="js/data/tiles-data.js?v=1.3.5"></script>
+<script src="js/icons.js?v=1.3.5"></script>
+<script src="js/app/core/01-state.js?v=1.3.5"></script>
+<script src="js/app/ui/02-render.js?v=1.3.5"></script>
+<script src="js/app/ui/03-ui.js?v=1.3.5"></script>
+<script src="js/app/ui/04-events.js?v=1.3.5"></script>
+<script src="js/app/data/05-rules.js?v=1.3.5"></script>
+<script src="js/app/ui/06-modals.js?v=1.3.5"></script>
+<script src="js/app/data/07-bestiary.js?v=1.3.5"></script>
+<script src="js/app/data/08-content.js?v=1.3.5"></script>
+<script src="js/app/media/09-music.js?v=1.3.5"></script>
+<script src="js/app/media/10-map.js?v=1.3.5"></script>
+<script src="js/app/ui/11-search.js?v=1.3.5"></script>
+<script src="js/app/pages/12-sessions.js?v=1.3.5"></script>
+<script src="js/app/pages/13-battle.js?v=1.3.5"></script>
+<script src="js/app/pages/14-generators.js?v=1.3.5"></script>
 </body>
 </html>

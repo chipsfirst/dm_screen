@@ -4,6 +4,7 @@ const STORE_BATTLE_LOG = 'shirma_battle_log_v1';
 let battleParts = [];   // {id,name,side:'opp'|'char',ac,hp,init}
 let battleTurn = { round: 1, turnId: null };
 const STORE_BATTLE_TURN = 'shirma_battle_turn_v1';
+const STORE_BATTLE_NOTE = 'shirma_battle_note_v1';
 function loadBattleTurn(){
   try{
     const d = JSON.parse(localStorage.getItem(STORE_BATTLE_TURN)||'null');
@@ -20,6 +21,11 @@ function battleLogPush(text){
   saveBattleLog();
   renderBattleLog();
 }
+function loadBattleNote(){
+  let v=''; try{ v=localStorage.getItem(STORE_BATTLE_NOTE)||''; }catch(e){}
+  const el=document.getElementById('battleQuickNote'); if(el) el.value=v;
+}
+function saveBattleNote(v){ try{ localStorage.setItem(STORE_BATTLE_NOTE, String(v||'')); }catch(e){} }
 function renderBattleLog(){
   const box = document.getElementById('battleLogItems');
   if(!box) return;
@@ -40,7 +46,8 @@ function loadBattle(){
       statuses: Array.isArray(p.statuses) ? p.statuses.slice(0,20).map(x=>String(x)) : [],
       acts: Array.isArray(p.acts) ? p.acts.slice(0,40).map(a=>({tag:String(a.tag||''),text:String(a.text||'')})) : [],
       applied: Array.isArray(p.applied) ? p.applied.slice(0,40).map(x=>String(x)) : [],
-      collapsed: !!p.collapsed }));
+      srcId: p.srcId ? String(p.srcId) : '',
+      collapsed: !!p.collapsed, detailsOpen: !!p.detailsOpen }));
     return true;
   }
   battleParts = []; return false;
@@ -67,58 +74,35 @@ function renderBattle(){
     return;
   }
   const sorted = battleSorted();
-  list.innerHTML = sorted.map(p=>`
-    <div class="battle-card ${p.side==='opp'?'opp':''}${p.collapsed?' collapsed':''}${p.id===battleSelId?' sel':''}${p.id===battleTurn.turnId?' turn':''}" data-bid="${p.id}" tabindex="0">
-      <span class="bt-chev" title="Свернуть/развернуть">▾</span>
-      <div class="bt-side">${gi(p.side==='opp'?'monsters':'character')}</div>
-      <span class="bt-nameline">
-        <input class="bt-name" data-field="name" data-bid="${p.id}" value="${escapeHtml(p.name)}" spellcheck="false" aria-label="Имя">
-        ${woundTag(p)}
-      </span>
-      ${(p.acts && p.acts.length) ? `<div class="bt-acts">
-        <select class="bt-acts-select" data-act-select="${p.id}" aria-label="Действия монстра">
-          <option value="">действие…</option>
-          ${p.acts.map((a,i)=>`<option value="${i}">${escapeHtml((a.tag? a.tag+': ' : '')+ a.text.slice(0,90))}</option>`).join('')}
-        </select>
-      </div>` : ''}
-      <span class="bt-grp bt-stat bt-acgrp">
-        <span class="bt-ico" title="КД" aria-hidden="true">${gi('shield')}</span>
-        <input class="bt-in bt-ac" data-field="ac" data-bid="${p.id}" type="number" value="${p.ac}" aria-label="КД">
-        <span class="bt-step">
-          <button class="bt-stepbtn" data-ac-op="inc" data-bid="${p.id}" title="+1 КД" aria-label="+1 КД">+</button>
-          <button class="bt-stepbtn" data-ac-op="dec" data-bid="${p.id}" title="−1 КД" aria-label="−1 КД">−</button>
-        </span>
-      </span>
-      <span class="bt-grp bt-stat bt-hpgrp">
-        <span class="bt-ico" title="ХП" aria-hidden="true">${gi('heart')}</span>
-        ${hpBarTag(p)}
-        <input class="bt-in bt-hp" data-field="hp" data-bid="${p.id}" type="number" value="${p.hp}" aria-label="ХП">
-        ${hpMaxTag(p)}
-        <span class="bt-step">
+  const rows = sorted.map(p=>{
+    const st = p.statuses || [];
+    const stTitle = escapeHtml(st.join(', '));
+    const stShown = st.slice(0,1).map(x=>`<span class="bt-chip-mini" title="${stTitle}">${escapeHtml(x)}</span>`).join('');
+    const stMore = st.length>1 ? `<span class="bt-chip-mini" title="${stTitle}">+${st.length-1}</span>` : '';
+    return `
+    <tbody class="battle-card ${p.side==='opp'?'opp':''}${p.id===battleSelId?' sel':''}${p.id===battleTurn.turnId?' turn':''}" data-bid="${p.id}">
+      <tr class="battle-row-main" tabindex="0">
+        <td class="bt-cell-chev">${(p.srcId && statBlockOf(p)) ? `<button type="button" class="bt-side bt-side-btn" data-stat="${p.id}" title="Открыть статблок" aria-label="Открыть статблок">${gi(p.side==='opp'?'monsters':'character')}</button>` : `<span class="bt-side">${gi(p.side==='opp'?'monsters':'character')}</span>`}</td>
+        <td class="bt-cell-name"><div class="bt-name-wrap"><input class="bt-name" data-field="name" data-bid="${p.id}" value="${escapeHtml(p.name)}" spellcheck="false" aria-label="Имя">${woundTag(p)}</div></td>
+        <td class="bt-cell-init"><input class="bt-in bt-init" data-field="init" data-bid="${p.id}" type="number" value="${p.init}" aria-label="Инициатива"></td>
+        <td class="bt-cell-ac"><input class="bt-in bt-ac" data-field="ac" data-bid="${p.id}" type="number" value="${p.ac}" aria-label="КД"></td>
+        <td class="bt-cell-hp">${hpBarTag(p)}<input class="bt-in bt-hp" data-field="hp" data-bid="${p.id}" type="number" value="${p.hp}" aria-label="ХП">${hpMaxTag(p)}<span class="bt-step">
           <button class="bt-stepbtn" data-hp-op="inc" data-bid="${p.id}" title="+1 ХП" aria-label="+1 ХП">+</button>
           <button class="bt-stepbtn" data-hp-op="dec" data-bid="${p.id}" title="−1 ХП" aria-label="−1 ХП">−</button>
-        </span>
-      </span>
-      <span class="bt-grp bt-stat bt-dmggrp">
-        <span class="bt-ico" title="Урон" aria-hidden="true">${gi('sword')}</span>
-        <input class="bt-in bt-dmg" data-dmg data-bid="${p.id}" type="number" placeholder="⏎" title="Введите урон и нажмите Enter" aria-label="Урон">
-        <span class="bt-step">
+        </span></td>
+        <td class="bt-cell-dmg"><input class="bt-in bt-dmg" data-dmg data-bid="${p.id}" type="number" placeholder="⏎" title="Введите урон и нажмите Enter" aria-label="Урон"><span class="bt-step">
           <button class="bt-stepbtn" data-dmg-op="inc" data-bid="${p.id}" title="Нанести 1 урон" aria-label="Нанести 1 урон">+</button>
           <button class="bt-stepbtn" data-dmg-op="dec" data-bid="${p.id}" title="Вылечить 1" aria-label="Вылечить 1">−</button>
-        </span>
-      </span>
-      <span class="bt-grp bt-initgrp"><span class="bt-lbl">Иниц</span><input class="bt-in bt-init" data-field="init" data-bid="${p.id}" type="number" value="${p.init}" aria-label="Инициатива"></span>
-      <button class="bt-del" data-del="${p.id}" title="Убрать из боя" aria-label="Убрать">${gi('trash')}</button>
-      <div class="bt-statuses">
-        ${(p.statuses||[]).map((s,i)=>`<span class="bt-status">${escapeHtml(s)}<button class="bt-status-del" data-status-del="${p.id}" data-si="${i}" title="Убрать статус">✕</button></span>`).join('')}
-        <select class="bt-status-add" data-status-add="${p.id}" aria-label="Добавить статус">
-          <option value="">+ статус…</option>
-          ${BATTLE_STATUSES.map(s=>`<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('')}
-        </select>
-      </div>
-      ${(p.applied && p.applied.length) ? `<div class="bt-applied">${p.applied.map((t,i)=>`
-        <span class="bt-chip">${escapeHtml(t)}<button class="bt-chip-del" data-achip="${p.id}" data-ai="${i}" title="Убрать">✕</button></span>`).join('')}</div>` : ''}
-    </div>`).join('');
+        </span></td>
+        <td class="bt-cell-status">${stShown}${stMore}<button class="bt-mini" data-details="${p.id}" title="Статусы и действия" aria-label="Статусы и действия">+</button></td>
+        <td class="bt-cell-del"><button class="bt-del" data-del="${p.id}" title="Убрать из боя" aria-label="Убрать">${gi('trash')}</button></td>
+      </tr>
+    </tbody>`;}).join('');
+  list.innerHTML = `<table class="battle-table">
+    <colgroup><col style="width:30px"><col><col style="width:58px"><col style="width:54px"><col style="width:180px"><col style="width:92px"><col style="width:150px"><col style="width:30px"></colgroup>
+    <thead><tr><th></th><th>Имя</th><th>Иниц</th><th>КД</th><th>ХП</th><th>Урон</th><th>Статусы</th><th></th></tr></thead>
+    ${rows}
+  </table>`;
   renderBattleTurn();
 }
 function renderBattleTurn(){
@@ -128,6 +112,135 @@ function renderBattleTurn(){
   label.textContent = 'Раунд ' + battleTurn.round + (cur ? ' · ' + cur.name : '');
   label.title = cur ? ('Сейчас ходит: ' + cur.name) : 'Текущий раунд';
 }
+function statBlockOf(p){
+  if(!p || !p.srcId || typeof findBlock !== 'function') return null;
+  try{
+    const b = findBlock(p.srcId);
+    return (b && (b.mdata || b.type==='pc')) ? b : null;
+  }catch(e){ return null; }
+}
+function modOf(v){
+  v = +v;
+  if(!isFinite(v)) return '';
+  const m = Math.floor((v-10)/2);
+  return m>=0 ? ('+' + m) : ('−' + Math.abs(m));
+}
+let battleStatBid = null;
+
+function splitActsBalanced(acts){
+  const len = a => String((typeof a==='string') ? a : ((a && a.text) || '')).length;
+  const total = acts.reduce((n,a)=>n+len(a),0);
+  let acc=0, i=0;
+  for(; i<acts.length-1; i++){ acc += len(acts[i]); if(acc >= total/2) { i++; break; } }
+  return [acts.slice(0,i), acts.slice(i)];
+}
+function pcStatBlockHtml(p, b){
+  const pr = b.props || {};
+  const val = k => (pr[k]!=null && pr[k]!=='') ? String(pr[k]) : '';
+  const ac = val('Броня КК') || val('КД') || val('AC') || (p.ac!=='' && p.ac!=null ? String(p.ac) : '');
+  const sp = val('Скорость') || val('Speed');
+  const lvl = val('Уровень') || val('Ур.');
+  const stats = Array.isArray(b.stats) ? b.stats : [];
+  const names = ['СИЛ','ЛОВ','ТЕЛ','ИНТ','МДР','ХАР'];
+  const hpMax = (p.hpMax!=='' && p.hpMax!=null) ? p.hpMax : (hpMaxOf(b) || val('ХП'));
+  const hpVal = (p.hp==='' || p.hp==null) ? '—' : String(p.hp);
+  const badges = `
+      ${ac?`<div class="sc-badge"><span class="l">КД</span><span class="v">${escapeHtml(ac)}</span></div>`:''}
+      <div class="sc-badge hp"><span class="l">ХП</span><span class="v">${escapeHtml(hpVal)}${(hpMax && hpVal!=='—')?`<span class="m">/${escapeHtml(String(hpMax))}</span>`:''}</span></div>
+      ${lvl?`<div class="sc-badge"><span class="l">Уровень</span><span class="v">${escapeHtml(lvl)}</span></div>`:''}
+      ${sp?`<div class="sc-badge wide"><span class="l">Скорость</span><span class="v small">${escapeHtml(sp)}</span></div>`:''}`;
+  const abilityCells = stats.length ? stats.slice(0,6).map((v,i)=>`<div class="sc-badge ab"><span class="l">${names[i]||''}</span><span class="v">${escapeHtml(String(v))}<span class="m">${modOf(v)}</span></span></div>`).join('') : '';
+  const topRow = `<div class="sc-top">${badges}${abilityCells}</div>`;
+  const initLine = (val('Инициатива')||val('Иниц')||p.init!=='') ? `<div class="sc-line"><b>Инициатива</b> ${escapeHtml(val('Инициатива')||val('Иниц')||String(p.init))}</div>` : '';
+  const atk = (b.attack!=null && b.attack!=='') ? String(b.attack) : (p.atk!=='' && p.atk!=null ? String(p.atk) : '');
+  const dmg = (b.damage!=null) ? String(b.damage) : '';
+  const attackLine = (atk || dmg) ? `<div class="sc-line"><b>Атака</b> ${atk?`<b class="hit-atk">${escapeHtml(atk)}</b>`:'—'}${dmg?` <span class="sc-dot">·</span> <b>Урон</b> ${highlightAct(dmg)}`:''}</div>` : '';
+  const skip = new Set(['КД','AC','Броня КК','Скорость','Speed','Уровень','Ур.','ХП','HP','Инициатива','Иниц']);
+  const propLines = Object.entries(pr).filter(([k,v])=>!skip.has(k) && String(v||'').trim()).map(([k,v])=>`<div class="sc-line"><b>${escapeHtml(k)}</b> ${escapeHtml(String(v))}</div>`).join('');
+  const res = Array.isArray(b.res) && b.res.length ? `<div class="sc-sec">Ресурсы</div><div class="sc-res">${b.res.map(r=>`<span class="sc-res-chip">${escapeHtml(r.name||'Ресурс')} <b>${r.cur}/${r.max}</b></span>`).join('')}</div>` : '';
+  const text = (b.text||'').trim() ? `<div class="sc-sec">Заметки</div><div class="sc-text">${escapeHtml(b.text)}</div>` : '';
+  return `<div class="stat-card">${topRow}${initLine}${attackLine}${propLines}${res}${text}</div>`;
+}
+
+function statBlockHtml(p){
+  const b = statBlockOf(p);
+  if(b && b.type==='pc') return pcStatBlockHtml(p, b);
+  const md = (b && b.mdata) || {};
+  const acts = Array.isArray(md.acts) ? md.acts : (Array.isArray(p.acts) ? p.acts : []);
+  const stats = (b && Array.isArray(b.stats)) ? b.stats : [];
+  const names = ['СИЛ','ЛОВ','ТЕЛ','ИНТ','МДР','ХАР'];
+  const ac = (md.ac!==undefined && md.ac!=='') ? md.ac : p.ac;
+  const cr = md.cr ? String(md.cr).split(' ')[0] : '';
+  const line = (lbl, val) => val ? `<div class="sc-line"><b>${lbl}</b> ${escapeHtml(val)}</div>` : '';
+  const actionsLen = acts.reduce((n,a)=>n + String((typeof a==='string') ? a : ((a && a.text) || '')).length, 0);
+  const wide = acts.length >= 2 && (acts.length >= 3 || actionsLen > 320);
+  const badgesInner = `
+      ${(ac!=='' && ac!=null)?`<div class="sc-badge"><span class="l">КД</span><span class="v">${escapeHtml(String(ac))}</span></div>`:''}
+      <div class="sc-badge hp"><span class="l">ХП</span><span class="v">${escapeHtml(String(p.hp))}</span></div>
+      ${cr?`<div class="sc-badge"><span class="l">ОП</span><span class="v">${escapeHtml(cr)}</span></div>`:''}
+      ${md.sp?`<div class="sc-badge wide"><span class="l">Скорость</span><span class="v small">${escapeHtml(md.sp)}</span></div>`:''}`;
+  const abilityCells = stats.length ? stats.slice(0,6).map((v,i)=>`<div class="sc-badge ab"><span class="l">${names[i]||''}</span><span class="v">${escapeHtml(String(v))}<span class="m">${modOf(v)}</span></span></div>`).join('') : '';
+  const topRow = `<div class="sc-top">${badgesInner}${abilityCells}</div>`;
+  const initLine = md.init ? `<div class="sc-line"><b>Инициатива</b> ${escapeHtml(md.init)}</div>` : '';
+  const actHtml = a => {
+    const txt = (typeof a==='string') ? a : ((a && a.text) || '');
+    const rawTag = (a && typeof a==='object' && a.tag) ? a.tag : '';
+    const tag = /^действ/i.test(rawTag) ? '' : rawTag;
+    const sp = (typeof splitAct==='function') ? splitAct(txt) : {name:txt, body:''};
+    return `<div class="act"><span class="an">${tag?escapeHtml(tag)+' — ':''}${escapeHtml(sp.name)}.</span> ${highlightAct(sp.body)}</div>`;
+  };
+  let actsBlock = '';
+  if(acts.length){
+    if(wide){
+      const [a1,a2] = splitActsBalanced(acts);
+      actsBlock = `<div class="sc-sec">Действия</div><div class="sc-cols">
+        <div class="sc-col">${a1.map(actHtml).join('')}</div>
+        <div class="sc-col">${a2.map(actHtml).join('')}</div>
+      </div>`;
+    } else {
+      actsBlock = `<div class="sc-sec">Действия</div><div class="sc-acts">${acts.map(actHtml).join('')}</div>`;
+    }
+  }
+  const meta = line('Навыки', md.sk) + line('Чувства', md.sen) + line('Языки', md.lang) + line('Спасброски', md.sav) + line('Защита', md.imm);
+  const hint = !b ? `<div class="hint">Участник добавлен вручную — подробного статблока нет.</div>` : '';
+  const extra = meta ? `<div class="sc-extra">${meta}</div>` : '';
+  if(wide) return `<div class="stat-card wide">${topRow}${initLine}${actsBlock}${extra}${hint}</div>`;
+  return `<div class="stat-card">${topRow}${initLine}${actsBlock}${meta}${hint}</div>`;
+}
+function placeStatExtra(body){
+  const cols = [...body.querySelectorAll('.sc-cols .sc-col')];
+  const extra = body.querySelector('.sc-extra');
+  if(cols.length < 2 || !extra) return;
+  const h1 = cols[0].getBoundingClientRect().height;
+  const h2 = cols[1].getBoundingClientRect().height;
+  (h1 <= h2 ? cols[0] : cols[1]).appendChild(extra);
+}
+
+function openStatBlock(p){
+  const box = document.getElementById('battleStat');
+  const body = document.getElementById('battleStatBody');
+  const title = document.getElementById('battleStatTitle');
+  const sub = document.getElementById('battleStatSub');
+  if(!box || !body || !title || !p) return;
+  const b = statBlockOf(p);
+  if(!b) return;
+  const md = b.mdata || {};
+  battleStatBid = p.id;
+  title.textContent = p.name;
+  sub.textContent = (b.type==='pc')
+    ? [(b.props||{})['Раса'], (b.props||{})['Класс']].filter(Boolean).join(' · ')
+    : (md.type || '');
+  body.innerHTML = statBlockHtml(p);
+  box.hidden = false;
+  placeStatExtra(body);
+}
+
+function closeStatBlock(){
+  const box = document.getElementById('battleStat');
+  if(box) box.hidden = true;
+  battleStatBid = null;
+}
+
 function battleNextTurn(){
   if(!battleParts.length){ toast('В бою никого нет'); return; }
   const sorted = battleSorted();
@@ -265,7 +378,7 @@ function refreshBattleState(p){
   const nameInput = card.querySelector('.bt-name');
   const hpInput = card.querySelector('.bt-hp');
   if(!nameInput || !hpInput) return;
-  const nameLine = card.querySelector('.bt-nameline') || nameInput;
+  const nameLine = card.querySelector('.bt-name-wrap') || nameInput;
   const wHtml = woundTag(p);
   const wOld = card.querySelector('.bt-wound');
   if(!wHtml){ if(wOld) wOld.remove(); }
@@ -327,6 +440,7 @@ function battleAdd(side, preset){
 }
 /* ── Быстрые статусы и клавиатура в бою ── */
 let paletteBid = null;
+let paletteAnchor = null;
 let battleSelId = null;
 
 function toggleStatus(bid, name){
@@ -337,26 +451,55 @@ function toggleStatus(bid, name){
   if(i>=0) p.statuses.splice(i,1); else p.statuses.push(name);
   saveBattle(); renderBattle();
   battleLogPush(`«${p.name}»: ${i>=0?'снят статус':'статус'} «${name}»`);
-  const card = document.querySelector(`.battle-card[data-bid="${bid}"]`);
-  if(card) card.focus();
 }
 
-function renderStatusPalette(bid){
+function paletteBox(){
   const box = document.getElementById('battleStatusPalette');
+  if(box && box.parentElement !== document.body) document.body.appendChild(box);
+  return box;
+}
+
+function renderStatusPalette(bid, anchor){
+  const box = paletteBox();
   if(!box) return;
-  paletteBid = bid;
   const p = battleParts.find(x=>x.id===bid);
-  const on = (p && Array.isArray(p.statuses)) ? p.statuses : [];
-  box.innerHTML = BATTLE_STATUSES.map((st,i)=>
-    `<button type="button" class="${on.includes(st)?'on':''}" data-pst="${escapeHtml(st)}"><span class="num">${i+1}</span>${escapeHtml(st)}</button>`
-  ).join('');
+  if(!p) return;
+  if(anchor && !anchor.isConnected) anchor = null;
+  if(!anchor){
+    const card = document.querySelector(`.battle-card[data-bid="${bid}"]`);
+    if(card) anchor = card.querySelector('[data-details]');
+  }
+  paletteBid = bid; paletteAnchor = anchor || null;
+  const on = Array.isArray(p.statuses) ? p.statuses : [];
+  const acts = Array.isArray(p.acts) ? p.acts : [];
+  const applied = Array.isArray(p.applied) ? p.applied : [];
+  box.innerHTML = `
+    <div class="bp-head"><span>${escapeHtml(p.name)}</span>${p.srcId && statBlockOf(p) ? `<button type="button" class="bp-stat" data-bp-stat="${p.id}" title="Открыть статблок">статблок</button>` : ''}<button type="button" class="bp-x" data-bp-close title="Закрыть" aria-label="Закрыть">✕</button></div>
+    <div class="bp-grid">
+      ${BATTLE_STATUSES.map((st,i)=>`<button type="button" class="${on.includes(st)?'on':''}" data-pst="${escapeHtml(st)}"><span class="num">${i+1}</span>${escapeHtml(st)}</button>`).join('')}
+    </div>
+    ${acts.length ? `<div class="bp-sub">Действия</div><div class="bp-acts">${acts.map((a,i)=>`<button type="button" class="bp-act-row" data-bp-act="${i}" title="${escapeHtml(a.text)}">${a.tag?`<span class="bp-tag">${escapeHtml(a.tag)}</span>`:''}<span class="bp-act-txt">${highlightAct(a.text)}</span><span class="bp-act-go" aria-hidden="true">📝</span></button>`).join('')}</div>` : ''}
+    ${applied.length ? `<div class="bp-sub">Эффекты</div><div class="bp-chips">${applied.map((t,i)=>`<span class="bt-chip">${escapeHtml(t)}<button type="button" class="bt-chip-del" data-achip="${p.id}" data-ai="${i}" title="Убрать">✕</button></span>`).join('')}</div>` : ''}
+  `;
   box.hidden = false;
+  box.style.position = 'fixed';
+  box.style.width = 'min(360px, calc(100vw - 16px))';
+  box.style.left = '0px'; box.style.top = '0px';
+  const bw = box.offsetWidth, bh = box.offsetHeight;
+  const el = anchor || document.getElementById('battleList');
+  const r = el ? el.getBoundingClientRect() : { right: innerWidth - 12, bottom: 90, top: 60 };
+  let left = Math.round(r.right - bw);
+  left = Math.max(8, Math.min(left, innerWidth - bw - 8));
+  let top = Math.round(r.bottom + 6);
+  if(top + bh > innerHeight - 8) top = Math.max(8, Math.round(r.top - bh - 6));
+  box.style.left = left + 'px';
+  box.style.top = top + 'px';
 }
 
 function closeStatusPalette(){
   const box = document.getElementById('battleStatusPalette');
   if(box) box.hidden = true;
-  paletteBid = null;
+  paletteBid = null; paletteAnchor = null;
 }
 
 function paletteIsOpen(){
@@ -368,11 +511,34 @@ function bindBattleKeyboard(){
   const pal = document.getElementById('battleStatusPalette');
   if(pal){
     pal.addEventListener('click', e=>{
-      const b = e.target.closest('[data-pst]');
-      if(!b) return;
+      e.stopPropagation();
       const bid = paletteBid;
-      if(bid) toggleStatus(bid, b.dataset.pst);
-      closeStatusPalette();
+      if(e.target.closest('[data-bp-close]')){ closeStatusPalette(); return; }
+      const stBtn = e.target.closest('[data-bp-stat]');
+      if(stBtn){
+        const p = battleParts.find(x=>x.id===stBtn.dataset.bpStat);
+        closeStatusPalette();
+        if(p) openStatBlock(p);
+        return;
+      }
+      if(!bid) return;
+      const b = e.target.closest('[data-pst]');
+      if(b){ toggleStatus(bid, b.dataset.pst); renderStatusPalette(bid, paletteAnchor); return; }
+      const actBtn = e.target.closest('[data-bp-act]');
+      if(actBtn){
+        const p = battleParts.find(x=>x.id===bid);
+        const a = p && (p.acts||[])[+actBtn.dataset.bpAct];
+        if(!p || !a) return;
+        const txt = (a.tag? a.tag+': ' : '') + a.text;
+        battleLogPush(`«${p.name}» → ${txt}`);
+        return;
+      }
+      const chip = e.target.closest('[data-achip]');
+      if(chip){
+        const p = battleParts.find(x=>x.id===chip.dataset.achip);
+        if(p && Array.isArray(p.applied)){ p.applied.splice(+chip.dataset.ai,1); saveBattle(); renderBattle(); renderStatusPalette(p.id, paletteAnchor); }
+        return;
+      }
     });
   }
 
@@ -392,7 +558,7 @@ function bindBattleKeyboard(){
     if(paletteIsOpen() && /^[1-9]$/.test(e.key)){
       const st = BATTLE_STATUSES[+e.key - 1];
       const bid = paletteBid;
-      if(st && bid){ e.preventDefault(); toggleStatus(bid, st); closeStatusPalette(); }
+      if(st && bid){ e.preventDefault(); toggleStatus(bid, st); if(paletteIsOpen()) renderStatusPalette(bid, paletteAnchor); }
       return;
     }
 
@@ -415,7 +581,7 @@ function bindBattleKeyboard(){
 
     if(e.key === 'Enter'){
       e.preventDefault();
-      sel.collapsed = !sel.collapsed; saveBattle(); renderBattle();
+      renderStatusPalette(sel.id);
       return;
     }
     if(e.key === 's' || e.key === 'S' || e.key === 'ы' || e.key === 'Ы'){
@@ -501,7 +667,7 @@ function bindBattle(){
         return;
       }
       clearTimeout(timer); disarm();
-      battleParts=[]; battleTurn={round:1, turnId:null}; saveBattle(); saveBattleTurn(); renderBattle(); battleLogPush('Бой очищен');
+      battleParts=[]; battleTurn={round:1, turnId:null}; closeStatBlock(); saveBattle(); saveBattleTurn(); renderBattle(); battleLogPush('Бой очищен');
     });
   }
   const list = document.getElementById('battleList');
@@ -529,18 +695,37 @@ function bindBattle(){
       const order = battleSorted().map(x=>x.id);
       const els = [...list.querySelectorAll('.battle-card')];
       els.sort((x,y)=> order.indexOf(x.dataset.bid) - order.indexOf(y.dataset.bid));
-      els.forEach(el=> list.appendChild(el));
+      els.forEach(el=> { if(el.parentNode) el.parentNode.appendChild(el); });
     });
     list.addEventListener('click', e=>{
       const card = e.target.closest('.battle-card');
       if(card){ battleSelId = card.dataset.bid; }
-      if(card && !e.target.closest('input,button,select,textarea,label,[contenteditable]')){
-        const p = battleParts.find(x=>x.id===card.dataset.bid);
-        if(p){ p.collapsed = !p.collapsed; saveBattle(); renderBattle(); }
+      const statBtn = e.target.closest('[data-stat]');
+      if(statBtn){
+        const p = battleParts.find(x=>x.id===statBtn.dataset.stat);
+        if(p) openStatBlock(p);
         return;
       }
+      const detBtn = e.target.closest('[data-details]');
+      if(detBtn){
+        const p = battleParts.find(x=>x.id===detBtn.dataset.details);
+        if(p) renderStatusPalette(p.id, detBtn);
+        return;
+      }
+      if(card && !e.target.closest('input,button,select,textarea,label,[contenteditable]')){
+        const p = battleParts.find(x=>x.id===card.dataset.bid);
+        if(p && statBlockOf(p)) openStatBlock(p);
+        else if(battleStatBid) closeStatBlock();
+      }
       const del = e.target.closest('[data-del]');
-      if(del){ const gone = battleParts.find(x=>x.id===del.dataset.del); battleParts = battleParts.filter(x=>x.id!==del.dataset.del); saveBattle(); renderBattle(); if(gone) battleLogPush(`«${gone.name}» убран из боя`); return; }
+      if(del){
+        const gone = battleParts.find(x=>x.id===del.dataset.del);
+        battleParts = battleParts.filter(x=>x.id!==del.dataset.del);
+        if(battleStatBid === del.dataset.del) closeStatBlock();
+        saveBattle(); renderBattle();
+        if(gone) battleLogPush(`«${gone.name}» убран из боя`);
+        return;
+      }
       const chip = e.target.closest('[data-achip]');
       if(chip){
         const p = battleParts.find(x=>x.id===chip.dataset.achip);
@@ -630,34 +815,6 @@ function bindBattle(){
     list.addEventListener('change', e=>{
       const dmg = e.target.closest('[data-dmg]');
       if(dmg){ applyBattleDamage(dmg); return; }
-      const stAdd = e.target.closest('[data-status-add]');
-      if(stAdd){
-        const v = stAdd.value; stAdd.value='';
-        if(!v) return;
-        const p = battleParts.find(x=>x.id===stAdd.dataset.statusAdd);
-        if(!p) return;
-        if(!Array.isArray(p.statuses)) p.statuses=[];
-        if(!p.statuses.includes(v)) p.statuses.push(v);
-        saveBattle(); renderBattle();
-        battleLogPush(`«${p.name}» — статус: ${v}`);
-        return;
-      }
-      const actSel = e.target.closest('[data-act-select]');
-      if(actSel){
-        const idx = +actSel.value;
-        actSel.value = '';
-        if(!idx && idx!==0) return;
-        const p = battleParts.find(x=>x.id===actSel.dataset.actSelect);
-        if(!p) return;
-        const act = (p.acts||[])[idx];
-        if(!act) return;
-        const txt = (act.tag? act.tag+': ' : '') + act.text;
-        if(!Array.isArray(p.applied)) p.applied=[];
-        if(!p.applied.includes(txt)) p.applied.push(txt);
-        saveBattle(); renderBattle();
-        battleLogPush(`«${p.name}» → ${txt}`);
-        return;
-      }
     });
   }
   loadBattle();
@@ -666,6 +823,35 @@ function bindBattle(){
   renderBattleLog();
   const logClear = document.getElementById('battleLogClear');
   if(logClear) logClear.addEventListener('click', ()=>{ battleLog=[]; saveBattleLog(); renderBattleLog(); });
+  loadBattleNote();
+  const qn=document.getElementById('battleQuickNote');
+  const qa=document.getElementById('battleQuickNoteAdd');
+  if(qn){
+    qn.addEventListener('input', ()=> saveBattleNote(qn.value));
+    const pushNote=()=>{
+      const v=qn.value.trim(); if(!v) return;
+      battleLogPush('📝 '+v);
+      qn.value=''; saveBattleNote('');
+    };
+    qn.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); pushNote(); } });
+    if(qa) qa.addEventListener('click', pushNote);
+  }
+  const statBox = document.getElementById('battleStat');
+  if(statBox){
+    const statClose = document.getElementById('battleStatClose');
+    const statGrow = document.getElementById('battleStatGrow');
+    if(statClose) statClose.addEventListener('click', closeStatBlock);
+    if(statGrow) statGrow.addEventListener('click', ()=>{
+      statBox.classList.toggle('grow');
+      statGrow.textContent = statBox.classList.contains('grow') ? '⤡' : '⤢';
+      statGrow.title = statBox.classList.contains('grow') ? 'Свернуть по высоте' : 'Развернуть по высоте';
+    });
+  }
+  document.addEventListener('click', e=>{
+    if(!paletteIsOpen()) return;
+    if(e.target.closest('#battleStatusPalette') || e.target.closest('[data-details]')) return;
+    closeStatusPalette();
+  });
 }
 /* ════════════ Эффекты монстров по типам ════════════ */
 const MON_TYPE_EFFECTS = {

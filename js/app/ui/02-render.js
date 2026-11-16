@@ -1,20 +1,80 @@
 /* ════════════ Render: sidebar tree ════════════ */
 /* ════════════════ Render: canvas ════════════════ */
+let canvasCols = 3;
+let canvasQuery = '';
+let canvasView = 'grid';
+let sectionCollapsed = new Set();
+try{
+  const v = +localStorage.getItem('shirma_canvas_cols');
+  if(v >= 2 && v <= 4) canvasCols = v;
+  if(localStorage.getItem('shirma_canvas_view') === 'list') canvasView = 'list';
+  const sc = JSON.parse(localStorage.getItem('shirma_canvas_sections') || '[]');
+  if(Array.isArray(sc)) sectionCollapsed = new Set(sc.map(String));
+}catch(e){}
+function canvasEffectiveCols(){
+  if(freeLayout) return canvasCols;
+  if(canvasView === 'list') return 1;
+  if(innerWidth < 900) return 1;
+  if(innerWidth < 1200) return Math.min(canvasCols, 2);
+  return canvasCols;
+}
+function saveCanvasView(){
+  try{
+    localStorage.setItem('shirma_canvas_view', canvasView);
+    localStorage.setItem('shirma_canvas_sections', JSON.stringify([...sectionCollapsed]));
+  }catch(e){}
+}
+function canvasGroups(list){
+  const defs = [['pc','Персонажи'],['note','Заметки'],['rule','Правила'],['img','Файлы']];
+  const groups = [];
+  defs.forEach(([type,title])=>{
+    const items = list.filter(b=> b.type === type);
+    if(items.length) groups.push({ key:type, title, items });
+  });
+  const other = list.filter(b=> !defs.some(([t])=> b.type===t));
+  if(other.length) groups.push({ key:'other', title:'Другое', items:other });
+  return groups;
+}
+function cardMatchesQuery(b, q){
+  if(!q) return true;
+  const props = Object.values(b.props||{}).join(' ').toLowerCase();
+  return (b.title||'').toLowerCase().includes(q) || (b.text||'').toLowerCase().includes(q) || props.includes(q);
+}
+function updateCanvasTools(){
+  document.querySelectorAll('.canvas-cols button').forEach(b=>{
+    b.classList.toggle('on', (+b.dataset.cols||0) === canvasCols);
+    b.disabled = canvasView === 'list';
+  });
+  document.querySelectorAll('.canvas-view button').forEach(b=>{
+    b.classList.toggle('on', (b.dataset.view || 'grid') === canvasView);
+  });
+  const tools = document.querySelector('.canvas-tools');
+  if(tools) tools.classList.toggle('mode-list', canvasView === 'list');
+  const btn = document.getElementById('canvasCollapseAll');
+  if(!btn) return;
+  const base = blocksTab==='monsters' ? blocks.filter(b=> b.type==='mob') : blocks.filter(b=> b.type!=='mob');
+  const anyOpen = base.some(b=> !collapsed.has(b.id));
+  btn.textContent = anyOpen ? 'Свернуть всё' : 'Развернуть всё';
+}
 function render(){
   const canvas = document.getElementById('canvas');
   canvas.classList.toggle('free', freeLayout);
+  canvas.style.setProperty('--canvas-cols', canvasEffectiveCols());
   const viewChars = document.getElementById('view-chars');
   if(viewChars) viewChars.classList.toggle('show-monsters', blocksTab==='monsters');
   let base = blocksTab==='monsters'
     ? blocks.filter(b=> b.type==='mob')
     : blocks.filter(b=> b.type!=='mob');
-  const list = searchFilter ? base.filter(matches) : (activeParentId===null ? base : base.filter(b=>b.id===activeParentId));
+  let list = searchFilter ? base.filter(matches) : (activeParentId===null ? base : base.filter(b=>b.id===activeParentId));
+  const q = canvasQuery.trim().toLowerCase();
+  if(q) list = list.filter(b=> cardMatchesQuery(b, q));
   const crumbEl = document.getElementById('crumbsRoot');
   if(crumbEl) crumbEl.textContent = (blocksTab==='monsters'?'Монстры':'Персонажи')
-    + (searchFilter?' · результаты поиска':(activeParentId===null?'':(' / '+(findBlock(activeParentId)?.title||'корень'))));
+    + (searchFilter?' · результаты поиска':'') + (q?' · фильтр: '+canvasQuery.trim():'')
+    + (activeParentId===null?'':(' / '+(findBlock(activeParentId)?.title||'корень')));
 
   if(!list.length){
-    canvas.innerHTML = `<div class="canvas-watermark">${searchFilter?'Ничего не найдено.':(blocksTab==='monsters'?'Здесь будут монстры: «＋ Создать монстра» — пресет или пустая карточка, «Бестиарий» — готовые из книг.':'Добавьте первого персонажа — «＋ ПК» в правом меню.')}</div>`;
+    canvas.innerHTML = `<div class="canvas-watermark">${q ? 'По фильтру «'+escapeHtml(canvasQuery.trim())+'» ничего не найдено.' : (searchFilter?'Ничего не найдено.':(blocksTab==='monsters'?'Здесь будут монстры: «＋ Создать монстра» — пресет или пустая карточка, «Бестиарий» — готовые из книг.':'Добавьте первого персонажа — «＋ ПК» в правом меню.'))}</div>`;
   } else {
     const safeCard = b => { try { return blockCard(b); } catch(e){
       return `<div class="block" data-id="${b.id}"><div class="block-head"><div class="ttl-note"><span>${escapeHtml(b.title||'Блок')}</span></div></div><div class="block-body"><div class="hint">Ошибка отображения блока: ${escapeHtml(String((e&&e.message)||e))}</div></div></div>`;
@@ -26,9 +86,23 @@ function render(){
         return `<div class="canvas-free-wrap" style="position:absolute;left:${x}px;top:${y}px;width:${b.w||360}px;z-index:${b._z||0}">${card}</div>`;
       }).join('');
     } else {
-      canvas.innerHTML = `<div class="canvas-flow">` + list.map(safeCard).join('') + `</div>`;
+      const flowCls = 'canvas-flow' + (canvasView === 'list' ? ' view-list' : '');
+      if(blocksTab === 'monsters'){
+        canvas.innerHTML = `<div class="${flowCls}">` + list.map(safeCard).join('') + `</div>`;
+      } else {
+        let html = '';
+        canvasGroups(list).forEach(g=>{
+          const closed = sectionCollapsed.has(g.key);
+          html += `<div class="canvas-section${closed ? ' closed' : ''}" data-sec="${g.key}">`
+            + `<button type="button" class="cs-toggle" data-section="${g.key}" aria-expanded="${closed ? 'false' : 'true'}" title="${closed ? 'Развернуть раздел' : 'Свернуть раздел'}">${closed ? '▸' : '▾'}</button>`
+            + `<span class="cs-title">${g.title}</span><span class="cs-count">${g.items.length}</span></div>`;
+          if(!closed) html += g.items.map(safeCard).join('');
+        });
+        canvas.innerHTML = `<div class="${flowCls}">` + html + `</div>`;
+      }
     }
   }
+  updateCanvasTools();
   save();
 }
 
@@ -40,12 +114,23 @@ function blockIsWide(b){
   return len > 800;
 }
 
+function blockSummary(b){
+  const p = b.props||{};
+  const pick = b.type==='mob'
+    ? [['Опасн.','ОП'],['КД','КД'],['ХП','ХП']]
+    : (b.type==='pc' ? [['Класс','Класс'],['Раса','Раса'],['Броня КК','КД']] : []);
+  return pick.map(([k,lbl])=>{
+    const v = p[k];
+    return (v!=null && String(v).trim()!=='') ? lbl+': '+String(v) : '';
+  }).filter(Boolean).slice(0,3).join(' · ');
+}
 function blockCard(b){
   const open = !collapsed.has(b.id);
   const border = 'border-'+b.type;
   const ttype = TYPE_LABEL[b.type];
   const w = b.w || 820;
   const wide = blockIsWide(b) ? ' block-wide' : '';
+  const sum = open ? '' : blockSummary(b);
   const li = `<div class="block ${border}${wide}" data-id="${b.id}" style="width:${w}px">
     <div class="block-head" data-toggle>
       <span class="collapse ${open?'':'collapsed'}">▸</span>
@@ -53,6 +138,7 @@ function blockCard(b){
         <span class="block-title" data-title="${b.id}" contenteditable="true" spellcheck="false" title="Кликните, чтобы переименовать">${escapeHtml(b.title||'(без названия)')}</span>
         <span class="type-tag ${b.type}">${ttype}</span>
         ${b.type==='pc' ? blockHpBarHtml(b) : ''}
+        ${sum ? `<span class="block-sum" title="${escapeHtml(sum)}">${escapeHtml(sum)}</span>` : ''}
         ${open ? '' : `<button class="del del-head" data-action="delete" data-id="${b.id}" title="Удалить блок" aria-label="Удалить блок">✕</button>`}
       </div>
     </div>
@@ -84,12 +170,9 @@ function blockFoot(b){
     ? `<button data-action="battle" data-battle-id="${b.id}" title="Добавить в вкладку «Бой»">${gi('battle')} В бой</button><button data-action="map" data-map-id="${b.id}" title="Поставить на карту">${gi('map')} На карту</button>`
     : '';
   return `<div class="block-foot">
-        <button data-action="collapse">Свернуть</button>
-        <button data-action="expand">Развернуть</button>
         ${rollAll}
         ${battleMap}
-        <span class="size-info">Ширина: <input class="resize-input" type="number" min="200" max="1600" step="20" value="${b.w||820}" data-width="${b.id}" title="Ширина блока, px"></span>
-        <span class="hint" style="margin-left:auto">редактируйте заголовок и текст прямо здесь</span>
+        <span class="size-info" title="Ширина карточки">↔ <input class="resize-input" type="number" min="200" max="1600" step="20" value="${b.w||820}" data-width="${b.id}" title="Ширина блока, px"></span>
         <button class="del" data-action="delete">Удалить блок</button>
       </div>`;
 }
@@ -276,6 +359,13 @@ function mobStatBlockHtml(b){
     </div>`;
 }
 /* Общий разбор действия монстра: «Название. Текст» */
+function highlightAct(text){
+  let h = escapeHtml(String(text||''));
+  h = h.replace(/\d+\s*\(\s*\d+d\d+(?:\s*[+\-−]\s*\d+)?\s*\)|\d+d\d+(?:\s*[+\-−]\s*\d+)?/g, '<b class="hit-dmg">$&</b>');
+  h = h.replace(/((?:атака|атаки|атаке|атаку|попаданию)\s*:\s*)([+\-−]\s*\d+)/gi, '$1<b class="hit-atk">$2</b>');
+  h = h.replace(/([+\-−]\s*\d+)(\s+к\s+попаданию)/gi, '<b class="hit-atk">$1</b>$2');
+  return h;
+}
 function splitAct(txt){
   const s=String(txt||''); const ci=s.indexOf('. ');
   return ci>0 ? { name:s.slice(0,ci), body:s.slice(ci+2) } : { name:'', body:s };
@@ -291,7 +381,7 @@ function actsGroupsHtml(d){
       html += `<div class="mob-section"><div class="mob-sec-title">${escapeHtml(tag)}</div>`;
       groups[tag].forEach(txt=>{
         const {name, body}=splitAct(txt);
-        html += `<div class="mob-act"><b>${escapeHtml(name)}</b> ${escapeHtml(body)}</div>`;
+        html += `<div class="mob-act"><b>${escapeHtml(name)}</b> ${highlightAct(body)}</div>`;
       });
       html += `</div>`;
     }

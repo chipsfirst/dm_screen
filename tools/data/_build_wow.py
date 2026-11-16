@@ -65,7 +65,7 @@ def load_spell_map():
     """Английские заклинания PHB 2024 → русские названия из library-data.js (по индексу)."""
     try:
         en = json.load(open(os.path.join(HERE, "data", "spells-phb2024.json"), encoding="utf-8"))["spell"]
-        lib = load_js("library-data.js", "window.LIBRARY")["spells"]
+        lib = load_js(os.path.join("js", "data", "library-data.js"), "window.LIBRARY")["spells"]
         for a, b in zip(en, lib):
             if a.get("name") and b.get("n"):
                 SPELL_RU[a["name"].lower()] = b["n"]
@@ -82,7 +82,10 @@ SAVE_RU = {"str": "Силы", "dex": "Ловкости", "con": "Телосло�
 def render_tag(tag, args):
     seg = [a.strip() for a in str(args or "").split("|")]
     first = seg[0] if seg else ""
-    disp = next((x for x in reversed(seg[1:]) if x and not x.replace("-", "").isupper()), "")
+    # 5e.tools: {@tag Name|Source} или {@tag Name|Source|Display}.
+    # Раньше здесь брался последний сегмент, и источник «WoW» подменял имя
+    # (в переводе он превращался в «вау»).
+    disp = seg[2] if len(seg) > 2 and seg[2] else first
     t = tag.lower()
     if t == "spell":
         return SPELL_RU.get(first.lower(), disp or first)
@@ -134,8 +137,10 @@ def render_tag(tag, args):
 
 
 def collect_terms(texts):
-    """Собирает термины из тегов (условия, правила, действия), которые надо перевести."""
-    terms = set()
+    """Собирает термины из тегов (условия, правила, действия), которые надо перевести.
+    Возвращает {термин:True}, если это имя собственное (предмет, существо, награда)."""
+    terms = {}
+    proper_tags = ("item", "creature", "object", "reward")
     for text in texts:
         for m in TAG_RE.finditer(str(text or "")):
             tag = m.group(1).lower()
@@ -144,10 +149,10 @@ def collect_terms(texts):
                 continue
             seg = [a.strip() for a in str(m.group(2) or "").split("|")]
             first = seg[0] if seg else ""
-            disp = next((x for x in reversed(seg[1:]) if x and not x.replace("-", "").isupper()), "")
+            disp = seg[2] if len(seg) > 2 and seg[2] else first
             term = (disp or first).strip()
             if term and term.lower() not in TERM_RU:
-                terms.add(term)
+                terms[term] = terms.get(term, False) or (tag in proper_tags)
     return terms
 
 
@@ -158,8 +163,9 @@ def load_terms(texts):
     if not terms:
         return
     tr = TR.translate_texts(sorted(terms))
-    for t in terms:
-        TERM_RU[t.lower()] = polish(TR.fix_ru(tr.get(t, t))).lower()
+    for t, proper in terms.items():
+        val = polish(TR.fix_ru(tr.get(t, t)))
+        TERM_RU[t.lower()] = val if proper else val.lower()
 
 
 GLOBAL_REPL = {}
@@ -233,6 +239,11 @@ FIXES = [
     (r"\bэманация (\d+) фт\b", r"эманация \1 фт"),
     (r"\bфутовом эманация\b", "футовой эманации"),
     (r"\bв эманация\b", "в эманации"),
+    # Артас: имена предметов в творительном падеже
+    (r"владеет Шлем господства", "владеет Шлемом Господства"),
+    (r"и Ледяная Скорбь\. Владея ими", "и Ледяной Скорбью. Владея ими"),
+    (r"Шлем использование заклинаний", "Использование заклинаний Шлема"),
+    (r"действия Ледяная Скорбь и Использование заклинаний Шлема", "действия «Ледяная Скорбь» и «Использование заклинаний Шлема»"),
     (r"\s+([,.;:!?])", r"\1"),
 ]
 

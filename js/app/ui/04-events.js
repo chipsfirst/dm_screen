@@ -260,3 +260,50 @@ document.getElementById('addPc').addEventListener('click', ()=> addBlock('pc'));
   });
 })();
 
+
+/* ═══ Ширма: фильтр, число колонок, свернуть всё ═══ */
+(function(){
+  const filter = document.getElementById('canvasFilter');
+  if(filter){
+    filter.addEventListener('input', ()=>{
+      canvasQuery = filter.value.trim().toLowerCase();
+      render();
+    });
+  }
+  document.querySelectorAll('.canvas-cols button').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const n = +btn.dataset.cols || 3;
+      canvasCols = Math.max(2, Math.min(4, n));
+      try{ localStorage.setItem('shirma_canvas_cols', String(canvasCols)); }catch(e){}
+      render();
+    });
+  });
+  document.querySelectorAll('.canvas-view button').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      canvasView = btn.dataset.view === 'list' ? 'list' : 'grid';
+      saveCanvasView();
+      render();
+    });
+  });
+  const canvasEl = document.getElementById('canvas');
+  if(canvasEl) canvasEl.addEventListener('click', e=>{
+    const t = e.target && e.target.closest ? e.target.closest('[data-section]') : null;
+    if(!t) return;
+    const key = t.dataset.section;
+    if(sectionCollapsed.has(key)) sectionCollapsed.delete(key); else sectionCollapsed.add(key);
+    saveCanvasView();
+    render();
+  });
+  const collapseAll = document.getElementById('canvasCollapseAll');
+  if(collapseAll) collapseAll.addEventListener('click', ()=>{
+    const base = blocksTab==='monsters' ? blocks.filter(b=> b.type==='mob') : blocks.filter(b=> b.type!=='mob');
+    const anyOpen = base.some(b=> !collapsed.has(b.id));
+    base.forEach(b=>{ if(anyOpen) collapsed.add(b.id); else collapsed.delete(b.id); });
+    render();
+  });
+  let rt = 0;
+  window.addEventListener('resize', ()=>{
+    clearTimeout(rt);
+    rt = setTimeout(()=> render(), 150);
+  });
+})();

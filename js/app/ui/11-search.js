@@ -95,9 +95,18 @@ function addGoItem(r){
 function runGoAction(r){
   if(r.kind!=='block') return;
   const b=r.b;
-  searchFilter = b.title||'';
-  const s=document.getElementById('search'); if(s) s.value=searchFilter;
+  searchFilter = '';
+  const s=document.getElementById('search'); if(s) s.value='';
+  collapsed.delete(b.id);
   showTab(b.type==='mob'?'monsters':'chars');
+  render();
+  requestAnimationFrame(()=>{
+    const el=document.querySelector('#canvas .block[data-id="'+b.id+'"]');
+    if(!el) return;
+    el.scrollIntoView({block:'center', behavior:'smooth'});
+    el.classList.add('flash');
+    setTimeout(()=>el.classList.remove('flash'), 1800);
+  });
   toast('Найдено на ширме: '+(b.title||'блок'));
 }
 function openGo(){

@@ -19,3 +19,6 @@ window.GI_PATHS = Object.assign(window.GI_PATHS, {
 });
 
 window.GI_PATHS.select = "<path d=\"M96 32v368l64-64 40 96 48-20-40-96h92L96 32z\"/>";
+
+window.GI_PATHS.play = '<path d="M150 66l266 190-266 190V66z"/>';
+window.GI_PATHS.pause = '<path d="M128 64h96v384h-96V64zm160 0h96v384h-96V64z"/>';
