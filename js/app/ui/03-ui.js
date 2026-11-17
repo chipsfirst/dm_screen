@@ -408,9 +408,16 @@ function uiZoomApply(v){
 
 /* ═══ Звуки (Web Audio, синтез — файлов нет) ═══ */
 const SOUND_KEY = 'shirma_sound_v1';
+const ALARM_VOL_KEY = 'shirma_sound_alarm_v1';
 let soundOn = true;
-try{ soundOn = localStorage.getItem(SOUND_KEY)!=='0'; }catch(e){}
+let alarmVol = 1;
+try{
+  soundOn = localStorage.getItem(SOUND_KEY) !== '0';
+  const a = parseFloat(localStorage.getItem(ALARM_VOL_KEY));
+  if(isFinite(a)) alarmVol = Math.min(1, Math.max(0, a));
+}catch(e){}
 let audioCtx = null;
+let soundScale = 1;
 function audioReady(){
   try{
     if(!soundOn) return null;
@@ -427,29 +434,75 @@ function beep(freq, dur, type, vol, delay){
     const t0 = ctx.currentTime + (delay||0);
     const o=ctx.createOscillator(), g=ctx.createGain();
     o.type = type||'sine'; o.frequency.value = freq;
-    g.gain.setValueAtTime(vol||0.07, t0);
+    g.gain.setValueAtTime(Math.max(.0001,(vol||.07)*soundScale), t0);
     g.gain.exponentialRampToValueAtTime(0.0001, t0+dur);
     o.connect(g); g.connect(ctx.destination);
     o.start(t0); o.stop(t0+dur+0.05);
   }catch(e){}
 }
+function alarmSound(){
+  try{
+    for(let i=0;i<4;i++){
+      beep(880,.13,'square',.05,i*.42);
+      beep(1320,.13,'square',.045,i*.42+.14);
+    }
+    beep(660,.18,'triangle',.04,1.74);
+  }catch(e){}
+}
 function playSound(name){
   if(!soundOn) return;
+  soundScale = name==='alarm' ? alarmVol : 1;
   if(name==='turn'){ beep(500,.08,'triangle'); beep(760,.11,'triangle',.05,.08); }
   else if(name==='crit'){ beep(660,.09,'square',.05); beep(880,.09,'square',.05,.09); beep(1320,.16,'square',.04,.18); }
   else if(name==='tick'){ beep(880,.04,'sine',.03); }
   else if(name==='round'){ beep(560,.09,'sine'); beep(560,.09,'sine',.06,.15); }
   else if(name==='ding'){ beep(980,.14,'sine'); beep(1470,.22,'sine',.05,.12); }
+  else if(name==='alarm'){ alarmSound(); }
+  soundScale = 1;
 }
 const soundBtn = document.getElementById('btnSound');
-function soundBtnState(){ if(soundBtn){ soundBtn.innerHTML = gi('effects'); soundBtn.title = soundOn?'Звуки включены (клик — выключить)':'Звуки выключены (клик — включить)'; } }
-if(soundBtn) soundBtn.addEventListener('click', ()=>{
-  soundOn=!soundOn;
+const soundMenu = document.getElementById('soundMenu');
+const soundEnabled = document.getElementById('soundEnabled');
+const soundAlarmVol = document.getElementById('soundAlarmVol');
+function soundBtnState(){
+  if(!soundBtn) return;
+  soundBtn.title = soundOn ? 'Звуки включены — громкость' : 'Звуки выключены — включить';
+  soundBtn.setAttribute('aria-pressed', soundOn ? 'true' : 'false');
+  soundBtn.setAttribute('aria-expanded', soundMenu && soundMenu.classList.contains('open') ? 'true' : 'false');
+}
+function syncSoundUI(){
+  if(soundEnabled) soundEnabled.checked = soundOn;
+  if(soundAlarmVol) soundAlarmVol.value = String(Math.round(alarmVol*100));
+  soundBtnState();
+}
+function closeSoundMenu(){
+  if(soundMenu) soundMenu.classList.remove('open');
+  soundBtnState();
+}
+if(soundBtn && soundMenu){
+  soundBtn.addEventListener('click', e=>{
+    e.stopPropagation();
+    soundMenu.classList.toggle('open');
+    soundBtnState();
+  });
+  document.addEventListener('click', e=>{
+    if(!soundMenu.classList.contains('open')) return;
+    if(e.target.closest('.sound-wrap')) return;
+    closeSoundMenu();
+  });
+  document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeSoundMenu(); });
+}
+if(soundEnabled) soundEnabled.addEventListener('change', ()=>{
+  soundOn = !!soundEnabled.checked;
   try{ localStorage.setItem(SOUND_KEY, soundOn?'1':'0'); }catch(e){}
   soundBtnState();
-  toast(soundOn?'Звуки включены':'Звуки выключены');
 });
-soundBtnState();
+if(soundAlarmVol) soundAlarmVol.addEventListener('input', ()=>{
+  alarmVol = Math.min(1, Math.max(0, (parseInt(soundAlarmVol.value,10)||0)/100));
+  try{ localStorage.setItem(ALARM_VOL_KEY, String(alarmVol)); }catch(e){}
+});
+if(soundAlarmVol) soundAlarmVol.addEventListener('change', ()=> playSound('alarm'));
+syncSoundUI();
 
 /* ═══ Таймер боя: 1 раунд = 6 секунд ═══ */
 let timerRunning=false, timerSeconds=0, timerInterval=null;

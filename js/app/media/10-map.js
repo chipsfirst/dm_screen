@@ -826,8 +826,8 @@ function openMapAddMenu(btn){
   ['mapDrawTool','mapRuler','mapSnapShapes','mapDrawHint'].forEach(id=>move(id,gDraw));
   ['mapAddToken','mapAddMarker'].forEach(id=>move(id,gObj));
   ['mapGen','mapRoomsLib','mapAssets'].forEach(id=>move(id,gCreate));
-  ['mapShape','mapCellPx','mapFeet','mapSnap','mapMono','mapFull','mapFogMode'].forEach(id=>move(id,gView));
-  ['mapZoneAdd','mapZoneClear'].forEach(id=>move(id,gZones));
+  ['mapShape','mapCellPx','mapFeet','mapSnap','mapMono','mapFull'].forEach(id=>move(id,gView));
+  ['mapZoneType','mapZoneAdd','mapZoneClear','mapFogMode','mapFogSoft','mapFogHideAll','mapFogShowAll','mapFogRoom'].forEach(id=>move(id,gZones));
   ['mapDrawClear','mapExport','mapImport','mapImportInput','mapFileInput','mapRulerLabel','mapTypeHint'].forEach(id=>move(id,gMore));
   const more=document.getElementById('mapMoreBtn'); if(more) more.style.display='none';
   const adv=document.getElementById('mapAdvanced'); if(adv) adv.hidden=true;
@@ -866,7 +866,7 @@ function openMapAddMenu(btn){
     {v:'hex',l:'Гексы',i:'hex',t:'Сетка: гексы'},
     {v:'square',l:'Квадраты',i:'square',t:'Сетка: квадраты'}
   ]);
-  seg('mapFogMode', gView, [
+  seg('mapFogMode', gZones, [
     {v:'off',l:'Выкл',i:'off',t:'Туман войны выключен'},
     {v:'hide',l:'Скрыть',i:'moon',t:'Закрыть области туманом'},
     {v:'reveal',l:'Открыть',i:'sun',t:'Открыть области'}

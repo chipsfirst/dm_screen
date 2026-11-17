@@ -23,6 +23,7 @@ const musicAudio = document.getElementById('musicAudio');
 let musicDBPromise = null;
 let musicObjectUrl = null;
 let musicPickSelection = new Set();
+let musicQuery = '';
 let musicStorageAt = 0;
 let musicSaveWarned = false;
 
@@ -378,7 +379,9 @@ function musicRenderLists(){
 function musicRenderTracks(){
   const el = document.getElementById('musicTracks');
   if(!el) return;
-  const list = musicListTracks(music.currentList);
+  const source = musicListTracks(music.currentList);
+  const q = musicQuery.trim().toLowerCase();
+  const list = q ? source.filter(tr => ((tr.title||'')+' '+(tr.artist||'')).toLowerCase().includes(q)) : source;
   const all = music.currentList === MUSIC_ALL;
   const titleEl = document.getElementById('musicListTitle');
   const countEl = document.getElementById('musicListCount');
@@ -388,12 +391,16 @@ function musicRenderTracks(){
   if(titleEl) titleEl.textContent = musicListName(music.currentList);
   if(countEl){
     const total = list.reduce((s,t)=> s + (+t.dur||0), 0);
-    countEl.textContent = list.length ? (list.length + ' · ' + (total ? musicFmtTime(total) : '—')) : 'пусто';
+    countEl.textContent = q ? (list.length + ' из ' + source.length) : (list.length ? (list.length + ' · ' + (total ? musicFmtTime(total) : '—')) : 'пусто');
   }
   if(delBtn) delBtn.disabled = all;
   if(renBtn) renBtn.disabled = all;
   if(addBtn) addBtn.disabled = all;
   if(!list.length){
+    if(q){
+      el.innerHTML = '<div class="music-empty">Ничего не найдено по запросу «'+escapeHtml(musicQuery.trim())+'».</div>';
+      return;
+    }
     el.innerHTML = '<div class="music-empty">'
       + (all
         ? 'Пока нет треков. Нажмите <b>«Добавить треки»</b> или перетащите аудиофайлы сюда.<br>Аудио до '+Math.round(MUSIC_MAX_BYTES/1024/1024)+' МБ на файл, хранится локально и никуда не отправляется.'
@@ -416,6 +423,16 @@ function musicRenderTracks(){
     + '</span></div>';
   }).join('');
 }
+/* Поиск по трекам */
+(function musicSearchInit(){
+  const inp = document.getElementById('musicSearch');
+  if(!inp) return;
+  inp.addEventListener('input', ()=>{
+    musicQuery = inp.value.trim();
+    musicRenderTracks();
+  });
+})();
+
 function musicUpdateStorage(force){
   const el = document.getElementById('musicStorage');
   if(!el) return;
@@ -1056,7 +1073,19 @@ function renderMap(){
   const m = curMap();
   renderMapTabs();
   mc.innerHTML='';
-  if(!m){ return; }
+  if(!m){
+    mc.classList.remove('has-bg','locked','no-grid');
+    mc.innerHTML = `<div class="map-empty">
+      <span class="me-icon">${gi('map')}</span>
+      <h3>Карта пока не создана</h3>
+      <p>Добавьте пустую карту с сеткой или загрузите готовое изображение.</p>
+      <div class="me-actions">
+        <button type="button" data-map-empty="blank">${gi('map')} Пустая карта</button>
+        <button type="button" data-map-empty="file">${gi('import')} Загрузить изображение</button>
+      </div>
+    </div>`;
+    return;
+  }
   mc.classList.toggle('locked', !!mapLocked);
   mc.classList.toggle('no-grid', !mapGridOn);
   mc.style.setProperty('--grid-step', mapGridStep+'px');

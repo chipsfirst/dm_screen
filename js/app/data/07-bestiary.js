@@ -53,17 +53,27 @@ function renderBestiary(){
     // при поиске НЕ трогаем bestShowCount — раньше он раздувался навсегда
     list = bestAll.filter(m => normalizeLib(m.n+' '+m.en+' '+m.type).includes(q));
   }
-  if(!list.length){ bestResults.innerHTML='<div class="lib-empty">Ничего не найдено.</div>'; return; }
+  if(window.bestFavOnly){
+    list = list.filter(m => window.favHas && window.favHas('best:'+m.id));
+  }
+  if(!list.length){
+    bestResults.innerHTML=`<div class="lib-empty">${window.bestFavOnly ? 'В избранном пока пусто. Отметьте монстров звёздочкой.' : 'Ничего не найдено.'}</div>`;
+    return;
+  }
   bestResultClose.style.display='none';
-  bestResults.innerHTML = list.map(m=>`
+  bestResults.innerHTML = list.map(m=>{
+    const favKey='best:'+m.id, fav=window.favHas && window.favHas(favKey);
+    return `
     <div class="lib-row" data-type="librow" data-best="${m.id}" style="cursor:pointer">
       <span class="lib-kind k-rule">${escapeHtml(shortCr(m.cr))}</span>
       <div class="lib-main">
         <div class="lib-title">${escapeHtml(m.n)}</div>
         <div class="lib-meta">${escapeHtml(m.type)} · КД ${escapeHtml(m.ac)} · ХП ${escapeHtml(m.hp)}</div>
       </div>
+      <button type="button" class="lib-fav${fav ? ' on' : ''}" data-fav="${favKey}" title="${fav ? 'Убрать из избранного' : 'В избранное'}">${fav ? '★' : '☆'}</button>
       <span class="lib-add" title="Открыть">›</span>
-    </div>`).join('');
+    </div>`;
+  }).join('');
   if(!q && bestShowCount < bestAll.length) bestResults.innerHTML += `<div class="lib-empty" style="text-align:center"><button id="bestMore" style="margin:auto">Показать ещё (${bestShowCount} / ${bestAll.length})</button></div>`;
   if(list.length){ /* bind */ bestResults.querySelectorAll('[data-best]').forEach(row=>{
     row.addEventListener('click', ()=>{

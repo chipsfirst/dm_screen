@@ -31,27 +31,6 @@
         <button id="mbMute" class="mb-btn" title="Звук вкл/выкл (Ctrl+M). Громкость — во вкладке «Музыка»" aria-label="Выключить звук">♪</button>
         <audio id="musicAudio" preload="metadata"></audio>
       </div>
-      <div class="dicebar">
-        <span class="db-label">Кости:</span>
-        <select id="dieSel" class="die-sel" aria-label="Кость: число граней">
-          <option value="4">d4</option>
-          <option value="6">d6</option>
-          <option value="8">d8</option>
-          <option value="10">d10</option>
-          <option value="12">d12</option>
-          <option value="20" selected>d20</option>
-          <option value="100">d100</option>
-          <option value="custom">d? свои грани…</option>
-        </select>
-        <input id="dieCustom" class="die-custom" type="number" min="2" max="10000" placeholder="6" title="Число граней своей кости" aria-label="Число граней своей кости">
-        <span class="toolbar-sep"></span>
-        <span class="db-label">Кол-во:</span>
-        <input id="dieCount" class="die-count" type="number" min="1" max="100" value="1" aria-label="Количество костей">
-        <span class="toolbar-sep"></span>
-        <button id="btnRoll" title="Бросить выбранные кости" aria-label="Бросить кости"><span class="gi" data-gi="dice"></span></button>
-        <span id="rollResult"></span>
-        <span id="rollLog"></span>
-      </div>
       <div class="main-head">
         <div class="tabbar">
           <button class="tab active" data-tab="home" title="Главная (Alt+1)"><span class="gi" data-gi="home"></span> Главная</button>
@@ -63,6 +42,21 @@
           <button class="tab" data-tab="music" title="Музыка (Alt+7)"><span class="gi" data-gi="music"></span> Музыка</button>
         </div>
         <div class="actions">
+          <button id="btnGameTimer" type="button" title="Таймер" aria-label="Таймер" aria-expanded="false" aria-controls="gameTimerPanel">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 1.5M9 2h6M12 2v3"/></svg>
+            <span id="gameTimerBadge" hidden></span>
+          </button>
+          <span class="menu-wrap sound-wrap">
+            <button id="btnSound" type="button" title="Звуки и громкость" aria-label="Звуки и громкость" aria-expanded="false" aria-controls="soundMenu">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>
+            </button>
+            <div class="menu-panel sound-menu" id="soundMenu">
+              <span class="menu-caption">Звук</span>
+              <label class="sound-row"><input type="checkbox" id="soundEnabled" checked> Звуки включены</label>
+              <label class="sound-slider">Тревоги <input type="range" id="soundAlarmVol" min="0" max="100" step="1" value="100"></label>
+              <div class="hint">Громкость сигнала таймера.</div>
+            </div>
+          </span>
           <button id="btnKeys" title="Горячие клавиши" aria-label="Горячие клавиши">?</button>
           <span class="acts-group" id="fontGroup">
             <button id="btnFontMinus" title="Уменьшить шрифт (Ctrl+−)" aria-label="Уменьшить шрифт">А−</button>
@@ -90,25 +84,29 @@
           <span class="menu-wrap">
             <button id="btnMenu" title="Действия, справочники и команды" aria-label="Меню: действия и команды">☰</button>
             <div class="menu-panel" id="menuPanel">
-              <span class="menu-caption">Действия</span>
+              <span class="menu-caption">Быстрые действия</span>
               <button id="addPc" title="Лист персонажа">+ Персонаж</button>
-              <button id="btnBestiary" title="Бестиарий: монстры D&D 5e (поиск)"><span class="gi" data-gi="monsters"></span> Бестиарий</button>
+              <button id="btnBestiary" title="Бестиарий: монстры D&amp;D 5e и добавление на ширму"><span class="gi" data-gi="monsters"></span> Монстр из бестиария</button>
               <button id="btnUndo" title="Отменить последнее действие (Ctrl+Z)"><span class="gi" data-gi="undo"></span> Отменить</button>
-              <button id="btnImportJson" title="Импорт персонажа или монстра из JSON"><span class="gi" data-gi="import"></span> Импорт JSON</button>
-              <span class="menu-caption">Справочники</span>
+              <span class="menu-caption">Библиотеки</span>
               <button id="btnLibrary" title="Поиск по библиотеке"><span class="gi" data-gi="book"></span> База</button>
               <button id="btnShop" title="Магазин: снаряжение и цены"><span class="gi" data-gi="shop"></span> Магазин</button>
               <button id="btnMonEffects" title="Таблицы эффектов по типам монстров"><span class="gi" data-gi="effects"></span> Эффекты</button>
               <button id="btnTables" title="Броски по случайным таблицам (d100)"><span class="gi" data-gi="tables"></span> Таблицы</button>
-              <button id="btnRules" title="Правила D&D 5.5 и советы по проведению"><span class="gi" data-gi="book"></span> Правила</button>
+              <button id="btnRules" title="Правила D&amp;D 5.5 и советы по проведению"><span class="gi" data-gi="book"></span> Правила</button>
               <button id="btnGen" title="Генераторы: сокровища, травмы, критические эффекты, бой"><span class="gi" data-gi="dice"></span> Генераторы</button>
-              <span class="menu-caption">Система</span>
+              <span class="menu-caption">Вид</span>
               <button id="btnDensity" aria-pressed="false" title="Компактные карточки на ширме"><span class="gi" data-gi="expand"></span> Компактные карточки</button>
-              <button id="btnTips" title="Случайный совет мастеру"><span class="gi" data-gi="book"></span> Совет мастеру</button>
+              <button id="btnTableHud" aria-pressed="false" title="Компактная полоса с ходом, таймером и кубиками"><span class="gi" data-gi="battle"></span> HUD «За столом»</button>
+              <span class="menu-caption">Данные</span>
+              <button id="btnDataCheck" title="Проверить связи, ссылки и сохранённые данные"><span class="gi" data-gi="shield"></span> Проверка данных</button>
+              <button id="btnImportJson" title="Импорт персонажа или монстра из JSON"><span class="gi" data-gi="import"></span> Импорт карточки</button>
               <button id="btnSaveDir" title="Выбрать папку для автосохранения резервной копии"><span class="gi" data-gi="folder"></span> Папка сохранений…</button>
               <button id="btnExport"><span class="gi" data-gi="export"></span> Экспорт JSON</button>
               <button id="btnImport"><span class="gi" data-gi="import"></span> Импорт</button>
-              <button id="btnReset" title="Сбросить к демо-данным"><span class="gi" data-gi="trash"></span> Сброс</button>
+              <button id="btnReset" class="menu-danger" title="Сбросить все данные к демонстрационному набору"><span class="gi" data-gi="trash"></span> Сброс к демо-данным</button>
+              <span class="menu-caption">Помощь</span>
+              <button id="btnTips" title="Случайный совет мастеру"><span class="gi" data-gi="book"></span> Совет мастеру</button>
             </div>
           </span>
           <input type="file" id="mediaInput" multiple accept="image/*,.pdf,.txt,.md,.rtf" class="hidden" aria-label="Импорт файлов">
@@ -131,15 +129,30 @@
               <h2>Что это и зачем</h2>
               <p>Рабочее место мастера вместо бумажной ширмы: персонажи, монстры, сессии, карта и бой — всё на одном экране, чтобы ничего не искать в книгах за столом. Данные сохраняются в браузере и не покидают ваш компьютер.</p>
             </section>
-            <section class="home-card home-tip">
-              <h2>С чего начать</h2>
-              <p>Меню «☰ → + Персонаж», затем «Бестиарий» для монстров. Создайте сессию во вкладке «Сессии» и добавьте карту во вкладке «Карта». Резервная копия — «Экспорт JSON».</p>
+            <section class="home-card home-quickstart" id="homeQuickStart" aria-labelledby="qsTitle">
+              <div class="qs-head">
+                <h2 id="qsTitle">Быстрый старт</h2>
+                <button type="button" id="qsHide" class="qs-hide" title="Скрыть быстрый старт">Скрыть</button>
+              </div>
+              <p class="qs-lead" id="qsLead">Пять шагов, чтобы освоиться: герой, монстр, сессия, карта и бой.</p>
+              <div class="qs-progress" role="progressbar" aria-labelledby="qsTitle" aria-valuemin="0" aria-valuemax="5" aria-valuenow="0"><span id="qsBar"></span></div>
+              <ol class="qs-list" id="qsList"></ol>
+              <p class="qs-done" id="qsDone" hidden>Всё готово. Можно вести игру — или скрыть этот блок.</p>
             </section>
+            <button type="button" class="qs-restore" id="qsShow" hidden>Показать быстрый старт</button>
           </div>
           <div class="home-col">
-            <section class="home-card">
-              <h2>Дополнительные возможности</h2>
-              <ul>
+            <div class="home-actions">
+              <button data-menu-target="btnLibrary"><span class="gi" data-gi="book"></span> База</button>
+              <button data-menu-target="btnShop"><span class="gi" data-gi="shop"></span> Магазин</button>
+              <button data-menu-target="btnMonEffects"><span class="gi" data-gi="effects"></span> Эффекты</button>
+              <button data-menu-target="btnTables"><span class="gi" data-gi="tables"></span> Таблицы</button>
+              <button data-menu-target="btnGen"><span class="gi" data-gi="dice"></span> Генераторы</button>
+              <button data-menu-target="btnRules"><span class="gi" data-gi="book"></span> Правила</button>
+            </div>
+            <details class="home-card home-features" id="homeFeatures">
+              <summary class="home-fold-summary home-features-summary"><h2>Возможности</h2><span class="hf-caret" aria-hidden="true">▾</span></summary>
+              <ul class="home-features-list">
                 <li><b>Бестиарий</b> — <span id="homeBestiaryCount">690</span> монстров D&amp;D 5e с поиском и добавлением на ширму.</li>
                 <li><b>База</b> — заклинания и снаряжение PHB 2024, а также конверсия World of Warcraft: 69 заклинаний и 64 магических предмета.</li>
                 <li><b>Магазин</b> — предметы и артефакты с ценами.</li>
@@ -151,20 +164,10 @@
                 <li><b>Кости</b> — d4…d100 и свои грани, несколько бросков сразу.</li>
                 <li><b>Экспорт / Импорт</b> — резервная копия всех данных.</li>
               </ul>
-            </section>
-            <div class="home-actions">
-              <button data-menu-target="btnLibrary"><span class="gi" data-gi="book"></span> База</button>
-              <button data-menu-target="btnShop"><span class="gi" data-gi="shop"></span> Магазин</button>
-              <button data-menu-target="btnMonEffects"><span class="gi" data-gi="effects"></span> Эффекты</button>
-              <button data-menu-target="btnTables"><span class="gi" data-gi="tables"></span> Таблицы</button>
-              <button data-menu-target="btnGen"><span class="gi" data-gi="dice"></span> Генераторы</button>
-              <button data-menu-target="btnRules"><span class="gi" data-gi="book"></span> Правила</button>
-            </div>
-          </div>
-        </div>
-        <div class="home-bottom">
-        <details class="home-card home-save" open>
-          <summary><h2>Сохранение данных</h2></summary>
+            </details>
+        <details class="home-card home-save">
+          <summary class="home-fold-summary"><h2>Сохранение данных</h2><span class="hf-caret" aria-hidden="true">▾</span></summary>
+          <div class="home-fold-body">
           <p>Данные хранятся в браузере (localStorage и IndexedDB). Чтобы не потерять их при очистке истории, подключите папку на диске — в неё будет автоматически записываться файл <code>shirma-backup.json</code> при каждом изменении.</p>
           <ol class="home-save-steps">
             <li>Нажмите «Выбрать папку» и укажите любую папку (например, <code>Документы/Ширма</code>).</li>
@@ -176,10 +179,11 @@
             <span class="hint" id="homeSaveDirStatus"></span>
           </div>
           <p class="hint">Работает в Chrome и Edge (десктоп). В Safari/Firefox используйте «Экспорт JSON» и храните файл вручную.</p>
+          </div>
         </details>
-        <section class="home-card home-updates">
-          <h2>Обновления</h2>
-          <ul>
+        <details class="home-card home-updates">
+          <summary class="home-fold-summary"><h2>Обновления</h2><span class="hf-caret" aria-hidden="true">▾</span></summary>
+          <ul class="home-updates-list">
             <li><span class="upd-date">16.11.2026</span><span>Бой: компактный трекер — одна строка на участника, статусы в поповере, быстрая заметка над журналом и статблок монстра или персонажа в нижней панели.</span></li>
             <li><span class="upd-date">16.11.2026</span><span>Ширма и монстры: 2–4 колонки, фильтр по карточкам, разделы «Персонажи / Заметки / Правила», режим списка, сводки в свёрнутых карточках и облегчённое оформление.</span></li>
             <li><span class="upd-date">16.11.2026</span><span>Музыка: длительность каждого трека и общая, перетаскивание треков за ручку, строка воспроизведения с перемоткой и play/pause прямо в списке.</span></li>
@@ -215,7 +219,8 @@
             <li><span class="upd-date">02.11.2026</span><span>Карточки персонажей и монстров в две колонки; компактный интерфейс, меню «☰».</span></li>
             <li><span class="upd-date">01.11.2026</span><span>Раздел «Карта»: добавление карт, карточки боя и бестиарий.</span></li>
           </ul>
-        </section>
+        </details>
+          </div>
         </div>
       </div>
     </div>
@@ -224,8 +229,8 @@
         <button id="addPcTop" class="only-chars">＋ Добавить персонажа</button>
         <button id="addNoteTop" class="only-chars"><span class="gi" data-gi="note"></span> Добавить заметку</button>
         <span class="toolbar-hint only-chars">Нажми ⌘K / Ctrl+K для поиска и вставки</span>
-        <button id="addMobTop" class="only-monsters">＋ Добавить монстра</button>
-        <button id="createMobTop" class="only-monsters"><span class="gi" data-gi="monsters"></span> Создать монстра</button>
+        <button id="addMobTop" class="only-monsters"><span class="gi" data-gi="book"></span> Из бестиария</button>
+        <button id="createMobTop" class="only-monsters"><span class="gi" data-gi="monsters"></span> Свой монстр</button>
         <button id="btnImportJsonTop" title="Импорт персонажа или монстра из JSON"><span class="gi" data-gi="import"></span> Из JSON</button>
         <button id="tplOpenTop" title="Шаблоны карточек: сохранить заготовку и создать по ней новую"><span class="gi" data-gi="note"></span> Шаблоны</button>
         <span class="canvas-tools">
@@ -255,66 +260,74 @@
         </aside>
         <div class="sessions-editor">
           <div class="editor-toolbar" id="sessionToolbar">
+            <button data-cmd="undo" title="Отменить последнее действие (Ctrl+Z)">Отменить</button>
+            <button data-cmd="redo" title="Повторить отменённое действие (Ctrl+Shift+Z)">Повторить</button>
+            <span class="acts-sep"></span>
             <button data-cmd="bold" title="Жирный (Ctrl+B)"><b>Ж</b></button>
             <button data-cmd="italic" title="Курсив (Ctrl+I)"><i>К</i></button>
-            <button data-cmd="underline" title="Подчёркнутый"><u>Ч</u></button>
-            <button data-cmd="strikeThrough" title="Зачёркнутый"><s>З</s></button>
             <span class="acts-sep"></span>
             <button data-block="h1" title="Заголовок 1">H1</button>
             <button data-block="h2" title="Заголовок 2">H2</button>
             <button data-block="h3" title="Заголовок 3">H3</button>
             <button data-block="p" title="Обычный текст">¶</button>
-            <span class="acts-sep"></span>
-            <button data-cmd="insertUnorderedList" title="Список">• —</button>
+            <button data-cmd="insertUnorderedList" title="Маркированный список">• —</button>
             <button data-cmd="insertOrderedList" title="Нумерованный список">1.</button>
-            <button data-block="blockquote" title="Цитата (повторно — вернуть обычный текст)">❝</button>
-            <button data-block="pre" title="Код">‹/›</button>
             <span class="acts-sep"></span>
-            <button data-cmd="justifyLeft" title="Выравнивание по левому краю">⇤</button>
-            <button data-cmd="justifyCenter" title="Выравнивание по центру">↔</button>
-            <button data-cmd="justifyRight" title="Выравнивание по правому краю">⇥</button>
-            <button data-cmd="justifyFull" title="Выравнивание по ширине">☰</button>
-            <span class="acts-sep"></span>
-            <select id="sessionFontSize" class="editor-select" title="Размер шрифта (в пикселях)" aria-label="Размер шрифта">
-              <option value="">Размер</option>
-              <option value="11">11</option>
-              <option value="12">12</option>
-              <option value="13">13</option>
-              <option value="14">14</option>
-              <option value="15">15</option>
-              <option value="16">16</option>
-              <option value="17">17</option>
-              <option value="18">18</option>
-              <option value="20">20</option>
-              <option value="22">22</option>
-              <option value="24">24</option>
-              <option value="28">28</option>
-              <option value="32">32</option>
-              <option value="36">36</option>
-              <option value="42">42</option>
-            </select>
-            <select id="sessionFontFamily" class="editor-select" title="Шрифт" aria-label="Шрифт">
-              <option value="">Шрифт</option>
-              <option value="'Cormorant Garamond', serif">Классика</option>
-              <option value="'PT Serif', serif">PT Serif</option>
-              <option value="Alegreya, serif">Alegreya</option>
-              <option value="Forum, serif">Forum</option>
-              <option value="'Cinzel', serif">Cinzel</option>
-              <option value="Inter, sans-serif">Inter</option>
-              <option value="'Book Antiqua', 'Palatino Linotype', serif">Book Antiqua</option>
-              <option value="Georgia, serif">Georgia</option>
-              <option value="'Times New Roman', serif">Times</option>
-              <option value="Palatino, serif">Palatino</option>
-              <option value="ui-monospace, Menlo, monospace">Моноширинный</option>
-            </select>
-            <span class="acts-sep"></span>
-            <button data-link="1" title="Ссылка"><span class="gi" data-gi="link"></span></button>
+            <button data-link="1" title="Вставить ссылку"><span class="gi" data-gi="link"></span></button>
             <button id="sessionCardLink" type="button" title="Вставить ссылку на карточку ([[название]])" aria-label="Вставить ссылку на карточку">[[ ]]</button>
             <button id="sessionImgBtn" type="button" title="Вставить картинку" aria-label="Вставить картинку">IMG</button>
             <input type="file" id="sessionImgInput" accept="image/*" class="hidden" aria-label="Выбрать картинку">
-            <button data-cmd="removeFormat" title="Очистить форматирование">✕ фмт</button>
-            <button data-cmd="undo" title="Отменить">↶</button>
-            <button data-cmd="redo" title="Повторить">↷</button>
+            <span class="menu-wrap">
+              <button id="sessionMoreBtn" type="button" aria-expanded="false" title="Дополнительное форматирование">Ещё ▾</button>
+              <div class="menu-panel" id="sessionMorePanel">
+                <span class="menu-caption">Начертание</span>
+                <button data-cmd="underline" title="Подчёркнутый"><u>Подчёркнутый</u></button>
+                <button data-cmd="strikeThrough" title="Зачёркнутый"><s>Зачёркнутый</s></button>
+                <span class="menu-caption">Абзац</span>
+                <button data-block="blockquote" title="Цитата; повторно — обычный текст">Цитата</button>
+                <button data-block="pre" title="Блок кода">Код</button>
+                <span class="menu-caption">Выравнивание</span>
+                <button data-cmd="justifyLeft" title="По левому краю">По левому краю</button>
+                <button data-cmd="justifyCenter" title="По центру">По центру</button>
+                <button data-cmd="justifyRight" title="По правому краю">По правому краю</button>
+                <button data-cmd="justifyFull" title="По ширине">По ширине</button>
+                <span class="menu-caption">Шрифт</span>
+                <select id="sessionFontSize" class="editor-select" title="Размер шрифта (в пикселях)" aria-label="Размер шрифта">
+                  <option value="">Размер</option>
+                  <option value="11">11</option>
+                  <option value="12">12</option>
+                  <option value="13">13</option>
+                  <option value="14">14</option>
+                  <option value="15">15</option>
+                  <option value="16">16</option>
+                  <option value="17">17</option>
+                  <option value="18">18</option>
+                  <option value="20">20</option>
+                  <option value="22">22</option>
+                  <option value="24">24</option>
+                  <option value="28">28</option>
+                  <option value="32">32</option>
+                  <option value="36">36</option>
+                  <option value="42">42</option>
+                </select>
+                <select id="sessionFontFamily" class="editor-select" title="Шрифт" aria-label="Шрифт">
+                  <option value="">Шрифт</option>
+                  <option value="'Cormorant Garamond', serif">Классика</option>
+                  <option value="'PT Serif', serif">PT Serif</option>
+                  <option value="Alegreya, serif">Alegreya</option>
+                  <option value="Forum, serif">Forum</option>
+                  <option value="'Cinzel', serif">Cinzel</option>
+                  <option value="Inter, sans-serif">Inter</option>
+                  <option value="'Book Antiqua', 'Palatino Linotype', serif">Book Antiqua</option>
+                  <option value="Georgia, serif">Georgia</option>
+                  <option value="'Times New Roman', serif">Times</option>
+                  <option value="Palatino, serif">Palatino</option>
+                  <option value="ui-monospace, Menlo, monospace">Моноширинный</option>
+                </select>
+                <span class="menu-caption">Оформление</span>
+                <button data-cmd="removeFormat" title="Убрать жирный, курсив, цвет и другие стили">Очистить формат</button>
+              </div>
+            </span>
           </div>
           <div class="editor-title-row">
             <button id="sessionsListToggle" class="sess-list-toggle" title="Список сессий" aria-label="Показать или скрыть список сессий" aria-expanded="true">☰</button>
@@ -332,6 +345,10 @@
     <div class="tabview" id="view-map" hidden>
       <div class="map-toolbar">
         <button id="mapRailToggle" class="map-rail-toggle" title="Список карт" aria-label="Показать или скрыть список карт" aria-expanded="true">☰</button>
+        <div class="map-mode" id="mapMode" role="group" aria-label="Режим карты">
+          <button type="button" data-map-mode="prep" class="active" title="Подготовка: рисование, ассеты, генератор">Подготовка</button>
+          <button type="button" data-map-mode="play" title="Игра: только токены, туман и линейка">Игра</button>
+        </div>
         <button id="mapAdd" title="Добавить новую карту"><span class="gi" data-gi="map"></span> Добавить карту</button>
       <div class="map-menu-bar" id="mapMenus" aria-label="Инструменты карты">
         <div class="map-menu">
@@ -343,7 +360,7 @@
           <div class="menu-panel"><div class="ms-row" id="msObj"></div></div>
         </div>
         <div class="map-menu">
-          <button class="map-menu-btn" aria-expanded="false"><span class="gi" data-gi="book"></span> Создать <span class="mm-caret">▾</span></button>
+          <button class="map-menu-btn" aria-expanded="false"><span class="gi" data-gi="book"></span> Наполнить <span class="mm-caret">▾</span></button>
           <div class="menu-panel"><div class="ms-row" id="msCreate"></div></div>
         </div>
         <div class="map-menu">
@@ -351,13 +368,24 @@
           <div class="menu-panel"><div class="ms-row" id="msView"></div></div>
         </div>
         <div class="map-menu">
-          <button class="map-menu-btn" aria-expanded="false"><span class="gi" data-gi="effects"></span> Зоны <span class="mm-caret">▾</span></button>
+          <button class="map-menu-btn" aria-expanded="false"><span class="gi" data-gi="effects"></span> Сцена <span class="mm-caret">▾</span></button>
           <div class="menu-panel"><div class="ms-row" id="msZones"></div></div>
         </div>
         <div class="map-menu">
           <button class="map-menu-btn" aria-expanded="false"><span class="gi" data-gi="folder"></span> Ещё <span class="mm-caret">▾</span></button>
           <div class="menu-panel"><div class="ms-row" id="msMore"></div></div>
         </div>
+      </div>
+      <div class="map-play-bar" id="mapPlayBar" hidden aria-label="Быстрые действия в игре">
+        <button type="button" data-play-act="token"><span class="gi" data-gi="character"></span> Персонаж</button>
+        <button type="button" data-play-act="marker"><span class="gi" data-gi="note"></span> Метка</button>
+        <button type="button" data-play-act="ruler"><span class="gi" data-gi="ruler"></span> Линейка</button>
+        <span class="mps-sep" aria-hidden="true"></span>
+        <button type="button" data-play-act="fog-hide">Скрыть всё</button>
+        <button type="button" data-play-act="fog-show">Открыть всё</button>
+        <button type="button" data-play-act="fog-room">Открыть комнату</button>
+        <span class="mps-sep" aria-hidden="true"></span>
+        <button type="button" data-play-act="present">Экран игроков</button>
       </div>
         <button id="mapToolsBtn" title="Показать или скрыть панель инструментов" aria-expanded="true">⚙ Инструменты</button>
         <button id="mapAddToken" title="Поставить персонажа или монстра на карту"><span class="gi" data-gi="character"></span> Персонаж</button>
@@ -565,6 +593,7 @@
         <button id="musicNewList" title="Новый плейлист или сцена">＋ Плейлист</button>
         <span class="acts-sep"></span>
         <button id="musicPlayAll" title="Играть выбранный плейлист">▶ Играть</button>
+        <input id="musicSearch" class="music-search" type="search" placeholder="Поиск трека…" aria-label="Поиск по трекам">
         <label class="music-vol-wrap" title="Громкость музыки">
           <span class="music-vol-ico" aria-hidden="true">♪</span>
           <span class="music-vol-lbl">Громкость</span>
@@ -613,12 +642,100 @@
             <span class="af-hint">Автор: Ролёвки от Вовки</span>
             <span class="af-hint" title="Иконки: Lorc, Delapouite — game-icons.net, CC BY 3.0">Иконки: game-icons.net</span>
             <span class="af-hint" title="Магические предметы SRD 5.2.1 — Wizards of the Coast, CC-BY-4.0">SRD 5.2.1 · CC-BY-4.0</span>
-            <span class="af-hint af-ver">Ширма мастера <span id="appVersion">1.4.0</span> · <a class="af-link" href="https://github.com/chipsfirst/dm_screen/releases" target="_blank" rel="noopener">что нового</a></span>
+            <span class="af-hint af-ver">Ширма мастера <span id="appVersion">1.4.1</span> · <a class="af-link" href="https://github.com/chipsfirst/dm_screen/releases" target="_blank" rel="noopener">что нового</a></span>
             <a class="af-link" href="https://boosty.to/vovkaroleplay" target="_blank" rel="noopener">Поддержать</a>
             <a class="af-link" href="https://github.com/chipsfirst/dm_screen" target="_blank" rel="noopener">Репозиторий на GitHub ↗</a>
           </span>
         </footer>
     </main>
+  <div class="table-hud" id="tableHud" hidden>
+  <button type="button" id="hudTurn" class="th-turn" title="Открыть бой">Бой не начат</button>
+  <span class="th-sep" aria-hidden="true"></span>
+  <button type="button" id="hudTimer" class="th-timer" title="Открыть таймер">Таймер: —</button>
+  <button type="button" id="hudDice" class="th-dice" title="Открыть кубики">Кости</button>
+  <span id="hudConds" class="th-conds">Состояния: 0</span>
+  <button type="button" id="hudClose" class="th-close" title="Скрыть HUD" aria-label="Скрыть HUD">✕</button>
+</div>
+
+<div class="dice-tray" id="diceTray">
+    <div class="dice-tray-panel" id="diceTrayPanel" hidden>
+      <div class="dt-head">
+        <span class="dt-title"><span class="gi" data-gi="dice"></span> Кости</span>
+        <button type="button" id="diceTrayClose" class="dt-close" title="Закрыть" aria-label="Закрыть">✕</button>
+      </div>
+      <div class="dt-dice" id="dtDice" role="group" aria-label="Тип кости">
+        <button type="button" class="dt-die" data-die="4">d4</button>
+        <button type="button" class="dt-die" data-die="6">d6</button>
+        <button type="button" class="dt-die" data-die="8">d8</button>
+        <button type="button" class="dt-die" data-die="10">d10</button>
+        <button type="button" class="dt-die" data-die="12">d12</button>
+        <button type="button" class="dt-die active" data-die="20">d20</button>
+        <button type="button" class="dt-die" data-die="100">d100</button>
+        <button type="button" class="dt-die" data-die="custom">dN</button>
+      </div>
+      <div class="dt-controls">
+        <label class="dt-count">Кол-во <input id="dieCount" class="die-count" type="number" min="1" max="100" value="1" aria-label="Количество костей"></label>
+        <button id="btnRoll" class="dt-roll" title="Бросить выбранные кости" aria-label="Бросить кости"><span class="gi" data-gi="dice"></span> Бросить</button>
+      </div>
+      <input id="dieCustom" class="dt-custom" type="number" min="2" max="10000" placeholder="Сколько граней? Например, 30" title="Число граней своей кости" aria-label="Число граней своей кости" style="display:none">
+      <div class="dt-result">
+        <span id="rollResult">—</span>
+        <span id="rollLog"></span>
+      </div>
+      <select id="dieSel" class="die-sel" aria-label="Кость: число граней" hidden>
+        <option value="4">d4</option>
+        <option value="6">d6</option>
+        <option value="8">d8</option>
+        <option value="10">d10</option>
+        <option value="12">d12</option>
+        <option value="20" selected>d20</option>
+        <option value="100">d100</option>
+        <option value="custom">d? свои грани…</option>
+      </select>
+    </div>
+    <button id="diceTrayToggle" class="dice-tray-toggle" type="button" aria-expanded="false" aria-controls="diceTrayPanel" title="Кости: броски доступны на любой вкладке">
+      <span class="gi" data-gi="dice"></span><span>Кости</span>
+    </button>
+  </div>
+</div>
+
+<div class="game-timer" id="gameTimerPanel" hidden>
+  <div class="gt-head"><strong>Таймер</strong><button type="button" id="gtClose" class="gt-close" title="Закрыть" aria-label="Закрыть">✕</button></div>
+  <div class="gt-modes" role="group" aria-label="Режим таймера">
+    <button type="button" class="gt-mode active" data-gt-mode="down">Отсчёт</button>
+    <button type="button" class="gt-mode" data-gt-mode="up">Секундомер</button>
+  </div>
+  <div class="gt-display" id="gtDisplay">05:00</div>
+  <div class="gt-presets" id="gtPresets">
+    <button type="button" data-gt-min="1">1 мин</button>
+    <button type="button" data-gt-min="5">5 мин</button>
+    <button type="button" data-gt-min="10">10 мин</button>
+    <button type="button" data-gt-min="30">30 мин</button>
+  </div>
+  <div class="gt-custom" id="gtCustom">
+    <input id="gtMin" type="number" min="0" max="999" value="5" aria-label="Минуты">
+    <span>мин</span>
+    <input id="gtSec" type="number" min="0" max="59" value="0" aria-label="Секунды">
+    <span>сек</span>
+    <button type="button" id="gtSet">Задать</button>
+  </div>
+  <div class="gt-actions">
+    <button type="button" id="gtStart">Старт</button>
+    <button type="button" id="gtReset">Сброс</button>
+  </div>
+  <div class="gt-extra">
+    <div class="gt-extra-title">Другие таймеры</div>
+    <div class="gt-extra-form">
+      <input id="gtExtraName" maxlength="24" placeholder="Название" aria-label="Название таймера">
+      <input id="gtExtraMin" type="number" min="0" max="999" value="1" aria-label="Минуты">
+      <span>м</span>
+      <input id="gtExtraSec" type="number" min="0" max="59" value="0" aria-label="Секунды">
+      <span>с</span>
+      <button id="gtExtraAdd" type="button" title="Добавить ещё один таймер">＋</button>
+    </div>
+    <div id="gtExtraList" class="gt-extra-list"></div>
+  </div>
+  <p class="gt-hint" id="gtHint">Обратный отсчёт. Таймер продолжает идти при переключении вкладок.</p>
 </div>
 
 <!-- Треки библиотеки для плейлиста -->
@@ -670,6 +787,7 @@
         <option value="feat">Черты</option>
         <option value="rule">Правила</option>
       </select>
+      <button id="libFavBtn" type="button" class="fav-filter" aria-pressed="false" title="Показать только избранное">★</button>
     </div>
 <div class="modal-results" id="libResults"></div>
   </div>
@@ -684,6 +802,7 @@
     </div>
     <div class="modal-search">
       <input id="bestSearch" type="search" placeholder="Поиск монстра: «дракон», «гоблин», «медведь»…">
+      <button id="bestFavBtn" type="button" class="fav-filter" aria-pressed="false" title="Показать только избранное">★</button>
       <button id="bestResultClose" title="Назад к списку" style="display:none">← Список</button>
     </div>
     <div class="modal-results" id="bestResults"></div>
@@ -1084,33 +1203,38 @@
   </div>
 </div>
 
-<script src="js/data/shop-data.js?v=1.4.0"></script>
-<script src="js/data/shop-catalog-data.js?v=1.4.0"></script>
-<script src="js/data/app-data.js?v=1.4.0"></script>
-<script src="js/data/books-data.js?v=1.4.0"></script>
-<script src="js/data/srd-data.js?v=1.4.0"></script>
-<script src="js/data/srd-chars-data.js?v=1.4.0"></script>
-<script src="js/data/feats-data.js?v=1.4.0"></script>
-<script src="js/data/adventure-cast.js?v=1.4.0"></script>
-<script src="js/data/tiles-data.js?v=1.4.0"></script>
-<script src="js/icons.js?v=1.4.0"></script>
-<script src="js/app/core/01-state.js?v=1.4.0"></script>
-<script src="js/app/ui/02-render.js?v=1.4.0"></script>
-<script src="js/app/ui/03-ui.js?v=1.4.0"></script>
-<script src="js/app/ui/04-events.js?v=1.4.0"></script>
-<script src="js/app/data/05-rules.js?v=1.4.0"></script>
-<script src="js/app/ui/06-modals.js?v=1.4.0"></script>
-<script src="js/app/data/07-bestiary.js?v=1.4.0"></script>
-<script src="js/app/data/08-content.js?v=1.4.0"></script>
-<script src="js/app/media/09-music.js?v=1.4.0"></script>
-<script src="js/app/media/10-map.js?v=1.4.0"></script>
-<script src="js/app/ui/11-search.js?v=1.4.0"></script>
-<script src="js/app/pages/12-sessions.js?v=1.4.0"></script>
-<script src="js/app/pages/13-battle.js?v=1.4.0"></script>
-<script src="js/app/pages/14-generators.js?v=1.4.0"></script>
-<script src="js/app/ui/15-cards.js?v=1.4.0"></script>
-<script src="js/app/ui/16-print.js?v=1.4.0"></script>
-<script src="js/app/ui/17-sessions-ext.js?v=1.4.0"></script>
-<script src="js/app/ui/18-map-ext.js?v=1.4.0"></script>
+<script src="js/data/shop-data.js?v=1.4.1"></script>
+<script src="js/data/shop-catalog-data.js?v=1.4.1"></script>
+<script src="js/data/app-data.js?v=1.4.1"></script>
+<script src="js/data/books-data.js?v=1.4.1"></script>
+<script src="js/data/srd-data.js?v=1.4.1"></script>
+<script src="js/data/srd-chars-data.js?v=1.4.1"></script>
+<script src="js/data/feats-data.js?v=1.4.1"></script>
+<script src="js/data/adventure-cast.js?v=1.4.1"></script>
+<script src="js/data/tiles-data.js?v=1.4.1"></script>
+<script src="js/icons.js?v=1.4.1"></script>
+<script src="js/app/core/01-state.js?v=1.4.1"></script>
+<script src="js/app/ui/02-render.js?v=1.4.1"></script>
+<script src="js/app/ui/03-ui.js?v=1.4.1"></script>
+<script src="js/app/ui/04-events.js?v=1.4.1"></script>
+<script src="js/app/data/05-rules.js?v=1.4.1"></script>
+<script src="js/app/ui/06-modals.js?v=1.4.1"></script>
+<script src="js/app/data/07-bestiary.js?v=1.4.1"></script>
+<script src="js/app/data/08-content.js?v=1.4.1"></script>
+<script src="js/app/media/09-music.js?v=1.4.1"></script>
+<script src="js/app/media/10-map.js?v=1.4.1"></script>
+<script src="js/app/ui/11-search.js?v=1.4.1"></script>
+<script src="js/app/pages/12-sessions.js?v=1.4.1"></script>
+<script src="js/app/pages/13-battle.js?v=1.4.1"></script>
+<script src="js/app/pages/14-generators.js?v=1.4.1"></script>
+<script src="js/app/ui/15-cards.js?v=1.4.1"></script>
+<script src="js/app/ui/16-print.js?v=1.4.1"></script>
+<script src="js/app/ui/17-sessions-ext.js?v=1.4.1"></script>
+<script src="js/app/ui/18-map-ext.js?v=1.4.1"></script>
+<script src="js/app/ui/19-polish.js?v=1.4.1"></script>
+<script src="js/app/ui/20-timer.js?v=1.4.1"></script>
+<script src="js/app/ui/21-favorites.js?v=1.4.1"></script>
+<script src="js/app/ui/22-hud.js?v=1.4.1"></script>
+<script src="js/app/ui/23-smoke.js?v=1.4.1"></script>
 </body>
 </html>

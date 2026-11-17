@@ -28,13 +28,13 @@
   }
   /* Пергамент — светлая тема: тёплая бумага, латунь, шалфей */
   html[data-theme="light"]{
-    --bg:#f4efe2; --panel:#fcf9ef; --panel2:#eee6d3; --line:#d8cdb6;
-    --card-edge:#d6c8ac; --card-edge-hi:#b79f74; --modal-edge:#bda987;
+    --bg:#f4efe5; --panel:#fcfaf3; --panel2:#f0e9dc; --line:#c9b99d;
+    --card-edge:#b9a47f; --card-edge-hi:#9f855a; --modal-edge:#b09a74;
     --text:#1d1a13; --muted:#554e3d; --accent:#5b6b44; --accent2:#4a3b22;
     --accent3:#6b7a52; --danger:#9d2f22; --ok:#3a6b45;
     --sel:#5b6b44; --sel2:#4b5937; --sel-text:#fbf6e6;
     --heading:#8a352a;
-    --btn-bg:linear-gradient(180deg,#f8f2e4 0%,#e7d9bf 52%,#d5c3a2 100%);
+    --btn-bg:linear-gradient(180deg,#fbf7ee 0%,#eee3cf 52%,#ddceb4 100%);
     --btn-text:#241d10; --btn-border:#b79f74;
     --bar-line:rgba(91,107,68,.44); --divider:rgba(91,107,68,.26);
     --card-shadow:0 2px 10px rgba(74,64,44,.12);
@@ -97,11 +97,11 @@
   /* Solarized Dark */
   html[data-theme="solarized"]{
     --bg:#002b36; --panel:#073642; --panel2:#0b4451; --line:#2f5561;
-    --card-edge:#3f6270; --card-edge-hi:#b58900; --modal-edge:#4d7182;
-    --text:#b7c2c2; --muted:#7f9499; --accent:#b58900; --accent2:#2aa198;
-    --accent3:#268bd2; --danger:#dc322f; --ok:#859900;
+    --card-edge:#527b8a; --card-edge-hi:#b58900; --modal-edge:#5d8796;
+    --text:#b7c2c2; --muted:#93a6aa; --accent:#b58900; --accent2:#35bdb2;
+    --accent3:#268bd2; --danger:#ff7b6f; --ok:#859900;
     --sel:#f0d08a; --sel2:#d3a51f; --sel-text:#002b36;
-    --heading:#cb4b16;
+    --heading:#f07a3f;
     --btn-bg:linear-gradient(180deg,#e8c96a 0%,#d3a51f 55%,#b58900 100%);
     --btn-text:#002b36; --btn-border:#b58900;
     --bar-line:rgba(181,137,0,.38); --divider:rgba(181,137,0,.22);
@@ -121,7 +121,7 @@
     --bg:#282828; --panel:#32302f; --panel2:#3c3836; --line:#504945;
     --card-edge:#6b5f52; --card-edge-hi:#fabd2f; --modal-edge:#7c6f64;
     --text:#ebdbb2; --muted:#a89984; --accent:#fabd2f; --accent2:#b8bb26;
-    --accent3:#83a598; --danger:#fb4934; --ok:#b8bb26;
+    --accent3:#83a598; --danger:#ff7a68; --ok:#b8bb26;
     --sel:#fabd2f; --sel2:#d79921; --sel-text:#282828;
     --heading:#fe8019;
     --btn-bg:linear-gradient(180deg,#ffd166 0%,#fabd2f 55%,#d79921 100%);
@@ -142,8 +142,8 @@
   html[data-theme="monokai"]{
     --bg:#272822; --panel:#2f3029; --panel2:#3b3c33; --line:#4f5340;
     --card-edge:#5f6349; --card-edge-hi:#a6e22e; --modal-edge:#767c56;
-    --text:#f8f8f2; --muted:#a6a68a; --accent:#a6e22e; --accent2:#f92672;
-    --accent3:#66d9ef; --danger:#f92672; --ok:#a6e22e;
+    --text:#f8f8f2; --muted:#b3b39b; --accent:#a6e22e; --accent2:#ff5c94;
+    --accent3:#66d9ef; --danger:#ff6b8f; --ok:#a6e22e;
     --sel:#c6f56b; --sel2:#a6e22e; --sel-text:#1f201a;
     --heading:#fd971f;
     --btn-bg:linear-gradient(180deg,#c6f56b 0%,#a6e22e 55%,#8bc723 100%);
@@ -163,8 +163,8 @@
   /* Tokyo Night */
   html[data-theme="tokyo"]{
     --bg:#1a1b26; --panel:#1f2335; --panel2:#292e42; --line:#3b4261;
-    --card-edge:#414a70; --card-edge-hi:#7aa2f7; --modal-edge:#4f5a85;
-    --text:#c0caf5; --muted:#787c99; --accent:#7aa2f7; --accent2:#bb9af7;
+    --card-edge:#56618c; --card-edge-hi:#7aa2f7; --modal-edge:#64709c;
+    --text:#c0caf5; --muted:#969ab8; --accent:#7aa2f7; --accent2:#bb9af7;
     --accent3:#7dcfff; --danger:#f7768e; --ok:#9ece6a;
     --sel:#c0d4ff; --sel2:#9db8f5; --sel-text:#1a1b26;
     --heading:#ff9e64;
@@ -185,8 +185,8 @@
   /* One Dark */
   html[data-theme="onedark"]{
     --bg:#282c34; --panel:#21252b; --panel2:#2c313a; --line:#3e4451;
-    --card-edge:#4b5263; --card-edge-hi:#61afef; --modal-edge:#5c6370;
-    --text:#c8cdd6; --muted:#7f848e; --accent:#61afef; --accent2:#c678dd;
+    --card-edge:#5f6878; --card-edge-hi:#61afef; --modal-edge:#6f7989;
+    --text:#c8cdd6; --muted:#9aa0ad; --accent:#61afef; --accent2:#c678dd;
     --accent3:#56b6c2; --danger:#e06c75; --ok:#98c379;
     --sel:#b8d8fa; --sel2:#8cc4f2; --sel-text:#1b1f24;
     --heading:#e5c07b;
@@ -206,12 +206,12 @@
   }
   /* Nord */
   html[data-theme="nord"]{
-    --bg:#2e3440; --panel:#3b4252; --panel2:#434c5e; --line:#4c566a;
-    --card-edge:#5a6b80; --card-edge-hi:#88c0d0; --modal-edge:#607d8f;
+    --bg:#2e3440; --panel:#3b4252; --panel2:#434c5e; --line:#64708c;
+    --card-edge:#6f8299; --card-edge-hi:#88c0d0; --modal-edge:#728fa2;
     --text:#eceff4; --muted:#a3aec2; --accent:#88c0d0; --accent2:#8fbcbb;
-    --accent3:#81a1c1; --danger:#bf616a; --ok:#a3be8c;
+    --accent3:#81a1c1; --danger:#f0a5aa; --ok:#a3be8c;
     --sel:#d7e7ee; --sel2:#b6d4de; --sel-text:#22303a;
-    --heading:#d08770;
+    --heading:#e8a089;
     --btn-bg:linear-gradient(180deg,#eef4f8 0%,#dbe7ee 55%,#c9dae4 100%);
     --btn-text:#22303a; --btn-border:#88c0d0;
     --bar-line:rgba(136,192,208,.32); --divider:rgba(136,192,208,.18);
@@ -257,7 +257,8 @@ html,body{height:100%}
   .home-lead{margin:4px 0 0; color:var(--muted); font-size:15px; line-height:1.45}
   .home-grid{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; align-items:stretch}
   .home-col{display:flex; flex-direction:column; gap:12px; min-width:0}
-  .home-grid > .home-col:first-child .home-card{flex:1 1 0; min-height:0}
+  .home-grid > .home-col:first-child .home-card{flex:0 0 auto; min-height:0}
+  .home-grid > .home-col:first-child{min-height:0; overflow:auto; padding-right:2px}
   .home-card{background:var(--panel); border:1px solid var(--card-edge); border-radius:10px; padding:11px 13px; box-shadow:var(--card-shadow)}
   .home-card:hover{border-color:var(--card-edge-hi)}
   .home-card h2{margin:0 0 6px; color:var(--heading)}
@@ -265,6 +266,46 @@ html,body{height:100%}
   .home-card ul{margin:0; padding-left:16px}
   .home-card li{margin-bottom:3px}
   .home-tip{border-color:var(--accent)}
+
+
+  /* Сворачиваемый список возможностей и нижний ряд главной */
+  .home-features{padding:0}
+  .home-features-summary{list-style:none; display:flex; align-items:center; justify-content:space-between; gap:8px;
+    padding:11px 13px; cursor:pointer; color:var(--heading)}
+  .home-features-summary::-webkit-details-marker{display:none}
+  .home-features-summary h2{margin:0}
+  .home-features[open] .home-features-summary{border-bottom:1px solid var(--line)}
+  .hf-caret{font-size:11px; color:var(--muted); transition:transform .18s ease}
+  .home-features[open] .hf-caret{transform:rotate(180deg)}
+  .home-features-list{margin:0!important; padding:10px 13px 12px 30px!important}
+  .home-bottom--single{grid-template-columns:1fr}
+
+  /* Быстрый старт на главной */
+  .home-quickstart{border-color:var(--accent)}
+  .qs-head{display:flex; align-items:center; justify-content:space-between; gap:8px}
+  .qs-head h2{margin:0}
+  .qs-hide{border:0; background:transparent; color:var(--muted); font-size:11.5px; padding:2px 4px; cursor:pointer; border-radius:5px}
+  .qs-hide:hover{color:var(--text); background:var(--panel2)}
+  .qs-lead{margin-top:2px!important; font-size:12.5px!important; color:var(--muted)!important}
+  .qs-progress{height:5px; margin:9px 0 4px; border-radius:99px; background:var(--line); overflow:hidden}
+  .qs-progress span{display:block; height:100%; width:0; border-radius:inherit; background:linear-gradient(90deg,var(--accent),var(--sel)); transition:width .25s ease}
+  .qs-list{list-style:none!important; margin:0!important; padding:0!important; display:flex; flex-direction:column}
+  .qs-step{display:flex; align-items:center; gap:8px; padding:6px 0; border-top:1px solid var(--line); margin:0!important}
+  .qs-step:first-child{border-top:0}
+  .qs-check{flex:0 0 22px; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center;
+    border:1px solid var(--line); border-radius:50%; font-size:11px; color:var(--muted); background:var(--panel2)}
+  .qs-step.done .qs-check{background:var(--sel); color:var(--sel-text); border-color:var(--card-edge-hi)}
+  .qs-body{display:flex; flex-direction:column; min-width:0; flex:1 1 auto; line-height:1.25}
+  .qs-body b{font-size:12.5px; color:var(--text); font-weight:600}
+  .qs-body small{font-size:11px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .qs-step.done .qs-body b{color:var(--muted); text-decoration:line-through; text-decoration-color:var(--line)}
+  .qs-act{flex:0 0 auto; padding:3px 8px!important; font-size:11.5px!important; border-radius:6px!important; min-height:0!important}
+  .qs-done{margin:7px 0 0!important; font-size:12px!important; color:var(--muted)!important}
+  .qs-restore{display:block; width:100%; margin-top:2px; padding:6px; border:1px dashed var(--line); border-radius:7px;
+    background:transparent; color:var(--muted); font-size:12px; cursor:pointer}
+  .qs-restore:hover{color:var(--text); border-color:var(--card-edge-hi)}
+  .qs-restore[hidden]{display:none}
+
   .home-actions{display:grid; grid-template-columns:1fr 1fr; gap:8px}
   .home-actions button{font-weight:600; width:100%}
   .home-updates ul{list-style:none; margin:0; padding:0}
@@ -328,6 +369,29 @@ html,body{height:100%}
   .view-toolbar .toolbar-hint{color:var(--muted); font-size:12px; margin-left:4px}
   .show-monsters .view-toolbar .only-chars{display:none}
   .show-monsters .view-toolbar .only-monsters{display:inline-flex}
+
+
+  /* Пустые состояния доски и карты */
+  .canvas-empty{max-width:560px; margin:clamp(32px,9vh,96px) auto; padding:18px; display:flex; flex-direction:column;
+    align-items:center; gap:6px; text-align:center; color:var(--muted)}
+  .canvas-empty .ce-icon{width:54px; height:54px; display:inline-flex; align-items:center; justify-content:center;
+    border:1px solid var(--line); border-radius:50%; color:var(--accent); background:var(--panel); margin-bottom:2px}
+  .canvas-empty .ce-icon .gi{width:26px; height:26px}
+  .canvas-empty h3{margin:0; color:var(--heading); font-size:18px}
+  .canvas-empty p{margin:0; max-width:440px; font-size:13.5px; line-height:1.45}
+  .ce-actions{display:flex; flex-wrap:wrap; justify-content:center; gap:7px; margin-top:6px}
+  .ce-actions button{display:inline-flex; align-items:center; gap:5px; padding:5px 11px; font-size:12.5px}
+  .ce-actions .gi{width:14px; height:14px}
+  .map-empty{position:absolute; inset:0; z-index:6; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:7px; padding:28px; text-align:center; color:var(--muted); background:var(--panel)}
+  .map-empty .me-icon{width:58px; height:58px; display:inline-flex; align-items:center; justify-content:center;
+    border:1px solid var(--line); border-radius:50%; color:var(--accent); background:var(--panel)}
+  .map-empty .me-icon .gi{width:28px; height:28px}
+  .map-empty h3{margin:0; color:var(--heading); font-size:19px}
+  .map-empty p{margin:0; max-width:430px; font-size:13.5px; line-height:1.45}
+  .me-actions{display:flex; flex-wrap:wrap; justify-content:center; gap:8px; margin-top:6px}
+  .me-actions button{display:inline-flex; align-items:center; gap:5px; padding:5px 11px; font-size:12.5px}
+  .me-actions .gi{width:14px; height:14px}
 
   /* Map */
   .map-toolbar{display:flex; gap:8px; align-items:center; padding:8px 18px; border-bottom:1px solid var(--line); flex-wrap:wrap; background:var(--panel)}
@@ -577,7 +641,7 @@ html,body{height:100%}
   /* акцентные кнопки (главные действия) */
   .actions button, .menu-panel .tab, #btnRoll, #btnMenu, .map-toolbar button, .editor-toolbar button,
   .sessions-list-head button, .sessions-wrap button{font-weight:600}
-  #btnRoll, .tab.active, .actions .acts-group button:first-child{color:var(--sel-text)}
+  #btnRoll, .tab.active{color:var(--sel-text)}
   #btnRoll, .tab.active{
     border-color:var(--card-edge-hi);
     background:linear-gradient(180deg, var(--sel) 0%, var(--sel2) 100%);
@@ -2295,3 +2359,284 @@ body.map-present .map-canvas{height:100vh}
 #mapPresentExit{position:fixed; top:12px; right:14px; z-index:1002; background:rgba(20,22,26,.85); color:#f1e9d6; border:1px solid rgba(255,255,255,.25); border-radius:8px; padding:7px 12px; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,.4)}
 #mapPresentExit:hover{border-color:var(--accent2); color:var(--accent2)}
 #mapPresent.active{border-color:var(--accent2); color:var(--accent2)}
+
+/* Режим карты: подготовка / игра */
+.map-mode{display:inline-flex; align-items:center; border:1px solid var(--line); border-radius:7px; overflow:hidden; background:var(--panel2); flex:0 0 auto}
+.map-toolbar .map-mode button{border:0; border-radius:0; padding:4px 9px; font-size:12px; background:transparent; box-shadow:none}
+.map-toolbar .map-mode button + button{border-left:1px solid var(--line)}
+.map-toolbar .map-mode button.active{background:var(--sel); color:var(--sel-text); border-color:var(--card-edge-hi)}
+.map-toolbar .map-mode button:hover{background:var(--panel)}
+.map-toolbar .map-mode button.active:hover{background:var(--sel2)}
+.map-play-bar{display:none; gap:5px; flex-wrap:wrap; align-items:center}
+.map-play-bar[hidden]{display:none!important}
+.map-play #mapPlayBar:not([hidden]){display:flex}
+.mps-sep{width:1px; height:18px; background:var(--line); margin:0 2px; flex:0 0 auto}
+.map-play .map-menu-bar,
+.map-play #mapAdd,
+.map-play #mapPresent,
+.map-play #mapToolsBtn,
+.map-play #mapMoreBtn{display:none!important}
+
+/* Нижний ряд главной с одним блоком «Обновления» */
+.home-bottom.home-bottom--single{grid-template-columns:1fr}
+
+/* Три сворачиваемых блока в правой колонке главной */
+.home-features,
+.home-save,
+.home-updates{padding:0!important; flex:0 0 auto; overflow:visible}
+.home-fold-summary{list-style:none; display:flex; align-items:center; justify-content:space-between; gap:8px;
+  margin:0; padding:11px 13px; cursor:pointer; color:var(--heading)}
+.home-fold-summary::-webkit-details-marker{display:none}
+.home-fold-summary h2{margin:0!important; font-size:16px!important}
+.home-features[open] > .home-fold-summary,
+.home-save[open] > .home-fold-summary,
+.home-updates[open] > .home-fold-summary{border-bottom:1px solid var(--line)}
+.home-save summary::before{content:none!important; display:none!important}
+.home-save .home-fold-body{padding:10px 13px 12px}
+.home-save .home-fold-body > p:first-child{margin-top:0}
+.home-updates{display:block!important}
+.home-updates-list{list-style:none; margin:0!important; padding:10px 13px 12px!important; max-height:300px; overflow:auto}
+
+/* Свёрнутые блоки правой колонки занимают всю ширину */
+.home-save:not([open]){align-self:stretch!important}
+.home-save{width:100%}
+
+/* Единая высота кнопок управления */
+:root{--control-h:32px}
+.topbar button:not(.mb-btn),
+.topbar .tab,
+.view-toolbar button,
+.home-actions button,
+.qs-act,
+.qs-restore,
+.ce-actions button,
+.me-actions button,
+.home-save-actions button,
+.map-toolbar button,
+.map-play-bar button,
+.map-mode button,
+.map-add-menu button,
+.map-zoomctl button,
+.menu-panel button,
+.sessions-list-head button,
+.sessions-editor .editor-toolbar button,
+.sessions-editor .editor-title-row button,
+.battle-toolbar button,
+.modal button,
+.ui-actions button,
+.room-lib-tabs button,
+.zone-types button{
+  height:var(--control-h);
+  min-height:var(--control-h);
+  padding-top:0;
+  padding-bottom:0;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  line-height:1.15;
+}
+.qs-hide{height:var(--control-h); min-height:var(--control-h); display:inline-flex; align-items:center; padding-top:0; padding-bottom:0}
+
+/* Опасное действие в глобальном меню */
+.menu-panel .menu-danger{color:var(--danger)}
+.menu-panel .menu-danger:hover{border-color:var(--danger)}
+
+/* Панель сессий: перенос строк и меню «Ещё» */
+.sessions-editor .editor-toolbar{flex-wrap:wrap; overflow:visible}
+#sessionMorePanel{left:0; right:auto; min-width:250px; max-height:min(70vh,480px); overflow:auto}
+#sessionMorePanel button{justify-content:flex-start; text-align:left}
+#sessionMorePanel .editor-select{width:100%; margin:2px 0; padding:4px 6px; font-size:12px}
+#sessionMoreBtn{font-weight:600}
+
+/* Поиск по трекам */
+.music-search{width:180px; min-width:140px; padding:5px 9px; font-size:12.5px; border-radius:7px; background:var(--panel2); border:1px solid var(--line); color:var(--text); outline:none}
+.music-search:focus{border-color:var(--card-edge-hi)}
+
+/* Дайс-трей в правом нижнем углу */
+.dice-tray{position:fixed; right:16px; bottom:44px; z-index:2500; display:flex; flex-direction:column; align-items:flex-end; gap:8px}
+.dice-tray-panel{width:min(330px,calc(100vw - 32px)); padding:10px; border:1px solid var(--card-edge); border-radius:12px; background:var(--panel); box-shadow:var(--modal-shadow)}
+.dice-tray-panel[hidden]{display:none}
+.dice-tray-panel .dicebar{display:flex; flex-wrap:wrap; align-items:center; gap:6px; padding:0; border:0; background:transparent}
+.dice-tray-panel .dicebar .db-label{font-size:11px; margin-right:2px}
+.dice-tray-panel .die-sel,.dice-tray-panel .die-count,.dice-tray-panel .die-custom{height:32px; font-size:12px; padding:4px 7px}
+.dice-tray-panel #rollResult{flex:1 1 100%; margin:4px 0 0; font-size:14px; min-height:20px}
+.dice-tray-panel #rollLog{flex:1 1 100%; max-width:100%; font-size:11px; white-space:normal; overflow:visible}
+.dice-tray-toggle{width:62px; height:62px; padding:0; border-radius:50%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
+  background:linear-gradient(180deg,var(--sel),var(--sel2)); color:var(--sel-text); border-color:var(--card-edge-hi); box-shadow:0 6px 20px rgba(0,0,0,.32)}
+.dice-tray-toggle .gi{width:24px; height:24px}
+.dice-tray-toggle > span:last-child{font-size:9px; letter-spacing:.08em; text-transform:uppercase; font-weight:700}
+.dice-tray-toggle:hover{filter:brightness(1.07)}
+/* На карте зум не должен прятаться под треем */
+.map-zoomctl{right:88px}
+
+/* Верхняя панель: ровная сетка и более выразительный шрифт кнопок */
+.topbar .tab,
+.topbar .main-head .actions button,
+.topbar #btnMenu{font-family:var(--font-head); letter-spacing:.025em; font-weight:600}
+.topbar .tab{font-size:14.5px}
+.topbar .main-head .actions button{font-size:13.5px}
+.topbar .tab,
+.topbar .main-head .actions button{display:inline-flex; align-items:center; justify-content:center; line-height:1}
+@media (min-width:1200px){
+  .topbar .main-head{display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:12px}
+  .topbar .tabbar{grid-column:2; justify-self:center}
+  .topbar .main-head .actions{grid-column:3; justify-self:end}
+}
+
+/* Точное центрирование вкладок по центру экрана на широких окнах */
+@media (min-width:1200px){
+  .topbar{position:relative}
+  .topbar .main-head{display:flex; justify-content:flex-end}
+  .topbar .tabbar{position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); z-index:2}
+}
+
+/* Светлая тема: читаемые цветные бейджи */
+html[data-theme="light"] .type-tag.pc,
+html[data-theme="light"] .lib-row .lib-kind.k-spell{color:#2f6f9f; border-color:#2f6f9f}
+html[data-theme="light"] .type-tag.rule,
+html[data-theme="light"] .lib-row .lib-kind.k-rule{color:#3f6b47; border-color:#3f6b47}
+html[data-theme="light"] .type-tag.note,
+html[data-theme="light"] .lib-row .lib-kind.k-feat{color:#7a4f95; border-color:#7a4f95}
+html[data-theme="light"] .type-tag.mob{color:#a33b34; border-color:#a33b34}
+html[data-theme="light"] .type-tag.img,
+html[data-theme="light"] .lib-row .lib-kind.k-item{color:#8a6418; border-color:#8a6418}
+
+/* Меню добавления карты больше не белое в тёмных темах */
+.map-add-menu{background:var(--panel2); color:var(--text); border-color:var(--line); box-shadow:var(--modal-shadow)}
+.map-add-menu button{color:var(--text)}
+.map-add-menu button:hover,.map-add-menu button:focus-visible{background:var(--panel); outline:none}
+
+/* В «Пергаменте» кнопка дайс-трея должна оставаться тёмно-зелёной */
+html[data-theme="light"] .dice-tray-toggle{
+  background:linear-gradient(180deg,var(--sel),var(--sel2));
+  color:var(--sel-text); border-color:var(--card-edge-hi);
+}
+html[data-theme="light"] .dice-tray-toggle:hover{
+  background:linear-gradient(180deg,var(--sel2),var(--sel));
+  color:var(--sel-text); filter:none;
+}
+
+/* Улучшенный открытый дайс-трей */
+.dice-tray-panel{width:min(332px,calc(100vw - 32px)); padding:0; overflow:hidden;
+  background:linear-gradient(180deg,var(--panel2),var(--panel)); border:1px solid var(--card-edge); border-radius:14px}
+.dt-head{display:flex; align-items:center; justify-content:space-between; gap:8px; padding:10px 12px;
+  border-bottom:1px solid var(--line); background:var(--panel2)}
+.dt-title{display:flex; align-items:center; gap:6px; font-family:var(--font-head); font-size:16px; font-weight:700; color:var(--heading)}
+.dt-title .gi{width:17px; height:17px}
+.dt-close{width:26px; height:26px; padding:0; border:0; background:transparent; color:var(--muted); box-shadow:none; font-size:14px}
+.dt-close:hover{color:var(--text); background:var(--panel)}
+.dt-dice{display:grid; grid-template-columns:repeat(4,1fr); gap:5px; padding:10px 12px 4px}
+.dt-die{height:34px; padding:0; border-radius:7px; border:1px solid var(--line); background:var(--panel); color:var(--text);
+  font-family:var(--font-head); font-size:13px; box-shadow:none}
+.dt-die:hover{background:var(--panel2); border-color:var(--card-edge-hi)}
+.dt-die.active{background:linear-gradient(180deg,var(--sel),var(--sel2)); color:var(--sel-text); border-color:var(--card-edge-hi)}
+.dt-controls{display:flex; align-items:center; gap:8px; padding:8px 12px 4px}
+.dt-count{display:flex; align-items:center; gap:5px; font-size:11px; color:var(--muted); white-space:nowrap}
+.dt-count input{width:54px; height:32px; padding:3px 6px; font-size:12px; border:1px solid var(--line); border-radius:7px; background:var(--panel); color:var(--text)}
+.dt-roll{flex:1; height:36px; padding:0 10px; display:inline-flex; align-items:center; justify-content:center; gap:6px;
+  font-family:var(--font-head); font-size:14px; font-weight:700; border-radius:8px;
+  background:linear-gradient(180deg,var(--sel),var(--sel2)); color:var(--sel-text); border-color:var(--card-edge-hi)}
+.dt-roll .gi{width:16px; height:16px}
+.dt-roll:hover{filter:brightness(1.07)}
+.dt-custom{display:block; width:calc(100% - 24px); height:34px; margin:4px 12px 0; padding:4px 8px;
+  border:1px solid var(--line); border-radius:7px; background:var(--panel); color:var(--text); font-size:12.5px}
+.dt-result{display:flex; flex-direction:column; justify-content:center; min-height:58px; margin:8px 12px 12px;
+  padding:8px 10px; border:1px solid var(--line); border-radius:9px; background:var(--panel)}
+#diceTrayPanel #rollResult{display:block; margin:0; min-height:28px; font-family:var(--font-head); font-size:25px; line-height:1.1; font-weight:700; color:var(--heading)}
+#diceTrayPanel #rollResult:empty::before{content:'—'; color:var(--muted); font-weight:400}
+#diceTrayPanel #rollLog{display:block; max-width:100%; max-height:46px; overflow:auto; margin-top:2px;
+  font-size:10.5px; line-height:1.35; color:var(--muted); white-space:normal}
+#diceTrayPanel #dieSel{display:none!important}
+
+/* Открытый трей поднимается над зумом карты */
+.dice-tray{transition:bottom .16s ease}
+.dice-tray.open{bottom:110px}
+
+/* Игровой таймер */
+#btnGameTimer{position:relative; padding:0 7px}
+#btnGameTimer svg{width:18px; height:18px; display:block}
+#gameTimerBadge{position:absolute; top:-7px; right:-7px; min-width:28px; padding:1px 4px; border-radius:8px;
+  background:var(--sel); color:var(--sel-text); border:1px solid var(--panel); font-size:9px; line-height:1.3;
+  font-variant-numeric:tabular-nums; text-align:center}
+#gameTimerBadge[hidden]{display:none}
+#btnGameTimer.done #gameTimerBadge{background:var(--danger); color:#fff}
+.game-timer{position:fixed; right:16px; z-index:2600; width:min(312px,calc(100vw - 32px));
+  background:var(--panel); border:1px solid var(--card-edge); border-radius:14px; box-shadow:var(--modal-shadow); overflow:hidden}
+.game-timer[hidden]{display:none}
+.gt-head{display:flex; align-items:center; justify-content:space-between; gap:8px; padding:10px 12px;
+  border-bottom:1px solid var(--line); background:var(--panel2)}
+.gt-head strong{font-family:var(--font-head); font-size:16px; color:var(--heading)}
+.gt-close{width:26px; height:26px; padding:0; border:0; background:transparent; color:var(--muted); box-shadow:none; font-size:14px}
+.gt-close:hover{color:var(--text); background:var(--panel)}
+.gt-modes{display:flex; gap:4px; padding:8px 12px 0}
+.gt-mode{flex:1; height:30px; padding:0; font-size:11.5px; border-radius:7px; background:var(--panel2); color:var(--muted); border:1px solid var(--line); box-shadow:none}
+.gt-mode.active{background:linear-gradient(180deg,var(--sel),var(--sel2)); color:var(--sel-text); border-color:var(--card-edge-hi)}
+.gt-display{padding:8px 12px 6px; font-family:var(--font-head); font-size:48px; line-height:1; font-weight:700;
+  text-align:center; color:var(--heading); font-variant-numeric:tabular-nums; letter-spacing:.03em}
+.game-timer.done .gt-display{color:var(--danger); animation:gtPulse 1s ease-in-out infinite}
+@keyframes gtPulse{50%{opacity:.45}}
+.gt-presets{display:grid; grid-template-columns:repeat(4,1fr); gap:4px; padding:2px 12px 4px}
+.gt-presets button{height:30px; padding:0; font-size:11px; border-radius:7px; background:var(--panel2); color:var(--text); border:1px solid var(--line); box-shadow:none}
+.gt-presets button:hover{border-color:var(--card-edge-hi)}
+.gt-custom{display:flex; align-items:center; gap:5px; padding:4px 12px; font-size:10.5px; color:var(--muted)}
+.gt-custom input{width:50px; height:30px; padding:3px 5px; border:1px solid var(--line); border-radius:6px; background:var(--panel2); color:var(--text); font-size:11.5px}
+.gt-custom button{height:30px; padding:0 8px; margin-left:auto; font-size:10.5px; border-radius:6px}
+.gt-actions{display:flex; gap:6px; padding:4px 12px}
+#gtStart{flex:1; height:36px; font-family:var(--font-head); font-size:14px; font-weight:700;
+  background:linear-gradient(180deg,var(--sel),var(--sel2)); color:var(--sel-text); border-color:var(--card-edge-hi)}
+#gtReset{height:36px; padding:0 12px; font-size:11.5px}
+.gt-hint{margin:2px 12px 10px; font-size:10.5px; line-height:1.35; color:var(--muted)}
+
+/* Меню звука */
+.sound-wrap{position:relative}
+.sound-menu{min-width:240px; padding:8px}
+.sound-row{display:flex; align-items:center; gap:7px; padding:5px 4px; font-size:12.5px; color:var(--text); cursor:pointer}
+.sound-row input{width:auto}
+.sound-slider{display:flex; align-items:center; justify-content:space-between; gap:8px; padding:5px 4px; font-size:11.5px; color:var(--muted)}
+.sound-slider input[type=range]{width:112px; accent-color:var(--accent)}
+.sound-menu .hint{padding:4px 4px 0; font-size:10.5px; line-height:1.35}
+
+/* Избранное в библиотеке и бестиарии */
+.fav-filter{min-width:34px; padding:0 8px!important; font-size:16px!important; color:var(--muted); line-height:1}
+.fav-filter.on{background:linear-gradient(180deg,var(--sel),var(--sel2)); color:var(--sel-text); border-color:var(--card-edge-hi)}
+.lib-row .lib-fav{flex:0 0 auto; width:24px!important; height:24px!important; min-height:24px!important; padding:0!important;
+  border:0; background:transparent; box-shadow:none; color:var(--muted); font-size:16px; line-height:1; opacity:.55; align-self:center}
+.lib-row .lib-fav:hover{color:var(--accent); opacity:1}
+.lib-row .lib-fav.on{color:var(--accent2); opacity:1}
+
+/* Дополнительные таймеры */
+.gt-extra{margin:8px 12px 0; padding-top:8px; border-top:1px solid var(--line)}
+.gt-extra-title{font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin-bottom:5px}
+.gt-extra-form{display:flex; align-items:center; gap:3px; margin-bottom:6px}
+.gt-extra-form input{height:30px; padding:3px 5px; border:1px solid var(--line); border-radius:6px; background:var(--panel2); color:var(--text); font-size:11px}
+#gtExtraName{flex:1; min-width:0}
+#gtExtraMin,#gtExtraSec{width:38px; text-align:center}
+#gtExtraAdd{width:30px!important; height:30px!important; min-height:30px!important; padding:0!important; font-size:16px; line-height:1; border-radius:6px}
+.gt-extra-list{display:flex; flex-direction:column; gap:4px; max-height:120px; overflow:auto}
+.gt-extra-item{display:flex; align-items:center; gap:6px; padding:4px 5px; border:1px solid var(--line); border-radius:7px; background:var(--panel2)}
+.gt-extra-item.done{border-color:var(--danger)}
+.gte-dot{width:7px; height:7px; border-radius:50%; flex:0 0 auto; background:var(--c)}
+.gte-name{flex:1; min-width:0; font-size:11.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.gte-time{font-size:12px; font-weight:700; font-variant-numeric:tabular-nums; color:var(--text)}
+.gt-extra-item.done .gte-time{color:var(--danger)}
+.gt-extra-item button{height:24px!important; min-height:24px!important; padding:0 5px!important; font-size:10px; border-radius:5px}
+.gt-extra-item button[data-x="del"]{width:22px; padding:0!important; color:var(--muted); border:0; background:transparent; box-shadow:none}
+.gt-extra-item button[data-x="del"]:hover{color:var(--danger); background:var(--panel)}
+
+/* Компактный HUD «За столом» */
+.table-hud{position:fixed; left:50%; bottom:40px; transform:translateX(-50%); z-index:2400; display:flex; align-items:center; gap:5px;
+  max-width:calc(100vw - 24px); padding:5px 6px 5px 9px; background:var(--panel); border:1px solid var(--card-edge); border-radius:11px;
+  box-shadow:var(--modal-shadow); flex-wrap:wrap}
+.table-hud[hidden]{display:none}
+.table-hud button{height:28px; min-height:28px; padding:0 8px; font-size:11.5px; border-radius:6px}
+.th-turn{max-width:250px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-family:var(--font-head); font-weight:700}
+.th-timer{font-variant-numeric:tabular-nums; font-weight:700; color:var(--accent2)}
+.th-sep{width:1px; height:18px; background:var(--line); flex:0 0 auto}
+.th-conds{font-size:10.5px; color:var(--muted); padding:0 4px; white-space:nowrap}
+.th-close{width:24px; padding:0!important; border:0; background:transparent; color:var(--muted); box-shadow:none}
+.th-close:hover{color:var(--danger); background:var(--panel2)}
+@media (max-width:700px){
+  .table-hud{bottom:118px; width:calc(100vw - 24px); justify-content:center}
+  .th-turn{max-width:100%; flex:1 1 100%}
+  .th-sep{display:none}
+}

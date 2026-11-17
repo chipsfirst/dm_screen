@@ -74,7 +74,42 @@ function render(){
     + (activeParentId===null?'':(' / '+(findBlock(activeParentId)?.title||'корень')));
 
   if(!list.length){
-    canvas.innerHTML = `<div class="canvas-watermark">${q ? 'По фильтру «'+escapeHtml(canvasQuery.trim())+'» ничего не найдено.' : (searchFilter?'Ничего не найдено.':(blocksTab==='monsters'?'Здесь будут монстры: «＋ Создать монстра» — пресет или пустая карточка, «Бестиарий» — готовые из книг.':'Добавьте первого персонажа — «＋ ПК» в правом меню.'))}</div>`;
+    if(q){
+      canvas.innerHTML = `<div class="canvas-empty">
+        <span class="ce-icon">${gi('search')}</span>
+        <h3>Ничего не найдено</h3>
+        <p>По фильтру «${escapeHtml(canvasQuery.trim())}» карточек нет.</p>
+        <div class="ce-actions"><button type="button" data-empty-action="reset-filter">Сбросить фильтр</button></div>
+      </div>`;
+    } else if(blocksTab==='monsters'){
+      canvas.innerHTML = `<div class="canvas-empty">
+        <span class="ce-icon">${gi('monsters')}</span>
+        <h3>Монстров пока нет</h3>
+        <p>Возьмите готового из бестиария или создайте своего по пресету.</p>
+        <div class="ce-actions">
+          <button type="button" data-empty-action="bestiary">${gi('book')} Бестиарий</button>
+          <button type="button" data-empty-action="mob-preset">${gi('monsters')} Создать монстра</button>
+        </div>
+      </div>`;
+    } else if(searchFilter){
+      canvas.innerHTML = `<div class="canvas-empty">
+        <span class="ce-icon">${gi('search')}</span>
+        <h3>Ничего не найдено</h3>
+        <p>Попробуйте изменить запрос или сбросить поиск.</p>
+        <div class="ce-actions"><button type="button" data-empty-action="reset-filter">Сбросить поиск</button></div>
+      </div>`;
+    } else {
+      canvas.innerHTML = `<div class="canvas-empty">
+        <span class="ce-icon">${gi('character')}</span>
+        <h3>Ширма пока пуста</h3>
+        <p>Начните с героя или заметки. Монстров можно взять из бестиария.</p>
+        <div class="ce-actions">
+          <button type="button" data-empty-action="pc">${gi('character')} Создать персонажа</button>
+          <button type="button" data-empty-action="note">${gi('note')} Добавить заметку</button>
+          <button type="button" data-empty-action="bestiary">${gi('book')} Бестиарий</button>
+        </div>
+      </div>`;
+    }
   } else {
     const safeCard = b => { try { return blockCard(b); } catch(e){
       return `<div class="block" data-id="${b.id}"><div class="block-head"><div class="ttl-note"><span>${escapeHtml(b.title||'Блок')}</span></div></div><div class="block-body"><div class="hint">Ошибка отображения блока: ${escapeHtml(String((e&&e.message)||e))}</div></div></div>`;

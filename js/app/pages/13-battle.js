@@ -1120,10 +1120,6 @@ if(monEffType) monEffType.addEventListener('change', renderMonEff);
   bindBattle();
   bindBattleKeyboard();
   musicInit();
-  // броски костей живут на панели боя
-  { const db=document.querySelector('.topbar .dicebar');
-    const tb=document.getElementById('battleToolbar');
-    if(db && tb && !tb.contains(db)) tb.insertBefore(db, tb.firstChild); }
   showTab(savedTab);   // remember последняя вкладка
   hydrateIcons();
 })();

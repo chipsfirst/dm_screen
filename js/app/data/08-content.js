@@ -220,11 +220,19 @@ function renderLib(){
   if(inKind('feat'))  feats.forEach(f=>{ if(matchQ((f.n||'')+' '+(f.en||'')+' '+(f.d||''))) rows.push({kind:'feat', feat:f}); });
   if(inKind('rule'))  RULES_FOR_LIB.forEach(r=>{ if(matchQ(r.title+' '+r.text)) rows.push({kind:'rule', rule:r}); });
 
-  if(!rows.length){ libResults.innerHTML=`<div class="lib-empty">Ничего не найдено. Попробуйте другое слово.</div>`; return; }
+  if(window.libFavOnly){
+    rows = rows.filter(r => window.favHas && window.favHas(window.libFavKey ? window.libFavKey(r) : ''));
+  }
+  if(!rows.length){
+    libResults.innerHTML=`<div class="lib-empty">${window.libFavOnly ? 'В избранном пока пусто. Отметьте записи звёздочкой.' : 'Ничего не найдено. Попробуйте другое слово.'}</div>`;
+    return;
+  }
 
   const limit = 80;
   let html = rows.slice(0,limit).map((r,i)=>{
     const addBtn = `<span class="lib-add" data-add="${i}" title="Добавить на ширму">＋</span>`;
+    const favKey = window.libFavKey ? window.libFavKey(r) : '';
+    const favBtn = favKey ? `<button type="button" class="lib-fav${window.favHas && window.favHas(favKey) ? ' on' : ''}" data-fav="${escapeHtml(favKey)}" title="${window.favHas && window.favHas(favKey) ? 'Убрать из избранного' : 'В избранное'}">${window.favHas && window.favHas(favKey) ? '★' : '☆'}</button>` : '';
     if(r.kind==='spell'){
       const s=r.sp;
       const meta = `Ур.${s.l} · ${s.sc} · ${s.t} · ${s.r} · ${s.d}${s.c?' · '+s.c:''} · ${s.cls}`;
@@ -234,7 +242,7 @@ function renderLib(){
           <div class="lib-title">${escapeHtml(s.n)}</div>
           <div class="lib-meta">${escapeHtml(meta)}</div>
           ${s.desc?`<div class="lib-p">${escapeHtml(s.desc.slice(0,140))}${s.desc.length>140?'…':''}</div>`:''}
-        </div>${addBtn}</div>`;
+        </div>${favBtn}${addBtn}</div>`;
     }
     if(r.kind==='item'){
       const it=r.it;
@@ -248,7 +256,7 @@ function renderLib(){
         <div class="lib-main">
           <div class="lib-title">${escapeHtml(it.n)}</div>
           <div class="lib-meta">${escapeHtml(meta)}</div>
-        </div>${addBtn}</div>`;
+        </div>${favBtn}${addBtn}</div>`;
     }
     if(r.kind==='feat'){
       const f=r.feat;
@@ -260,7 +268,7 @@ function renderLib(){
           <div class="lib-title">${escapeHtml(f.n)}${f.en?` <span class="lib-en">${escapeHtml(f.en)}</span>`:''}</div>
           <div class="lib-meta">${escapeHtml(meta)}</div>
           <div class="lib-p">${escapeHtml(String(f.d||'').replace(/\s+/g,' ').slice(0,140))}${String(f.d||'').length>140?'…':''}</div>
-        </div>${addBtn}</div>`;
+        </div>${favBtn}${addBtn}</div>`;
     }
     const rl=r.rule;
     return `<div class="lib-row" data-type="librow">
@@ -268,7 +276,7 @@ function renderLib(){
       <div class="lib-main">
         <div class="lib-title">${escapeHtml(rl.title)}</div>
         <div class="lib-p">${escapeHtml(String(rl.text||'').slice(0,120))}</div>
-      </div>${addBtn}</div>`;
+      </div>${favBtn}${addBtn}</div>`;
   }).join('');
 
   if(rows.length>limit) html += `<div class="lib-empty">…ещё ${rows.length-limit} результатов. Уточните запрос.</div>`;
