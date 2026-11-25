@@ -1,5 +1,5 @@
 /* ═══ Local library search (ленивая загрузка library-data.js) ═══ */
-const DATA_VER = '1.4.1';
+const DATA_VER = '1.5.0';
 let wowLoadingPromise = null;
 /* Ленивая загрузка wow-data.js (400 КБ): нужна магазину, библиотеке и бестиарию */
 function ensureWow(){
@@ -41,7 +41,15 @@ function ensureLibrary(){
   });
   return libLoadingPromise;
 }
-const RULES_FOR_LIB = BASE_RULES || [];
+const RULES_FOR_LIB = Array.isArray(window.RULES_DATA)
+  ? window.RULES_DATA.map(r => ({
+      title: r.title,
+      text: r.body || r.short || '',
+      id: r.id,
+      cat: r.cat,
+      short: r.short || ''
+    }))
+  : (BASE_RULES || []);
 mergeBooksRules();
 const libModal = document.getElementById('libModal');
 const libSearch = document.getElementById('libSearch');

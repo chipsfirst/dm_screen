@@ -9,6 +9,7 @@
   const hideBtn = document.getElementById('qsHide');
   const showBtn = document.getElementById('qsShow');
   const HIDE_KEY = 'shirma_quickstart_hidden_v1';
+  let forceTraining = false;
 
   function readSessions(){
     if(typeof sessions !== 'undefined' && sessionsInited) return sessions.length;
@@ -43,12 +44,15 @@
 
   function render(){
     const hidden = (()=>{ try{ return localStorage.getItem(HIDE_KEY)==='1'; }catch(e){ return false; } })();
-    card.hidden = hidden;
-    if(showBtn) showBtn.hidden = !hidden;
-    if(hidden) return;
-
     const d = data();
     const n = STEPS.filter(s=> d[s.key]).length;
+    const showDash = (hidden || n === STEPS.length) && !forceTraining;
+
+    if(typeof window.homeDashboardSet === 'function') window.homeDashboardSet(showDash);
+    card.hidden = showDash;
+    if(showBtn) showBtn.hidden = true;
+    if(showDash) return;
+
     list.innerHTML = STEPS.map((s,i)=>{
       const on = !!d[s.key];
       return `<li class="qs-step${on ? ' done' : ''}">
@@ -98,16 +102,23 @@
     if(b) act(b.dataset.qsAct);
   });
   if(hideBtn) hideBtn.addEventListener('click', ()=>{
+    forceTraining = false;
     try{ localStorage.setItem(HIDE_KEY,'1'); }catch(e){}
     render();
   });
   if(showBtn) showBtn.addEventListener('click', ()=>{
+    forceTraining = true;
     try{ localStorage.removeItem(HIDE_KEY); }catch(e){}
     render();
   });
   document.querySelectorAll('.tab').forEach(t=>{
     if(t.dataset.tab==='home') t.addEventListener('click', ()=> setTimeout(render, 40));
   });
+  window.startQuickStart = ()=>{
+    forceTraining = true;
+    try{ localStorage.removeItem(HIDE_KEY); }catch(e){}
+    render();
+  };
   render();
   window.renderQuickStart = render;
 })();

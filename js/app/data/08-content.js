@@ -407,19 +407,23 @@ function doRoll(die,count,modLabel){
 }
 function doOneD20(){ return 1+Math.floor(Math.random()*20); }
 document.getElementById('btnExport').addEventListener('click', ()=>{
-  // собираем блобы медиа, на которые ссылаются блоки, фон карты и токены
-  const media={};
-  const collect=k=>{ if(k && mediaCache[k]) media[k]=mediaCache[k]; };
-  blocks.forEach(b=> collect(b.dataKey));
-  maps.forEach(m=>{ collect(m.bgKey); (m.markers||[]).forEach(k=> collect(k.imgKey)); });
-  const payload={ version:2, exported:Date.now(), blocks, media };
-  saveFile('shirma-backup.json', JSON.stringify(payload,null,2), 'application/json');
+  const payload = (typeof buildBackupPayload === 'function')
+    ? buildBackupPayload()
+    : (()=>{
+        const media={};
+        const collect=k=>{ if(k && mediaCache[k]) media[k]=mediaCache[k]; };
+        blocks.forEach(b=> collect(b.dataKey));
+        maps.forEach(m=>{ collect(m.bgKey); (m.markers||[]).forEach(k=> collect(k.imgKey)); });
+        return { version:2, exported:Date.now(), blocks, media };
+      })();
+  const stamp = new Date().toISOString().slice(0,10);
+  saveFile('shirma-backup-'+stamp+'.json', JSON.stringify(payload,null,2), 'application/json');
 });
 document.getElementById('btnImport').addEventListener('click', ()=> document.getElementById('fileInput').click());
 document.getElementById('fileInput').addEventListener('change', e=>{
   const f=e.target.files[0]; if(!f) return;
   const r=new FileReader();
-  r.onload=()=>{
+  r.onload=async ()=>{
     try{
       let data=JSON.parse(r.result);
       let arr, media=null;
@@ -428,6 +432,11 @@ document.getElementById('fileInput').addEventListener('change', e=>{
       else { uiAlert('Неизвестный формат файла'); return; }
       arr = sanitizeBlocks(arr);
       if(!arr.length){ uiAlert('В файле нет корректных блоков'); return; }
+      const full = data && !Array.isArray(data) && ['sessions','map','battle','music'].some(k=> data[k] !== undefined);
+      const ok = await uiConfirm(full
+        ? `Импорт заменит карточки (${arr.length}) и данные кампании: сессии, карту, бой, музыку и шаблоны. Сначала сохраните резервную копию. Продолжить?`
+        : `Импорт заменит карточки (${arr.length}). Продолжить?`, {ok:'Импортировать'});
+      if(!ok) return;
       pushUndo('импорт из файла');
       if(media && typeof media==='object'){
         Object.entries(media).forEach(([k,v])=>{

@@ -23,10 +23,14 @@
     '17+':  [['зм',12,1000],['пм',8,1000]]
   };
   function coinsLine(band){
-    return COINS[band].map(([u,n,m]) => {
+    const rates = { 'мм':0.01, 'см':0.1, 'зм':1, 'пм':10 };
+    let gold = 0;
+    const text = COINS[band].map(([u,n,m]) => {
       const v = roll(n,6)*m;
+      if(v) gold += v * (rates[u] || 0);
       return v ? money(v)+' '+u : '';
     }).filter(Boolean).join(' · ') || '—';
+    return { text, gold };
   }
 
   /* ── камни и искусство ── */
@@ -65,13 +69,18 @@
     F:['необычный'], G:['очень редкий'], H:['легендарный'], I:['очень редкий','легендарный']
   };
   const COMMON_ITEMS = ['Зелье лечения','Свиток (заговор)','Зелье лазания','Свиток (1 уровень)','Свиток (2 уровня)','Зелье большого лечения'];
-  function magicItem(letter){
+  const RARITY_VALUE = { 'обычный':100, 'необычный':400, 'редкий':4000, 'очень редкий':40000, 'легендарный':200000 };
+  function magicItemInfo(letter){
     const it = (window.SRD_ITEMS && window.SRD_ITEMS.items) || [];
     const want = TABLE_RARITY[letter] || ['необычный'];
     const pool = it.filter(x => want.indexOf(x.rarity) >= 0);
-    if(pool.length) return pick(pool).n;
-    return pick(COMMON_ITEMS);
+    if(pool.length){
+      const x = pick(pool);
+      return { name:x.n, rarity:x.rarity || 'необычный', value:RARITY_VALUE[x.rarity] || 0, desc:x.d || '', att:!!x.att, type:x.type || '' };
+    }
+    return { name:pick(COMMON_ITEMS), rarity:'обычный', value:100, desc:'', att:false, type:'' };
   }
+  function magicItem(letter){ return magicItemInfo(letter).name; }
 
   /* ── клад по полосе КР ── */
   const HOARD = {
@@ -125,37 +134,60 @@
   function hoard(band){
     const roll100 = d(100);
     const row = HOARD[band].find(x => roll100 >= x.r[0] && roll100 <= x.r[1]) || HOARD[band][0];
-    const lines = ['Монеты: '+coinsLine(band)];
-    let html = '<div class="gen-block"><b>Монеты</b><div>'+esc(coinsLine(band))+'</div></div>';
+    const coin = coinsLine(band);
+    let total = coin.gold;
+    const lines = ['Монеты: '+coin.text];
+    let html = '<div class="gen-block"><b>Монеты</b><div>'+esc(coin.text)+'</div></div>';
     if(row.g){
-      const s = gemsLine([row.g[2]], roll(row.g[0], row.g[1]));
+      const n = roll(row.g[0], row.g[1]);
+      const s = gemsLine([row.g[2]], n);
+      total += n * row.g[2];
       html += '<div class="gen-block"><b>Самоцветы</b><div>'+esc(s)+'</div></div>';
       lines.push('Самоцветы: '+s);
     }
     if(row.a){
-      const s = artLine([row.a[2]], roll(row.a[0], row.a[1]));
+      const n = roll(row.a[0], row.a[1]);
+      const s = artLine([row.a[2]], n);
+      total += n * row.a[2];
       html += '<div class="gen-block"><b>Предметы искусства</b><div>'+esc(s)+'</div></div>';
       lines.push('Предметы искусства: '+s);
     }
     if(row.it){
       const items = [];
-      row.it.forEach(([letter, c]) => { const n = cnt(c); for(let i=0;i<n;i++) items.push(magicItem(letter)); });
-      html += '<div class="gen-block"><b>Магические предметы ('+row.it.map(x=>x[0]).join('+')+')</b><div>'+esc(items.join(', '))+'</div></div>';
-      lines.push('Магические предметы: '+items.join(', '));
+      row.it.forEach(([letter, c]) => {
+        const n = cnt(c);
+        for(let i=0;i<n;i++){
+          const info = magicItemInfo(letter);
+          items.push(info);
+          total += info.value;
+        }
+      });
+      html += '<div class="gen-block"><b>Магические предметы ('+row.it.map(x=>x[0]).join('+')+')</b>'+
+        items.map(info => '<div class="gen-item"><b>'+esc(info.name)+'</b> '+
+          '<span class="gen-rarity">'+esc(info.rarity)+(info.att?' · настройка':'')+'</span>'+
+          '<p>'+esc(info.desc || 'Описание в базе отсутствует.')+'</p></div>').join('')+'</div>';
+      lines.push('Магические предметы:\n'+items.map(info => info.name+' ('+info.rarity+(info.att?', настройка':'')+'): '+(info.desc || 'описание отсутствует')).join('\n'));
     }
+    html += '<div class="gen-block"><b>Итого</b><div>Оценка: '+money(Math.round(total))+' зм (магические предметы — по редкости)</div></div>';
     html += '<div class="gen-block"><b>d100 по таблице клада</b><div>'+roll100+'</div></div>';
-    return { html, text: 'Клад (КР '+band+')\n'+lines.join('\n') };
+    return { html, text: 'Клад (КР '+band+')\n'+lines.join('\n')+'\nИтого: '+money(Math.round(total))+' зм' };
   }
   function individual(band){
     const roll100 = d(100);
     const row = INDIVIDUAL[band].find(x => roll100 >= x[0] && roll100 <= x[1]) || INDIVIDUAL[band][0];
+    const rates = { 'мм':0.01, 'см':0.1, 'зм':1, 'пм':10 };
+    let total = 0;
     const coins = Object.keys(row[2]).map(u => {
       const [n, s, m] = row[2][u];
-      return money(roll(n, s) * (m || 1)) + ' ' + u;
+      const v = roll(n, s) * (m || 1);
+      total += v * (rates[u] || 0);
+      return money(v) + ' ' + u;
     }).join(' · ');
     return {
-      html: '<div class="gen-block"><b>Монеты</b><div>'+esc(coins)+'</div></div><div class="gen-block"><b>d100 по таблице индивидуальной добычи</b><div>'+roll100+'</div></div>',
-      text: 'Индивидуальная добыча (КР '+band+')\nМонеты: '+coins
+      html: '<div class="gen-block"><b>Монеты</b><div>'+esc(coins)+'</div></div>'+
+        '<div class="gen-block"><b>Итого</b><div>Оценка: '+money(Math.round(total))+' зм</div></div>'+
+        '<div class="gen-block"><b>d100 по таблице индивидуальной добычи</b><div>'+roll100+'</div></div>',
+      text: 'Индивидуальная добыча (КР '+band+')\nМонеты: '+coins+'\nИтого: '+money(Math.round(total))+' зм'
     };
   }
   function trinket(){
@@ -449,6 +481,55 @@
     return { html, text: lines.join('\n') };
   }
 
+  function traps(){
+    const levels = [
+      { label:'несерьёзная', dc:11, dmg:'1d10', note:'помеха и потеря времени' },
+      { label:'опасная', dc:15, dmg:'2d10', note:'серьёзный урон или состояние' },
+      { label:'смертельная', dc:18, dmg:'4d10', note:'тяжёлый урон, плен или смерть' }
+    ];
+    const triggers = ['нажимная плита','растяжка у двери','ложная ступень','дверная ручка','статуя в нише','руна на полу','подвесной груз','фальшивый сундук'];
+    const effects = ['дротики из стены','вспышка огня','облако яда','кислота из потолка','падение в яму','психический шёпот','срабатывание сигнальной руны','обвал камней'];
+    const lv = pick(levels);
+    const magical = Math.random() < 0.35;
+    const trigger = pick(triggers);
+    const effect = pick(effects);
+    const detect = magical ? 'Внимательность или Аркана' : 'Внимательность';
+    const disable = magical ? 'Аркана' : 'воровские инструменты';
+    const dmg = roll(parseInt(lv.dmg.split('d')[0],10), parseInt(lv.dmg.split('d')[1],10));
+    const html = `<div class="gen-block"><b>Ловушка: ${esc(trigger)}</b><div>
+      Тип: ${magical?'магическая':'механическая'}<br>
+      Обнаружение: ${detect}, Сл ${lv.dc} (пассивно ${10 + Math.floor(lv.dc/2)})<br>
+      Обезвреживание: ${disable}, Сл ${lv.dc}<br>
+      Срабатывание: ${esc(trigger)}<br>
+      Эффект: ${esc(effect)}; спасбросок ${magical?'Мудрости':'Ловкости'} Сл ${lv.dc}; ${dmg} урона, ${lv.note}.
+    </div></div>`;
+    return { html, text:`Ловушка: ${trigger}\nТип: ${magical?'магическая':'механическая'}\nОбнаружение: ${detect}, Сл ${lv.dc}\nОбезвреживание: ${disable}, Сл ${lv.dc}\nЭффект: ${effect}; спасбросок Сл ${lv.dc}; ${dmg} урона; ${lv.note}.` };
+  }
+
+  function achievements(){
+    const list = [
+      ['Первая кровь','Нанести первый урон в бою','вдохновение героя'],
+      ['Тихий шаг','Пройти мимо стражи, не подняв тревоги','50 XP или услуга'],
+      ['Гроза гоблинов','Победить троих гоблинов за одну сессию','репутация у деревни'],
+      ['Друг животных','Успокоить зверя без боя','мелкий трофей'],
+      ['Коллекционер','Собрать три предмета одной коллекции','скидка у торговца'],
+      ['Оратор','Убедить НПС без угроз и подкупа','вдохновение героя'],
+      ['Живучий','Пережить бой, оставшись с 1 хитом','50 XP'],
+      ['Кладоискатель','Найти тайник, который пропустили все','50 XP или предмет'],
+      ['Мастер уклонения','Избежать трёх атак подряд','вдохновение героя'],
+      ['Ночной гость','Пробраться в охраняемое место без боя','услуга или информация'],
+      ['Зверолов','Поймать существо, не убивая его','репутация'],
+      ['Дипломат','Заключить союз с бывшим врагом','союзник'],
+      ['Картограф','Нанести на карту новый маршрут','50 XP'],
+      ['Легенда','Сделать так, чтобы о поступке узнали в трёх местах','репутация']
+    ];
+    const a = pick(list);
+    return {
+      html:`<div class="gen-block"><b>Достижение: ${esc(a[0])}</b><div>Условие: ${esc(a[1])}<br>Награда: ${esc(a[2])}</div></div>`,
+      text:`Достижение: ${a[0]}\nУсловие: ${a[1]}\nНаграда: ${a[2]}`
+    };
+  }
+
   /* ── отрисовка ── */
   let advRows = [];
   function names(){
@@ -517,6 +598,10 @@
       renderAdvList();
     } else if(tab === 'dungeon'){
       body.innerHTML = '<div class="gen-row"><button class="btn" data-roll="dungeon">Сгенерировать подземелье</button></div><div id="genOut" class="gen-out"></div>';
+    } else if(tab === 'trap'){
+      body.innerHTML = '<div class="gen-row"><button class="btn" data-roll="trap">Сгенерировать ловушку</button></div><div id="genOut" class="gen-out"></div>';
+    } else if(tab === 'ach'){
+      body.innerHTML = '<div class="gen-row"><button class="btn" data-roll="ach">Сгенерировать достижение</button></div><div id="genOut" class="gen-out"></div>';
     } else {
       const habs = habitats();
       body.innerHTML = '<div class="gen-row"><label>Уровень</label><input type="number" min="1" max="20" value="'+st.level+'" data-st="level">'+
@@ -564,6 +649,8 @@
       else if(kind === 'npc'){ const o = npc(); lastText = o.text; out(o.html, true); }
       else if(kind === 'names'){ const o = names(); lastText = o.text; out(o.html, true); }
       else if(kind === 'dungeon'){ const o = dungeon(); lastText = o.text; out(o.html, true); }
+      else if(kind === 'trap'){ const o = traps(); lastText = o.text; out(o.html, true); }
+      else if(kind === 'ach'){ const o = achievements(); lastText = o.text; out(o.html, true); }
       else { const o = crit(kind); lastText = o.text; out(o.html, true); }
       return;
     }
@@ -634,17 +721,6 @@
   const next = document.getElementById('tipsNext');
   if(next) next.addEventListener('click', show);
   const close = document.getElementById('tipsClose');
-  if(close) close.addEventListener('click', ()=> closeModal(modal));
-  modal.addEventListener('click', e=>{ if(e.target === modal) closeModal(modal); });
-})();
-
-/* ═══ Правила D&D 5.5 ═══ */
-(function(){
-  const modal = document.getElementById('rulesModal');
-  if(!modal) return;
-  const btn = document.getElementById('btnRules');
-  if(btn) btn.addEventListener('click', ()=> openModal(modal, btn));
-  const close = document.getElementById('rulesClose');
   if(close) close.addEventListener('click', ()=> closeModal(modal));
   modal.addEventListener('click', e=>{ if(e.target === modal) closeModal(modal); });
 })();
