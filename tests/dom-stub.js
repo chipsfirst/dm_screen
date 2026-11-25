@@ -1,7 +1,7 @@
 // Минимальная заглушка DOM для проверки загрузки app.js
 const noop = function(){};
 function makeEl(){
-  const store = { style:new Proxy({}, { get:(t,p)=> (p in t? t[p] : noop), set:(t,p,v)=>{ t[p]=v; return true; } }), dataset:{}, classList:{add:noop,remove:noop,toggle:noop,contains:()=>false},
+  const store = { style:new Proxy({}, { get:(t,p)=> (p in t? t[p] : noop), set:(t,p,v)=>{ t[p]=v; return true; } }), dataset:{}, attributes:{}, classList:{add:noop,remove:noop,toggle:noop,contains:()=>false},
     children:[], childNodes:[], options:[], files:[], value:'', textContent:'', innerHTML:'',
     hidden:false, disabled:false, width:0, height:0, checked:false };
   return new Proxy(store, {
@@ -12,7 +12,11 @@ function makeEl(){
       if(p==='querySelectorAll') return ()=>[];
       if(p==='getContext') return ()=>ctxStub;
       if(p==='getBoundingClientRect') return ()=>({left:0,top:0,width:100,height:100,right:100,bottom:100});
-      if(p==='appendChild'||p==='insertBefore'||p==='removeChild'||p==='remove'||p==='click'||p==='focus'||p==='blur'||p==='select'||p==='scrollIntoView'||p==='setAttribute'||p==='removeAttribute'||p==='setPointerCapture'||p==='releasePointerCapture'||p==='addEventListener'||p==='removeEventListener'||p==='preventDefault'||p==='stopPropagation'||p==='insertAdjacentHTML') return noop;
+      if(p==='getAttribute') return (name)=> (t.attributes && name in t.attributes) ? t.attributes[name] : null;
+      if(p==='setAttribute') return (name,val)=>{ t.attributes[name]=String(val); };
+      if(p==='removeAttribute') return (name)=>{ delete t.attributes[name]; };
+      if(p==='hasAttribute') return (name)=> !!(t.attributes && name in t.attributes);
+      if(p==='appendChild'||p==='insertBefore'||p==='removeChild'||p==='remove'||p==='click'||p==='focus'||p==='blur'||p==='select'||p==='scrollIntoView'||p==='setPointerCapture'||p==='releasePointerCapture'||p==='addEventListener'||p==='removeEventListener'||p==='preventDefault'||p==='stopPropagation'||p==='insertAdjacentHTML') return noop;
       if(p==='firstChild'||p==='lastChild'||p==='parentNode'||p==='parentElement'||p==='nextSibling') return null;
       return undefined;
     },

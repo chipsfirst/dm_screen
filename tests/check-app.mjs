@@ -19,12 +19,31 @@ const APP_PARTS = [
   'js/app/pages/12-sessions.js',
   'js/app/pages/13-battle.js',
   'js/app/pages/14-generators.js',
+  'js/app/ui/15-cards.js',
+  'js/app/ui/16-print.js',
+  'js/app/ui/17-sessions-ext.js',
+  'js/app/ui/18-map-ext.js',
+  'js/app/ui/19-polish.js',
+  'js/app/ui/20-timer.js',
+  'js/app/ui/21-favorites.js',
+  'js/app/ui/22-hud.js',
+  'js/app/ui/23-smoke.js',
+  'js/app/ui/24-reference.js',
+  'js/app/ui/26-encounter.js',
+  'js/app/ui/27-character.js',
+  'js/app/ui/28-home-dashboard.js',
+  'js/app/ui/29-table-mode.js',
+  'js/app/media/30-ambience.js',
+  'js/app/ui/31-handouts.js',
+  'js/app/ui/32-chronicle.js',
 ];
 const files = [
   'tests/dom-stub.js',
   'js/data/shop-data.js',
   'js/data/shop-catalog-data.js',
   'js/data/app-data.js',
+  'js/data/rules-data.js',
+  'js/data/class-progress-data.js',
   'js/data/books-data.js',
   'js/data/srd-data.js',
   'js/data/srd-chars-data.js',
@@ -124,7 +143,10 @@ const cargoVersion = (cargo.match(/^version\s*=\s*"([^"]+)"/m) || [])[1];
 if (!appVersion) fail('в index.html нет #appVersion');
 if (appVersion !== tauriConf.version) fail(`appVersion ${appVersion} ≠ tauri.conf.json ${tauriConf.version}`);
 if (appVersion !== cargoVersion) fail(`appVersion ${appVersion} ≠ Cargo.toml ${cargoVersion}`);
-console.log(`OK: версия совпадает везде — ${appVersion}`);
+const assetVersions = [...new Set([...html.matchAll(/[?&]v=([^"&]+)/g)].map((m) => m[1]))];
+const badVersions = assetVersions.filter((v) => v !== appVersion);
+if (badVersions.length) fail(`версии ассетов не совпадают: ${badVersions.join(', ')}`);
+console.log(`OK: версия совпадает везде — ${appVersion} (${assetVersions.length} версия ассетов)`);
 
 /* ── wow-data.js грузится лениво, но обязан попасть в сборку ── */
 if (/<script[^>]+wow-data\.js/.test(html)) fail('wow-data.js снова подключён тегом script — старт станет тяжелее');
@@ -159,3 +181,54 @@ const usedIds = new Set([...appSrc.matchAll(/getElementById\(\s*['"]([^'"]+)['"]
 const unknownIds = [...usedIds].filter((id) => !declaredIds.has(id) && !dynamicIds.has(id) && !legacyIds.has(id));
 if (unknownIds.length) fail(`getElementById ищет несуществующие id: ${unknownIds.join(', ')}`);
 console.log(`OK: все id из кода существуют (${usedIds.size}, известных легаси — ${legacyIds.size})`);
+
+/* ── Новые модули: справочник, прогрессия, встречи, персонаж, печать и Пульт ── */
+const rules = vm.runInContext('RULES_DATA', ctx);
+if(!Array.isArray(rules) || rules.length < 50) fail(`справочник: статей ${rules && rules.length}, ожидалось не меньше 50`);
+const ruleCats = vm.runInContext('RULES_CATEGORIES.length', ctx);
+if(ruleCats < 6) fail(`справочник: категорий ${ruleCats}, ожидалось не меньше 6`);
+
+const progress = vm.runInContext('CLASS_PROGRESS', ctx);
+const classes = Object.keys(progress || {});
+if(classes.length !== 12) fail(`прогрессия: классов ${classes.length}, ожидалось 12`);
+for(const [name, cls] of Object.entries(progress || {})){
+  const levels = Object.keys(cls.features || {});
+  if(levels.length !== 20 || levels[0] !== '1' || levels[19] !== '20') {
+    fail(`прогрессия: у класса ${name} не 20 уровней`);
+  }
+  if(!cls.subclass || !cls.subclass.name_ru) fail(`прогрессия: у класса ${name} нет подкласса`);
+}
+
+for(const name of ['openRulesPanel','openCharacterBuilder','openPrintAllCards','buildBattleTrackerSheet','openPrintBattle','renderHomeDashboard']){
+  if(typeof vm.runInContext(name, ctx) !== 'function') fail(`не загружена функция ${name}`);
+}
+
+const backup = vm.runInContext('buildBackupPayload()', ctx);
+if(!backup || backup.version !== 5) fail('резервная копия: неверная версия');
+for(const key of ['blocks','media','sessions','map','battle','battleLog','battleTurn','music','ambience','templates','sessionTemplates']){
+  if(!(key in backup)) fail(`резервная копия: нет поля ${key}`);
+}
+console.log(`OK: новые модули загружены — статей ${rules.length}, классов ${classes.length}, бэкап v${backup.version}`);
+
+const ambienceFiles = ['rain.mp3','wind.ogg','fire.m4a','tavern.ogg','cave.ogg'];
+for(const file of ambienceFiles){
+  if(!fs.existsSync(path.join(root, 'assets/ambience', file))) fail(`нет атмосферного звука: ${file}`);
+}
+console.log(`OK: атмосферные звуки на месте (${ambienceFiles.length})`);
+
+/* ── HTML: уникальные id и все app-скрипты в тестовом списке ── */
+const allIds = [...html.matchAll(/\bid="([^"]+)"/g)].map((m) => m[1]);
+const seenIds = new Set();
+const duplicateIds = new Set();
+allIds.forEach((id) => {
+  if(seenIds.has(id)) duplicateIds.add(id);
+  else seenIds.add(id);
+});
+if(duplicateIds.size) fail(`дубли id: ${[...duplicateIds].join(', ')}`);
+
+const appScripts = [...html.matchAll(/<script[^>]+src="(js\/app\/[^"?]+)(?:\?[^"]*)?"/g)].map((m) => m[1]);
+const missingFromTests = appScripts.filter((f) => !APP_PARTS.includes(f));
+const extraInTests = APP_PARTS.filter((f) => !appScripts.includes(f));
+if(missingFromTests.length) fail(`скрипты не проверяются: ${missingFromTests.join(', ')}`);
+if(extraInTests.length) fail(`в тестах лишние скрипты: ${extraInTests.join(', ')}`);
+console.log(`OK: id уникальны (${allIds.length}), все app-скрипты в тестах (${appScripts.length})`);

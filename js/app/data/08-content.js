@@ -407,15 +407,7 @@ function doRoll(die,count,modLabel){
 }
 function doOneD20(){ return 1+Math.floor(Math.random()*20); }
 document.getElementById('btnExport').addEventListener('click', ()=>{
-  const payload = (typeof buildBackupPayload === 'function')
-    ? buildBackupPayload()
-    : (()=>{
-        const media={};
-        const collect=k=>{ if(k && mediaCache[k]) media[k]=mediaCache[k]; };
-        blocks.forEach(b=> collect(b.dataKey));
-        maps.forEach(m=>{ collect(m.bgKey); (m.markers||[]).forEach(k=> collect(k.imgKey)); });
-        return { version:2, exported:Date.now(), blocks, media };
-      })();
+  const payload = buildBackupPayload();
   const stamp = new Date().toISOString().slice(0,10);
   saveFile('shirma-backup-'+stamp+'.json', JSON.stringify(payload,null,2), 'application/json');
 });
@@ -453,6 +445,7 @@ document.getElementById('fileInput').addEventListener('change', e=>{
         if(Array.isArray(data.battleLog)){ try{ localStorage.setItem('shirma_battle_log_v1', JSON.stringify(data.battleLog.slice(0,200))); battleLog=data.battleLog.slice(0,200); extra=true; }catch(e){} }
         if(data.battleTurn && typeof data.battleTurn==='object'){ try{ localStorage.setItem('shirma_battle_turn_v1', JSON.stringify(data.battleTurn)); battleTurn=data.battleTurn; extra=true; }catch(e){} }
         if(data.music && typeof data.music==='object' && musicMetaRestore(data.music)) extra=true;
+        if(data.ambience!==undefined){ try{ localStorage.setItem('shirma_ambience_v1', JSON.stringify(data.ambience)); extra=true; }catch(e){} }
         if(Array.isArray(data.templates)){
           try{
             const okTypes=['pc','mob','note','rule','img'];

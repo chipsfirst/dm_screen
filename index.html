@@ -112,6 +112,8 @@
               <span class="menu-caption">Печать</span>
               <button id="btnPrintAll" title="Печать всех карточек ширмы или сохранение в PDF"><span class="gi" data-gi="export"></span> Печать ширмы / PDF</button>
               <button id="btnPrintBattle" title="Печать трекера боя или сохранение в PDF"><span class="gi" data-gi="battle"></span> Печать боя / PDF</button>
+              <button id="btnHandouts" title="Письма, розыскные листы, меню таверны и записки"><span class="gi" data-gi="note"></span> Раздатки</button>
+              <button id="btnChronicle" title="Хроника кампании из сессий и журнала боя"><span class="gi" data-gi="book"></span> Хроника</button>
               <span class="menu-caption">Данные</span>
               <button id="btnDataCheck" title="Проверить связи, ссылки и сохранённые данные"><span class="gi" data-gi="shield"></span> Проверка данных</button>
               <button id="btnImportJson" title="Импорт персонажа или монстра из JSON"><span class="gi" data-gi="import"></span> Импорт карточки</button>
@@ -684,6 +686,25 @@
           <div id="musicTracks" class="music-tracks"></div>
         </section>
       </div>
+      <details class="ambience" id="ambiencePanel">
+        <summary class="amb-summary"><span>Атмосфера</span><span class="hint">дождь · ветер · огонь · таверна · пещера</span></summary>
+        <div class="amb-body">
+          <div class="amb-head">
+            <label class="amb-master">Общая громкость <input type="range" id="ambMaster" min="0" max="100" step="1" value="70"></label>
+            <span class="amb-actions">
+              <button type="button" id="ambStart">Включить</button>
+              <button type="button" id="ambStop" hidden>Стоп</button>
+            </span>
+          </div>
+          <div class="amb-presets" id="ambPresets">
+            <button type="button" data-amb-preset="tavern">Таверна</button>
+            <button type="button" data-amb-preset="rain">Дождь</button>
+            <button type="button" data-amb-preset="forest">Лес</button>
+            <button type="button" data-amb-preset="cave">Пещера</button>
+          </div>
+          <div class="amb-grid" id="ambGrid"></div>
+        </div>
+      </details>
       <div class="music-now" id="musicNow" hidden>
         <button class="mn-btn" id="mnPlay" type="button" title="Играть/пауза" aria-label="Играть/пауза">▶</button>
         <span class="mn-title" id="mnTitle">—</span>
@@ -700,7 +721,7 @@
             <span class="af-hint">Автор: Ролёвки от Вовки</span>
             <span class="af-hint" title="Иконки: Lorc, Delapouite — game-icons.net, CC BY 3.0">Иконки: game-icons.net</span>
             <span class="af-hint" title="Магические предметы SRD 5.2.1 — Wizards of the Coast, CC-BY-4.0">SRD 5.2.1 · CC-BY-4.0</span>
-            <span class="af-hint af-ver">Ширма мастера <span id="appVersion">1.5.0</span> · <a class="af-link" href="https://github.com/chipsfirst/dm_screen/releases" target="_blank" rel="noopener">что нового</a></span>
+            <span class="af-hint af-ver">Ширма мастера <span id="appVersion">1.5.1</span> · <a class="af-link" href="https://github.com/chipsfirst/dm_screen/releases" target="_blank" rel="noopener">что нового</a></span>
             <a class="af-link" href="https://boosty.to/vovkaroleplay" target="_blank" rel="noopener">Поддержать</a>
             <a class="af-link" href="https://github.com/chipsfirst/dm_screen" target="_blank" rel="noopener">Репозиторий на GitHub ↗</a>
           </span>
@@ -957,6 +978,53 @@
     <div class="print-foot">
       <span class="hint">В диалоге печати выберите принтер или «Сохранить как PDF».</span>
       <button id="printDo">Печать / PDF</button>
+    </div>
+  </div>
+</div>
+
+<!-- Мастерская раздаток -->
+<div class="modal" id="handoutModal" hidden>
+  <div class="modal-box handout-box">
+    <div class="modal-head">
+      <strong><span class="gi" data-gi="note"></span> Мастерская раздаток</strong>
+      <button class="modal-close" id="handoutClose">✕</button>
+    </div>
+    <div class="handout-layout">
+      <div class="handout-form">
+        <label>Шаблон
+          <select id="handoutTemplate">
+            <option value="letter">Письмо</option>
+            <option value="wanted">Розыскной лист</option>
+            <option value="menu">Меню таверны</option>
+            <option value="note">Записка</option>
+            <option value="item">Карточка предмета</option>
+          </select>
+        </label>
+        <label>Заголовок<input id="handoutTitle" maxlength="80"></label>
+        <label>Подзаголовок<input id="handoutSubtitle" maxlength="120"></label>
+        <label>Текст<textarea id="handoutBody" rows="10"></textarea></label>
+        <label>Подпись<input id="handoutFooter" maxlength="100"></label>
+        <div class="handout-actions">
+          <span class="hint">Печать или «Сохранить как PDF» в диалоге.</span>
+          <button type="button" id="handoutPrint">Печать / PDF</button>
+        </div>
+      </div>
+      <div class="handout-preview" id="handoutPreview" aria-live="polite"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Хроника кампании -->
+<div class="modal" id="chronicleModal" hidden>
+  <div class="modal-box chronicle-box">
+    <div class="modal-head">
+      <strong><span class="gi" data-gi="book"></span> Хроника кампании</strong>
+      <button class="modal-close" id="chronicleClose">✕</button>
+    </div>
+    <div class="chronicle-body" id="chronicleBody"></div>
+    <div class="chronicle-foot">
+      <span class="hint">Сессии и последние события журнала боя.</span>
+      <button type="button" id="chronicleExport">Экспорт Markdown</button>
     </div>
   </div>
 </div>
@@ -1304,45 +1372,48 @@
   </div>
 </div>
 
-<script src="js/data/shop-data.js?v=1.5.0"></script>
-<script src="js/data/shop-catalog-data.js?v=1.5.0"></script>
-<script src="js/data/app-data.js?v=1.5.0"></script>
-<script src="js/data/rules-data.js?v=1.5.0"></script>
-<script src="js/data/class-progress-data.js?v=1.5.0"></script>
-<script src="js/data/books-data.js?v=1.5.0"></script>
-<script src="js/data/srd-data.js?v=1.5.0"></script>
-<script src="js/data/srd-chars-data.js?v=1.5.0"></script>
-<script src="js/data/feats-data.js?v=1.5.0"></script>
-<script src="js/data/adventure-cast.js?v=1.5.0"></script>
-<script src="js/data/tiles-data.js?v=1.5.0"></script>
-<script src="js/icons.js?v=1.5.0"></script>
-<script src="js/app/core/01-state.js?v=1.5.0"></script>
-<script src="js/app/ui/02-render.js?v=1.5.0"></script>
-<script src="js/app/ui/03-ui.js?v=1.5.0"></script>
-<script src="js/app/ui/04-events.js?v=1.5.0"></script>
-<script src="js/app/data/05-rules.js?v=1.5.0"></script>
-<script src="js/app/ui/06-modals.js?v=1.5.0"></script>
-<script src="js/app/data/07-bestiary.js?v=1.5.0"></script>
-<script src="js/app/data/08-content.js?v=1.5.0"></script>
-<script src="js/app/media/09-music.js?v=1.5.0"></script>
-<script src="js/app/media/10-map.js?v=1.5.0"></script>
-<script src="js/app/ui/11-search.js?v=1.5.0"></script>
-<script src="js/app/pages/12-sessions.js?v=1.5.0"></script>
-<script src="js/app/pages/13-battle.js?v=1.5.0"></script>
-<script src="js/app/pages/14-generators.js?v=1.5.0"></script>
-<script src="js/app/ui/15-cards.js?v=1.5.0"></script>
-<script src="js/app/ui/16-print.js?v=1.5.0"></script>
-<script src="js/app/ui/17-sessions-ext.js?v=1.5.0"></script>
-<script src="js/app/ui/18-map-ext.js?v=1.5.0"></script>
-<script src="js/app/ui/19-polish.js?v=1.5.0"></script>
-<script src="js/app/ui/20-timer.js?v=1.5.0"></script>
-<script src="js/app/ui/21-favorites.js?v=1.5.0"></script>
-<script src="js/app/ui/22-hud.js?v=1.5.0"></script>
-<script src="js/app/ui/23-smoke.js?v=1.5.0"></script>
-<script src="js/app/ui/24-reference.js?v=1.5.0"></script>
-<script src="js/app/ui/26-encounter.js?v=1.5.0"></script>
-<script src="js/app/ui/27-character.js?v=1.5.0"></script>
-<script src="js/app/ui/28-home-dashboard.js?v=1.5.0"></script>
-<script src="js/app/ui/29-table-mode.js?v=1.5.0"></script>
+<script src="js/data/shop-data.js?v=1.5.1"></script>
+<script src="js/data/shop-catalog-data.js?v=1.5.1"></script>
+<script src="js/data/app-data.js?v=1.5.1"></script>
+<script src="js/data/rules-data.js?v=1.5.1"></script>
+<script src="js/data/class-progress-data.js?v=1.5.1"></script>
+<script src="js/data/books-data.js?v=1.5.1"></script>
+<script src="js/data/srd-data.js?v=1.5.1"></script>
+<script src="js/data/srd-chars-data.js?v=1.5.1"></script>
+<script src="js/data/feats-data.js?v=1.5.1"></script>
+<script src="js/data/adventure-cast.js?v=1.5.1"></script>
+<script src="js/data/tiles-data.js?v=1.5.1"></script>
+<script src="js/icons.js?v=1.5.1"></script>
+<script src="js/app/core/01-state.js?v=1.5.1"></script>
+<script src="js/app/ui/02-render.js?v=1.5.1"></script>
+<script src="js/app/ui/03-ui.js?v=1.5.1"></script>
+<script src="js/app/ui/04-events.js?v=1.5.1"></script>
+<script src="js/app/data/05-rules.js?v=1.5.1"></script>
+<script src="js/app/ui/06-modals.js?v=1.5.1"></script>
+<script src="js/app/data/07-bestiary.js?v=1.5.1"></script>
+<script src="js/app/data/08-content.js?v=1.5.1"></script>
+<script src="js/app/media/09-music.js?v=1.5.1"></script>
+<script src="js/app/media/10-map.js?v=1.5.1"></script>
+<script src="js/app/ui/11-search.js?v=1.5.1"></script>
+<script src="js/app/pages/12-sessions.js?v=1.5.1"></script>
+<script src="js/app/pages/13-battle.js?v=1.5.1"></script>
+<script src="js/app/pages/14-generators.js?v=1.5.1"></script>
+<script src="js/app/ui/15-cards.js?v=1.5.1"></script>
+<script src="js/app/ui/16-print.js?v=1.5.1"></script>
+<script src="js/app/ui/17-sessions-ext.js?v=1.5.1"></script>
+<script src="js/app/ui/18-map-ext.js?v=1.5.1"></script>
+<script src="js/app/ui/19-polish.js?v=1.5.1"></script>
+<script src="js/app/ui/20-timer.js?v=1.5.1"></script>
+<script src="js/app/ui/21-favorites.js?v=1.5.1"></script>
+<script src="js/app/ui/22-hud.js?v=1.5.1"></script>
+<script src="js/app/ui/23-smoke.js?v=1.5.1"></script>
+<script src="js/app/ui/24-reference.js?v=1.5.1"></script>
+<script src="js/app/ui/26-encounter.js?v=1.5.1"></script>
+<script src="js/app/ui/27-character.js?v=1.5.1"></script>
+<script src="js/app/ui/28-home-dashboard.js?v=1.5.1"></script>
+<script src="js/app/ui/29-table-mode.js?v=1.5.1"></script>
+<script src="js/app/media/30-ambience.js?v=1.5.1"></script>
+<script src="js/app/ui/31-handouts.js?v=1.5.1"></script>
+<script src="js/app/ui/32-chronicle.js?v=1.5.1"></script>
 </body>
 </html>

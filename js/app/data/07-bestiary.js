@@ -1,9 +1,9 @@
 /* ═══ Bestiary (ленивая загрузка тяжёлого bestiary-data.js) ═══ */
 let bestiaryLoadingPromise = null;
 function syncHomeBestiaryCount(){
-  const el=document.getElementById('homeBestiaryCount'); if(!el) return;
-  const n=(window.BESTIARY && window.BESTIARY.length) || 0;
-  if(n) el.textContent = String(n);
+  const btn = document.querySelector('[data-pult="mob"]'); if(!btn) return;
+  const n = (window.BESTIARY && window.BESTIARY.length) || 0;
+  if(n) btn.title = 'Бестиарий: ' + n + ' монстров';
 }
 
 function mergeWowBestiary(){
