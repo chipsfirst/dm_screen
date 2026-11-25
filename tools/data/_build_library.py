@@ -2,8 +2,13 @@
 # -*- coding: utf-8 -*-
 import json, os, sys, importlib.util
 
+HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(os.path.dirname(HERE))
+DATA = os.path.join(ROOT, 'data')
+OUT = os.path.join(ROOT, 'js', 'data', 'library-data.js')
+
 # load Russian spell descriptions from sibling module
-_dd = os.path.join(os.path.dirname(os.path.abspath(__file__)), '_spell_descs_ru.py')
+_dd = os.path.join(HERE, '_spell_descs_ru.py')
 spec = importlib.util.spec_from_file_location('spelldesc', _dd)
 m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
 RU_DESC = m.RU_DESC
@@ -34,6 +39,10 @@ def time_str(t):
     unit_ru={'action':'действие','bonus':'бонус. действие','reaction':'реакция','minute':'мин','hour':'час','day':'день','free':'своб. действие'}
     return f"{n} {unit_ru.get(u,u)}"
 
+RANGE_UNIT = {'feet':'фт','foot':'фт','miles':'миль','mile':'миль',
+              'self':'Сам','touch':'Касание','sight':'в пределах видимости',
+              'unlimited':'Без границ'}
+
 def range_str(r):
     if not r: return ''
     ty=r.get('type')
@@ -43,8 +52,8 @@ def range_str(r):
         if u=='self': return 'Сам'
         if isinstance(u,list):
             return 'сам' if u and u[0]=='self' else (u[1] if len(u)>1 else '—')
-        if amt is None: return str(u)
-        return f"{amt} {u}"
+        if amt is None: return RANGE_UNIT.get(u,u)
+        return f"{amt} {RANGE_UNIT.get(u,u)}"
     if ty=='self':
         d=r.get('distance',{})
         if isinstance(d.get('type'),str) and d['type']=='self': return 'Сам'
@@ -79,7 +88,7 @@ def classes_str(c):
         return ', '.join(clmap.get(x['name'],x['name']) for x in c['fromClassList'])
     return ''
 
-sp=json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)),'data','spells-phb2024.json')))['spell']
+sp=json.load(open(os.path.join(DATA,'spells-phb2024.json')))['spell']
 srows=[]
 for s in sp:
     lvl=s.get('level',0)
@@ -94,7 +103,16 @@ for s in sp:
         'desc':RU_DESC.get(en,''),
     })
 
-it=json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)),'data','basic-items2024.json')))['basicitem']
+extra_path = os.path.join(DATA, 'spells-extra.json')
+if os.path.exists(extra_path):
+    extra = json.load(open(extra_path, encoding='utf-8')).get('spells', [])
+    seen = {x['n'] for x in srows}
+    for row in extra:
+        if row.get('n') and row['n'] not in seen:
+            srows.append(row)
+            seen.add(row['n'])
+
+it=json.load(open(os.path.join(DATA,'basic-items2024.json')))['basicitem']
 def prop_ru(p):
     if not p: return ''
     return ', '.join(prop_map.get(x,x) for x in p)
@@ -130,14 +148,13 @@ for i in it:
         'p':prop_ru(i.get('property',[])),
     })
 
-os.makedirs('/Users/vladimirkartashov/Documents/MultiTool/HomeChats/Chat-4/shirma-app', exist_ok=True)
+os.makedirs(os.path.dirname(OUT), exist_ok=True)
 # Build JS file exposing global LIBRARY
-js = "// Локальная библиотека D&D 5.5 (2024) — заклинания и снаряжение PHB. Русская локализация.\n"
+js = "// Локальная библиотека D&D 5.5 (2024) — заклинания и снаряжение PHB + дополнительные заклинания. Русская локализация.\n"
 js += "window.LIBRARY = " + json.dumps({'spells':srows,'items':irows}, ensure_ascii=False) + ";\n"
-open('/Users/vladimirkartashov/Documents/MultiTool/HomeChats/Chat-4/shirma-app/js/data/library-data.js','w',encoding='utf-8').write(js)
+open(OUT,'w',encoding='utf-8').write(js)
 print("written library-data.js")
-import os
-print("bytes:", os.path.getsize('/Users/vladimirkartashov/Documents/MultiTool/HomeChats/Chat-4/shirma-app/js/data/library-data.js'))
+print("bytes:", os.path.getsize(OUT))
 print("spells:", len(srows), "items:", len(irows))
 print("sample spell:", json.dumps(srows[0],ensure_ascii=False))
 print("sample item:", json.dumps(irows[0],ensure_ascii=False))

@@ -25,6 +25,7 @@
     return (typeof blocks !== 'undefined' ? blocks : []).filter(b => b && b.type === 'pc');
   }
   function lastPc(){ const a = pcs(); return a[a.length - 1]; }
+  const STATUS_ICONS = { session:'sessions', pc:'character', map:'map', battle:'battle' };
   function render(){
     const ss = sessionsCount();
     const pcList = pcs();
@@ -44,7 +45,7 @@
         { kind:'pc', kicker:'Персонаж', value: pc ? pc.title : 'Нет персонажа', meta: pc ? 'открыть' : 'создать' },
         { kind:'map', kicker:'Карта', value: map || 'Не создана', meta: map ? 'открыть' : 'создать' },
         { kind:'battle', kicker:'Бой', value: bp.length ? bp.length + ' участников' : 'Не начат', meta: bp.length ? 'открыть' : 'собрать' }
-      ].map(r => `<button type="button" class="pult-status-item" data-dash-open="${r.kind}" title="${escapeHtml(r.value)}"><span>${r.kicker}</span><b>${escapeHtml(r.value)}</b><small>${r.meta}</small></button>`).join('');
+      ].map(r => `<button type="button" class="pult-status-item" data-kind="${r.kind}" data-dash-open="${r.kind}" title="${escapeHtml(r.value)}"><span class="psi-ico">${typeof gi === 'function' ? gi(STATUS_ICONS[r.kind]) : ''}</span><span class="psi-kicker">${r.kicker}</span><b>${escapeHtml(r.value)}</b><small>${r.meta}</small></button>`).join('');
     }
     if(title) title.textContent = empty ? 'Начать кампанию' : 'За столом';
     dash.dataset.ready = '1';

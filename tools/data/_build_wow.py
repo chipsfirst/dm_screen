@@ -255,6 +255,115 @@ def post_fix(t):
     return t
 
 
+WOW_LANG = {
+    "Common": "Общий", "Common (WoW)": "Общий (WoW)",
+    "Forsaken": "Отрекшиеся", "Orcish": "Орочий",
+    "Darnassian": "Дарнасский", "Thalassian": "Талассийский",
+    "Dwarven": "Дварфийский", "Nerubian": "Нерубский",
+    "Eredun": "Эредун", "Nathrezim": "Натрезим",
+    "Taur-ahe": "Таур-ахе", "Kalimag": "Калимаг",
+    "Nerglish": "Нерглиш", "Nazja": "Назжа",
+    "Shath'Yar": "Шат'яр", "Furbolg": "Фурболг",
+    "Moonkin": "Лунный совух", "Quilboar": "Свинобразский",
+    "Ogre (WoW)": "Огрский (WoW)", "Goblin": "Гоблинский",
+    "Draconic (WoW)": "Драконий (WoW)",
+}
+WOW_TYPE = {
+    "cleric": "жрец", "wizard": "волшебник", "ogre": "огр",
+    "murloc": "мурлок", "naga": "нага", "barbarian": "варвар",
+    "orc": "орк", "human": "человек",
+}
+WOW_TERMS = [
+    (r"\{#[^}]+\}", ""),
+    (r"таблице зелье Miscibility в подземелье Master's Guide",
+     "таблице смешиваемости зелий в «Руководстве мастера»"),
+    (r"\bTrue State\b", "Истинное состояние"),
+    (r"\bNPC\b", "НИП"),
+    (r"\bMiscibility\b", "смешиваемость"),
+    (r"\bMaster's Guide\b", "«Руководство мастера»"),
+    (r"\bKingsmourne\b", "Королевская скорбь"),
+    (r"\bLight\b", "Свет"),
+    (r"type=beast", "тип «зверь»"),
+    (r"level=1;2;3;4;5", "заклинания 1–5 уровня"),
+    (r"использовали XPHB, но не тратите использование своего XPHB",
+     "использовали эту способность, но не тратите её использование"),
+    (r"использовали XPHB", "использовали способность из «Книги игрока 2024»"),
+    (r"использовали «Книга игрока 2024», но не тратите использование своего «Книга игрока 2024»",
+     "использовали эту способность, но не тратите её использование"),
+    (r"использовали «Книга игрока 2024»", "использовали способность из «Книги игрока 2024»"),
+    (r"использование своего «Книга игрока 2024»", "использование этой способности"),
+    (r"«Книга игрока 2024»", "«Книги игрока 2024»"),
+    (r"Prerequisite:", "Требование:"),
+    (r"\bRenown\b", "Известность"),
+    (r"\bXPHB\b", "«Книга игрока 2024»"),
+    (r"\bHit Die\b", "кость хитов"),
+    (r"\bbut doesn't speak\b", "но не говорит"),
+    (r"\bbut does not speak\b", "но не говорит"),
+    (r"\bUnderstands\b", "Понимает"),
+    (r"\btwo others\b", "два других"),
+    (r"\ball languages\b", "все языки"),
+    (r"\ball\b", "все"),
+    (r"\blanguages\b", "языки"),
+    (r"\bmiles\b", "миль"),
+    (r"\bTelepathy\b", "Телепатия"),
+    (r"\bwith Gnomeregan\b", "с Гномреганом"),
+    (r"\bHearthstone\b", "Хартстоун"),
+    (r"\bSteamwheedle\b", "Парящей шахты"),
+    (r"\bbeneficial\b", "благотворный"),
+    (r"\bdetrimental\b", "вредный"),
+    (r"\bminor\b", "малый"),
+    (r"\bmajor\b", "большой"),
+    (r"\bXP\b", "ОП"),
+    (r"\bCantrip\b", "заговор"),
+    (r"\bDruid\b", "друид"),
+    (r"\bPotion\b", "зелье"),
+    (r"\bDungeon\b", "подземелье"),
+    (r"\bGraze\b", "Задевание"),
+    (r"\bSap\b", "Ошеломление"),
+    (r"\bFinesse\b", "Фехтовальное"),
+    (r"\bRadiant\b", "излучение"),
+    (r"\bSummon\b", "Призыв"),
+    (r"\bFiend\b", "исчадие"),
+]
+
+
+def fix_wow_terms(payload):
+    """Убирает английские остатки в типах, языках и описаниях WoW."""
+    def clean(s, typ=False, lang=False):
+        s = str(s or "")
+        if typ:
+            for en, ru in sorted(WOW_TYPE.items(), key=lambda kv: -len(kv[0])):
+                s = re.sub(rf"(?<!\w){re.escape(en)}(?!\w)", ru, s, flags=re.I)
+        if lang:
+            s = re.sub(r"\ball languages\b", "все языки", s, flags=re.I)
+            s = re.sub(r"\ball\b", "все языки", s, flags=re.I)
+            for en, ru in sorted(WOW_LANG.items(), key=lambda kv: -len(kv[0])):
+                s = re.sub(rf"(?<!\w){re.escape(en)}(?!\w)", ru, s, flags=re.I)
+        for pat, rep in WOW_TERMS:
+            s = re.sub(pat, rep, s, flags=re.I)
+        def prop(m):
+            n = int(m.group(1))
+            good = m.group(2).lower().startswith("благ")
+            if n == 1:
+                return f"{n} {'полезное' if good else 'вредное'} свойство"
+            return f"{n} {'полезных' if good else 'вредных'} свойства"
+        s = re.sub(r"(\d+)\s+свойств(?:о|а)?\s+(?:малый|большой)\s+(благотворный|вредный)",
+                   prop, s, flags=re.I)
+        s = re.sub(r"\s+", " ", s)
+        return re.sub(r"\s+([,.;:!?])", r"\1", s).strip()
+
+    for m in payload["monsters"]:
+        m["type"] = clean(m.get("type", ""), typ=True)
+        m["lang"] = clean(m.get("lang", ""), lang=True)
+        for a in m.get("acts", []):
+            a["text"] = clean(a.get("text", ""))
+    for s in payload["spells"]:
+        s["desc"] = clean(s.get("desc", ""))
+    for i in payload["items"]:
+        i["d"] = clean(i.get("d", ""))
+    return payload
+
+
 def fix_type(t):
     m = TYPE_LOWER.match(t or "")
     if not m:
@@ -650,7 +759,7 @@ def main():
         print("  П:", i["n"], "|", i["type"], "|", i["rarity"], "|", i["d"][:60])
     if "--dry" in sys.argv:
         return
-    payload = {"monsters": monsters, "spells": spells, "items": items}
+    payload = fix_wow_terms({"monsters": monsters, "spells": spells, "items": items})
     header = ("// World of Warcraft для D&D 5e (конверсия) — бестиарий, заклинания, предметы. "
               f"{len(monsters)}/{len(spells)}/{len(items)}.\n")
     open(OUT, "w", encoding="utf-8").write(header + "window.WOW_DATA = " + json.dumps(payload, ensure_ascii=False) + ";\n")

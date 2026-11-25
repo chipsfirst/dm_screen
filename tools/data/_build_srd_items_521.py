@@ -126,6 +126,7 @@ def clean(t):
     t = t.replace('&nbsp;', ' ').replace('&amp;', 'и').replace('&quot;', '"')
     t = re.sub(r'_([^_]+)_', r'\1', t)
     t = t.replace('**', '')
+    t = t.replace('Hit Die', 'кость хитов').replace('hit die', 'кость хитов')
     return re.sub(r'\s+', ' ', t).strip()
 
 

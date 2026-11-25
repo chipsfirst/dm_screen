@@ -3058,3 +3058,47 @@ body.table-mode footer{display:none!important}
 .canvas-link-label[data-type="enemy"]{fill:#c95d55}
 .canvas-link-label[data-type="secret"]{fill:#a77bd6}
 .canvas-link-label[data-type="debt"]{fill:#c9974e}
+
+/* Акценты статусов Главной */
+.home-pult .pult-status-item{display:grid; grid-template-columns:24px minmax(0,1fr); grid-template-rows:auto auto auto;
+  column-gap:8px; align-items:center; padding:8px 10px!important;
+  background:linear-gradient(180deg, color-mix(in srgb, var(--panel2) 88%, var(--accent2) 12%), var(--panel2))!important}
+.pult-status-item[data-kind="session"]{--k:#6d9bc3}
+.pult-status-item[data-kind="pc"]{--k:#a183c9}
+.pult-status-item[data-kind="map"]{--k:#7fa36a}
+.pult-status-item[data-kind="battle"]{--k:#c27a66}
+.psi-ico{grid-column:1; grid-row:1 / span 3; width:24px; height:24px; display:grid; place-items:center; color:var(--k,var(--accent2))}
+.psi-ico .gi{width:21px; height:21px}
+.psi-kicker{grid-column:2; grid-row:1; font-size:9px; letter-spacing:.09em; text-transform:uppercase; color:var(--muted)}
+.home-pult .pult-status-item b{grid-column:2; grid-row:2; font-size:12px}
+.home-pult .pult-status-item small{grid-column:2; grid-row:3; font-size:10.5px; color:var(--muted)}
+.home-pult .pult-status-item:hover{border-color:color-mix(in srgb, var(--k,var(--accent2)) 55%, var(--line)); background:var(--panel)!important}
+
+/* Визуальный слой Главной */
+#view-home{position:relative; background:
+  radial-gradient(circle at 12% 4%, color-mix(in srgb, var(--accent2) 10%, transparent), transparent 38%),
+  radial-gradient(circle at 92% 0%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 42%),
+  var(--bg)}
+#view-home::after{content:""; position:absolute; right:18px; bottom:12px; width:420px; height:420px; pointer-events:none;
+  background:url("assets/logo.png") center/contain no-repeat; opacity:.035; filter:grayscale(1)}
+.home-pult{position:relative; z-index:1}
+.home-pult .home-hero{padding:5px 2px 11px; border-bottom:1px solid color-mix(in srgb, var(--accent2) 18%, var(--line))}
+.home-pult .home-logo{filter:drop-shadow(0 6px 14px rgba(0,0,0,.35)) drop-shadow(0 0 12px color-mix(in srgb, var(--accent2) 22%, transparent))}
+.home-pult .home-hero h1{font-size:26px; letter-spacing:.01em; text-shadow:0 2px 10px rgba(0,0,0,.18)}
+.home-pult .home-lead{color:var(--muted)}
+.home-pult .home-dashboard{position:relative; overflow:hidden; box-shadow:0 10px 28px rgba(0,0,0,.16);
+  background:linear-gradient(180deg, var(--panel), color-mix(in srgb, var(--panel2) 70%, var(--panel)))}
+.home-pult .home-dashboard::before{content:""; position:absolute; left:0; top:0; bottom:0; width:3px;
+  background:linear-gradient(180deg, var(--accent2), transparent)}
+.home-pult .home-dash-head h2{font-size:18px}
+.home-pult .pult-tools-head h2{font-size:18px; letter-spacing:.01em}
+.home-pult .pult-grid button{background:linear-gradient(180deg, var(--panel), var(--panel2)); box-shadow:0 2px 8px rgba(0,0,0,.10)}
+.home-pult .pult-grid button:nth-child(-n+4){border-color:color-mix(in srgb, var(--accent2) 34%, var(--line))}
+.home-pult .pult-grid button:hover{box-shadow:0 5px 14px rgba(0,0,0,.16)}
+.home-pult .pult-links{gap:7px; padding-top:3px}
+.home-pult .pult-links button{border:1px solid var(--line)!important; border-radius:999px; padding:4px 10px!important;
+  background:var(--panel)!important; color:var(--accent2); font-size:11.5px}
+.home-pult .pult-links button:hover{border-color:var(--accent2)!important; text-decoration:none; background:var(--panel2)!important}
+@media (max-width:700px){
+  #view-home::after{width:280px; height:280px; right:-30px; bottom:60px}
+}
