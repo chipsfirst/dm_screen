@@ -115,9 +115,10 @@ function render(){
       return `<div class="block" data-id="${b.id}"><div class="block-head"><div class="ttl-note"><span>${escapeHtml(b.title||'Блок')}</span></div></div><div class="block-body"><div class="hint">Ошибка отображения блока: ${escapeHtml(String((e&&e.message)||e))}</div></div></div>`;
     } };
     if(freeLayout){
-      canvas.innerHTML = list.map((b,idx)=>{
+      canvas.innerHTML = '<svg class="canvas-links" id="canvasLinks" aria-hidden="true"></svg>' + list.map((b,idx)=>{
         const card = safeCard(b);
-        const x = b.x!=null?b.x:(24 + (idx%12)*32), y = b.y!=null?b.y:(24 + (idx%12)*26);
+        const x = b.x!=null?b.x:(40 + (idx%4)*400), y = b.y!=null?b.y:(40 + Math.floor(idx/4)*280);
+        b.x = x; b.y = y;
         return `<div class="canvas-free-wrap" style="position:absolute;left:${x}px;top:${y}px;width:${b.w||360}px;z-index:${b._z||0}">${card}</div>`;
       }).join('');
     } else {

@@ -298,6 +298,14 @@
             <button type="button" data-view="grid" title="Сетка карточек">▦</button>
             <button type="button" data-view="list" title="Список одной колонкой">☰</button>
           </span>
+          <button id="canvasFreeToggle" type="button" aria-pressed="false" title="Свободный холст: карточки можно двигать по доске">Холст</button>
+          <span class="canvas-zoom" id="canvasZoomBar" hidden>
+            <button type="button" id="canvasZoomOut" title="Уменьшить">−</button>
+            <span id="canvasZoomVal">100%</span>
+            <button type="button" id="canvasZoomIn" title="Увеличить">＋</button>
+            <button type="button" id="canvasZoomFit" title="Вписать всё">⤢</button>
+            <button type="button" id="canvasZoomReset" title="Сбросить масштаб">100</button>
+          </span>
           <span class="canvas-cols" role="group" aria-label="Число колонок">
             <button type="button" data-cols="2" title="Две колонки">2</button>
             <button type="button" data-cols="3" title="Три колонки">3</button>
@@ -307,6 +315,10 @@
         </span>
       </div>
       <div class="canvas" id="canvas"></div>
+      <div class="canvas-minimap" id="canvasMinimap" hidden aria-label="Мини-карта холста">
+        <div class="cm-cards" id="canvasMinimapCards"></div>
+        <div class="cm-view" id="canvasMinimapView"></div>
+      </div>
     </div>
     <div class="tabview" id="view-sessions" hidden>
       <div class="sessions-wrap">
@@ -1029,6 +1041,32 @@
   </div>
 </div>
 
+<!-- Редактор связи на холсте -->
+<div class="modal" id="linkModal" hidden>
+  <div class="modal-box link-box">
+    <div class="modal-head">
+      <strong><span class="gi" data-gi="link"></span> Связь карточек</strong>
+      <button class="modal-close" id="linkClose">✕</button>
+    </div>
+    <div class="link-form">
+      <label>Подпись<input id="linkLabel" maxlength="48" placeholder="например, «союзники»"></label>
+      <label>Тип
+        <select id="linkType">
+          <option value="link">Связь</option>
+          <option value="ally">Союз</option>
+          <option value="enemy">Враг</option>
+          <option value="secret">Тайна</option>
+          <option value="debt">Долг</option>
+        </select>
+      </label>
+      <div class="link-actions">
+        <button type="button" id="linkDelete" class="menu-danger">Удалить связь</button>
+        <button type="button" id="linkSave">Сохранить</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Универсальное окно: сообщение / подтверждение / ввод -->
 <div class="modal" id="uiModal" hidden>
   <div class="modal-box ui-box">
@@ -1415,5 +1453,6 @@
 <script src="js/app/media/30-ambience.js?v=1.5.1"></script>
 <script src="js/app/ui/31-handouts.js?v=1.5.1"></script>
 <script src="js/app/ui/32-chronicle.js?v=1.5.1"></script>
+<script src="js/app/ui/33-canvas.js?v=1.5.1"></script>
 </body>
 </html>

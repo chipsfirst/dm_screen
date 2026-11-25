@@ -36,6 +36,7 @@ const APP_PARTS = [
   'js/app/media/30-ambience.js',
   'js/app/ui/31-handouts.js',
   'js/app/ui/32-chronicle.js',
+  'js/app/ui/33-canvas.js',
 ];
 const files = [
   'tests/dom-stub.js',

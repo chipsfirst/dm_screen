@@ -207,13 +207,17 @@ function renderBlockOnly(id){
     el.outerHTML = blockCard(b);
   }
 }
+function canvasZoomFactor(){
+  return typeof window.canvasZoomFactor === 'function' ? window.canvasZoomFactor() : 1;
+}
 function startBlockResize(e, handle){
   e.stopPropagation();
   const block=handle.closest('.block'), id=block.dataset.id, b=findBlock(id); if(!b) return;
+  const z=canvasZoomFactor();
   const startX=e.clientX, startW=b.w||block.offsetWidth||820;
   block.classList.add('dragging');
   pointerDrag(e, ev=>{
-    const nw=Math.max(180,Math.min(1600, startW + (ev.clientX-startX)));
+    const nw=Math.max(180,Math.min(1600, startW + (ev.clientX-startX)/z));
     block.style.width=nw+'px'; b.w=nw;
   }, ()=>{
     block.classList.remove('dragging'); save();
@@ -222,15 +226,41 @@ function startBlockResize(e, handle){
 }
 function startBlockDrag(e, head){
   const block=head.closest('.block');
-  const id=block.dataset.id, wrap=block.parentElement, b=findBlock(id); if(!b) return;
+  const id=block.dataset.id, b=findBlock(id); if(!b) return;
+  const z=canvasZoomFactor();
+  const selected = window.canvasSelected;
+  const ids = (selected && selected.has(id)) ? [...selected] : [id];
+  const items = [];
+  ids.forEach(bid=>{
+    const it = findBlock(bid);
+    if(!it) return;
+    const el = document.querySelector('#canvas .block[data-id="'+bid+'"]');
+    const wrap = el && el.parentElement;
+    if(!wrap || !wrap.classList.contains('canvas-free-wrap')) return;
+    items.push({ b:it, wrap, block:el, x:it.x!=null?it.x:wrap.offsetLeft, y:it.y!=null?it.y:wrap.offsetTop });
+  });
+  if(!items.length){
+    const wrap=block.parentElement;
+    items.push({ b, wrap, block, x:b.x!=null?b.x:wrap.offsetLeft, y:b.y!=null?b.y:wrap.offsetTop });
+  }
   const startX=e.clientX, startY=e.clientY;
-  const ox=b.x!=null?b.x:wrap.offsetLeft, oy=b.y!=null?b.y:wrap.offsetTop;
-  block.classList.add('dragging');
-  b._z = Math.max(1,(b._z||0)+1); wrap.style.zIndex=b._z;
+  items.forEach(it=>{
+    it.block.classList.add('dragging');
+    it.b._z = Math.max(1,(it.b._z||0)+1);
+    it.wrap.style.zIndex = it.b._z;
+  });
   pointerDrag(e, ev=>{
-    b.x = Math.max(0, ox+(ev.clientX-startX)); b.y = Math.max(0, oy+(ev.clientY-startY));
-    wrap.style.left=b.x+'px'; wrap.style.top=b.y+'px';
-  }, ()=>{ block.classList.remove('dragging'); save(); });
+    const dx=(ev.clientX-startX)/z, dy=(ev.clientY-startY)/z;
+    items.forEach(it=>{
+      it.b.x = Math.max(0, it.x + dx);
+      it.b.y = Math.max(0, it.y + dy);
+      it.wrap.style.left = it.b.x + 'px';
+      it.wrap.style.top = it.b.y + 'px';
+    });
+  }, ()=>{
+    items.forEach(it=> it.block.classList.remove('dragging'));
+    save();
+  });
 }
 function toggleBlock(id){
   if(collapsed.has(id)) collapsed.delete(id); else collapsed.add(id);

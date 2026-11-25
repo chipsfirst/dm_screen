@@ -139,7 +139,7 @@ function sanitizeRes(list){
 }
 function freeCascadePos(){
   const n = blocks.length % 12;
-  return { x: 24 + n*32, y: 24 + n*26 };
+  return { x: 40 + (n%4)*400, y: 40 + Math.floor(n/4)*280 };
 }
 function prepareCanvasForAdd(){
   activeParentId = null;
@@ -397,6 +397,17 @@ function sanitizeBlocks(arr){
           text:String(typeof a==='string'?a:((a&&a.text)||'')).slice(0,3000)
         }))
       };
+    }
+    if(Array.isArray(raw.links)){
+      b.links = [...new Set(raw.links.map(v=>String(v).slice(0,80)).filter(Boolean))].slice(0,80);
+    }
+    if(raw.linkMeta && typeof raw.linkMeta === 'object'){
+      b.linkMeta = {};
+      Object.entries(raw.linkMeta).slice(0,80).forEach(([k,v])=>{
+        const label = String((v && v.label) || '').slice(0,48);
+        const type = ['link','ally','enemy','secret','debt'].includes(v && v.type) ? v.type : 'link';
+        if(label || type !== 'link') b.linkMeta[String(k).slice(0,80)] = { label, type };
+      });
     }
     out.push(b);
   });
