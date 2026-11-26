@@ -425,9 +425,26 @@ function uiZoomApply(v){
   const btn=document.getElementById('btnMenu');
   const panel=document.getElementById('menuPanel');
   if(!btn||!panel) return;
-  btn.addEventListener('click', e=>{ e.stopPropagation(); panel.classList.toggle('open'); });
-  document.addEventListener('click', e=>{ if(!e.target.closest('.menu-wrap')) panel.classList.remove('open'); });
-  panel.addEventListener('click', ()=> panel.classList.remove('open'));
+  function setMenu(open){
+    panel.classList.toggle('open', open);
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    document.body.classList.toggle('menu-open', open);
+    if(open){
+      const dicePanel=document.getElementById('diceTrayPanel');
+      if(dicePanel && !dicePanel.hidden) document.getElementById('diceTrayToggle')?.click();
+    }
+  }
+  btn.addEventListener('click', e=>{
+    e.stopPropagation();
+    setMenu(!panel.classList.contains('open'));
+  });
+  document.addEventListener('click', e=>{
+    if(!e.target.closest('.menu-wrap')) setMenu(false);
+  });
+  panel.addEventListener('click', ()=> setMenu(false));
+  document.addEventListener('keydown', e=>{
+    if(e.key === 'Escape' && panel.classList.contains('open')) setMenu(false);
+  });
 })();
 
 /* ═══ Верхняя панель больше не сворачивается — сбрасываем сохранённое состояние ═══ */

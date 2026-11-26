@@ -214,7 +214,7 @@ function buildBackupPayload(){
   try{ battleLogData = JSON.parse(localStorage.getItem('shirma_battle_log_v1')||'null'); }catch(e){}
   let turn = null;
   try{ turn = JSON.parse(localStorage.getItem('shirma_battle_turn_v1')||'null'); }catch(e){}
-  return { version:5, exported:Date.now(), blocks, media, sessions, map, battle, battleLog: battleLogData, battleTurn: turn, music: musicMetaSnapshot(), ambience: (()=>{ try{ return JSON.parse(localStorage.getItem('shirma_ambience_v1')||'null'); }catch(e){ return null; } })(), templates: (typeof blockTemplates!=='undefined' ? blockTemplates : []), sessionTemplates: (()=>{ try{ return JSON.parse(localStorage.getItem('shirma_session_templates_v1')||'[]'); }catch(e){ return []; } })() };
+  return { version:5, exported:Date.now(), blocks, media, sessions, map, battle, battleLog: battleLogData, battleTurn: turn, music: musicMetaSnapshot(), ambience: (()=>{ try{ return JSON.parse(localStorage.getItem('shirma_ambience_v1')||'null'); }catch(e){ return null; } })(), templates: (typeof blockTemplates!=='undefined' ? blockTemplates : []), sessionTemplates: (()=>{ try{ return JSON.parse(localStorage.getItem('shirma_session_templates_v1')||'[]'); }catch(e){ return []; } })(), contentPacks: (()=>{ try{ return JSON.parse(localStorage.getItem('shirma_content_packs_v1')||'[]'); }catch(e){ return []; } })() };
 }
 function scheduleDirSave(){
   if(!saveDirHandle) return;

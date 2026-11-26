@@ -92,7 +92,7 @@
           </span>
           <span class="acts-sep"></span>
           <span class="menu-wrap">
-            <button id="btnMenu" title="Действия, справочники и команды" aria-label="Меню: действия и команды">☰</button>
+            <button id="btnMenu" title="Действия, справочники и команды" aria-label="Меню: действия и команды" aria-expanded="false" aria-controls="menuPanel">☰</button>
             <div class="menu-panel" id="menuPanel">
               <span class="menu-caption">Быстрые действия</span>
               <button id="addPc" title="Лист персонажа">+ Персонаж</button>
@@ -105,6 +105,7 @@
               <button id="btnTables" title="Броски по случайным таблицам (d100)"><span class="gi" data-gi="tables"></span> Таблицы</button>
               <button id="btnRules" title="Правила D&amp;D 5.5 и советы по проведению"><span class="gi" data-gi="book"></span> Правила</button>
               <button id="btnGen" title="Генераторы: сокровища, травмы, критические эффекты, бой"><span class="gi" data-gi="dice"></span> Генераторы</button>
+              <button id="btnContentPacks" title="Готовые паки: сокровища, лут, НПС и советы"><span class="gi" data-gi="book"></span> Контент-паки</button>
               <span class="menu-caption">Вид</span>
               <button id="btnDensity" aria-pressed="false" title="Компактные карточки на ширме"><span class="gi" data-gi="expand"></span> Компактные карточки</button>
               <button id="btnTableHud" aria-pressed="false" title="Компактная полоса с ходом, таймером и кубиками"><span class="gi" data-gi="battle"></span> HUD «За столом»</button>
@@ -112,6 +113,8 @@
               <span class="menu-caption">Печать</span>
               <button id="btnPrintAll" title="Печать всех карточек ширмы или сохранение в PDF"><span class="gi" data-gi="export"></span> Печать ширмы / PDF</button>
               <button id="btnPrintBattle" title="Печать трекера боя или сохранение в PDF"><span class="gi" data-gi="battle"></span> Печать боя / PDF</button>
+              <button id="btnPartySheet" title="Одна страница с КД, хитами, спасбросками и пассивными проверками всей группы"><span class="gi" data-gi="character"></span> Партийная шпаргалка</button>
+              <button id="btnPrintKit" title="Палатки инициативы и НПС, карточки предметов"><span class="gi" data-gi="note"></span> Печатные мелочи</button>
               <button id="btnHandouts" title="Письма, розыскные листы, меню таверны и записки"><span class="gi" data-gi="note"></span> Раздатки</button>
               <button id="btnChronicle" title="Хроника кампании из сессий и журнала боя"><span class="gi" data-gi="book"></span> Хроника</button>
               <span class="menu-caption">Данные</span>
@@ -181,11 +184,43 @@
                 <button type="button" data-pult="rules" title="Справочник правил"><span class="gi" data-gi="book"></span><b>Справочник</b></button>
                 <button type="button" data-pult="gen" title="Сокровища, НПС и генераторы"><span class="gi" data-gi="dice"></span><b>Генераторы</b></button>
                 <button type="button" data-pult="library" title="Заклинания и предметы"><span class="gi" data-gi="book"></span><b>База</b></button>
+                <button type="button" data-pult="content" title="Готовые паки: сокровища, лут, НПС и советы"><span class="gi" data-gi="book"></span><b>Контент</b></button>
               </div>
               <p class="home-actions-hint">Эффекты, таблицы, музыка и магазин — в меню ☰.</p>
             </section>
+            <section class="pult-tools pult-print" aria-labelledby="pultPrintTitle">
+              <div class="pult-tools-head"><h2 id="pultPrintTitle">Печать и раздатки</h2><span>Быстро к столу</span></div>
+              <div class="pult-grid">
+                <button type="button" data-print-act="party" title="Партийная шпаргалка на A4: КД, хиты, спасброски и пассивные проверки">
+                  <span class="gi" data-gi="character"></span><b>Партия</b><small id="ppPartyMeta">в партии: 0</small>
+                </button>
+                <button type="button" data-print-act="init" title="Палатки инициативы со сгибом">
+                  <span class="gi" data-gi="battle"></span><b>Инициатива</b><small id="ppInitMeta">в бою: 0</small>
+                </button>
+                <button type="button" data-print-act="npc" title="Палатки с именами НПС из заметок">
+                  <span class="gi" data-gi="note"></span><b>НПС</b><small id="ppNpcMeta">заметок: 0</small>
+                </button>
+                <button type="button" data-print-act="items" title="Карточки магических предметов SRD 5.2.1">
+                  <span class="gi" data-gi="book"></span><b>Предметы</b><small id="ppItemsMeta">SRD 5.2.1</small>
+                </button>
+                <button type="button" data-print-act="states" title="Карточки 15 состояний и жетоны для стола">
+                  <span class="gi" data-gi="effects"></span><b>Состояния</b><small id="ppStateMeta">карточки и жетоны</small>
+                </button>
+                <button type="button" data-print-act="handouts" title="Письма, розыскные листы, меню и записки">
+                  <span class="gi" data-gi="note"></span><b>Раздатки</b><small>письма и записки</small>
+                </button>
+                <button type="button" data-print-act="battle" title="Трекер боя: инициатива, хиты и состояния">
+                  <span class="gi" data-gi="battle"></span><b>Бой / PDF</b><small id="ppBattleMeta">участников: 0</small>
+                </button>
+                <button type="button" data-print-act="screen" title="Печать всей ширмы или сохранение в PDF">
+                  <span class="gi" data-gi="export"></span><b>Ширма / PDF</b><small id="ppScreenMeta">карточек: 0</small>
+                </button>
+              </div>
+            </section>
             <div class="pult-links">
               <button type="button" data-pult="rules">Правила за столом</button>
+              <button type="button" id="pultChronicle">Хроника</button>
+              <button type="button" id="pultTableMode">Режим «За столом»</button>
               <button type="button" id="dashTraining">Обучение</button>
             </div>
           </div>
@@ -733,7 +768,7 @@
             <span class="af-hint">Автор: Ролёвки от Вовки</span>
             <span class="af-hint" title="Иконки: Lorc, Delapouite — game-icons.net, CC BY 3.0">Иконки: game-icons.net</span>
             <span class="af-hint" title="Магические предметы SRD 5.2.1 — Wizards of the Coast, CC-BY-4.0">SRD 5.2.1 · CC-BY-4.0</span>
-            <span class="af-hint af-ver">Ширма мастера <span id="appVersion">1.5.3</span> · <a class="af-link" href="https://github.com/chipsfirst/dm_screen/releases" target="_blank" rel="noopener">что нового</a></span>
+            <span class="af-hint af-ver">Ширма мастера <span id="appVersion">1.6.0</span> · <a class="af-link" href="https://github.com/chipsfirst/dm_screen/releases" target="_blank" rel="noopener">что нового</a></span>
             <a class="af-link" href="https://boosty.to/vovkaroleplay" target="_blank" rel="noopener">Поддержать</a>
             <a class="af-link" href="https://github.com/chipsfirst/dm_screen" target="_blank" rel="noopener">Репозиторий на GitHub ↗</a>
           </span>
@@ -1026,6 +1061,83 @@
   </div>
 </div>
 
+<!-- Партийная шпаргалка и печатные мелочи -->
+<div class="modal" id="printKitModal" hidden>
+  <div class="modal-box printkit-box">
+    <div class="modal-head">
+      <strong id="printKitTitle">Печатные мелочи</strong>
+      <button class="modal-close" id="printKitClose" type="button" aria-label="Закрыть">✕</button>
+    </div>
+    <div class="pk-tabs" role="tablist" aria-label="Что печатаем">
+      <button type="button" role="tab" data-pk-tab="party" aria-selected="true">Партия</button>
+      <button type="button" role="tab" data-pk-tab="init" aria-selected="false">Инициатива</button>
+      <button type="button" role="tab" data-pk-tab="npc" aria-selected="false">НПС</button>
+      <button type="button" role="tab" data-pk-tab="items" aria-selected="false">Предметы</button>
+      <button type="button" role="tab" data-pk-tab="states" aria-selected="false">Состояния</button>
+    </div>
+    <div class="pk-body">
+      <section class="pk-pane" data-pk-pane="party">
+        <p class="hint">КД, хиты, инициатива, спасброски, пассивные Внимательность, Анализ и Проницательность. Одна карточка на героя.</p>
+        <div class="pk-toolbar">
+          <button type="button" data-pk-all="party">Выбрать всех</button>
+          <span class="hint" id="pkPartyCount"></span>
+        </div>
+        <div class="pk-list" id="pkPartyList"></div>
+      </section>
+      <section class="pk-pane" data-pk-pane="init" hidden>
+        <p class="hint">Палатки со сгибом: номер, имя и поля для инициативы, КД, хитов и состояний. Если бой пуст, берутся персонажи с ширмы.</p>
+        <div class="pk-toolbar">
+          <button type="button" data-pk-all="init">Выбрать всех</button>
+          <label class="pk-check"><input type="checkbox" id="pkInitStats" checked> Заполнять КД и ХП</label>
+          <label class="pk-check">Пустых палаток
+            <select id="pkInitBlank" aria-label="Сколько пустых палаток добавить">
+              <option value="0">0</option>
+              <option value="2">2</option>
+              <option value="4" selected>4</option>
+              <option value="6">6</option>
+              <option value="8">8</option>
+            </select>
+          </label>
+          <span class="hint" id="pkInitCount"></span>
+        </div>
+        <div class="pk-list" id="pkInitList"></div>
+      </section>
+      <section class="pk-pane" data-pk-pane="npc" hidden>
+        <p class="hint">Палатки для имён НПС из заметок. На сгибе — имя, ниже первая строка описания.</p>
+        <div class="pk-toolbar">
+          <button type="button" data-pk-all="npc">Выбрать всех</button>
+          <span class="hint" id="pkNpcCount"></span>
+        </div>
+        <div class="pk-list" id="pkNpcList"></div>
+      </section>
+      <section class="pk-pane" data-pk-pane="items" hidden>
+        <p class="hint">Карточки магических предметов SRD 5.2.1: название, редкость и краткое описание.</p>
+        <div class="pk-toolbar">
+          <input id="pkItemSearch" type="search" placeholder="Поиск предмета…" aria-label="Поиск предмета">
+          <button type="button" id="pkItemClear">Снять выбор</button>
+          <span class="hint" id="pkItemCount"></span>
+        </div>
+        <div class="pk-list pk-items-list" id="pkItemList"></div>
+      </section>
+      <section class="pk-pane" data-pk-pane="states" hidden>
+        <p class="hint">15 состояний D&amp;D 2024. Карточки — для стола, жетоны — на миниатюры и инициативу.</p>
+        <div class="pk-toolbar">
+          <label class="pk-check"><input type="checkbox" id="pkStateCards" checked> Карточки</label>
+          <label class="pk-check"><input type="checkbox" id="pkStateTokens" checked> Жетоны состояний</label>
+          <label class="pk-check"><input type="checkbox" id="pkInitTokens" checked> Номера 1–20</label>
+          <button type="button" data-pk-all="states">Выбрать все</button>
+          <span class="hint" id="pkStateCount"></span>
+        </div>
+        <div class="pk-list pk-cond-list" id="pkStateList"></div>
+      </section>
+    </div>
+    <div class="pk-foot">
+      <span class="hint" id="pkHint"></span>
+      <button type="button" id="pkPrint">Печать / PDF</button>
+    </div>
+  </div>
+</div>
+
 <!-- Хроника кампании -->
 <div class="modal" id="chronicleModal" hidden>
   <div class="modal-box chronicle-box">
@@ -1234,6 +1346,41 @@
   </div>
 </div>
 
+<!-- Контент-паки -->
+<div class="modal" id="contentModal" hidden>
+  <div class="modal-box content-box">
+    <div class="modal-head">
+      <strong><span class="gi" data-gi="book"></span> Контент-паки</strong>
+      <button class="modal-close" id="contentClose" type="button" aria-label="Закрыть">✕</button>
+    </div>
+    <div class="content-tabs" role="tablist" aria-label="Раздел контента">
+      <button type="button" role="tab" class="content-tab on" data-content-tab="treasure" aria-selected="true">Сокровища</button>
+      <button type="button" role="tab" class="content-tab" data-content-tab="loot" aria-selected="false">Лут</button>
+      <button type="button" role="tab" class="content-tab" data-content-tab="npc" aria-selected="false">НПС</button>
+      <button type="button" role="tab" class="content-tab" data-content-tab="advice" aria-selected="false">Советы</button>
+      <button type="button" role="tab" class="content-tab" data-content-tab="import" aria-selected="false">Импорт</button>
+    </div>
+    <div class="content-toolbar" id="contentToolbar">
+      <input id="contentSearch" type="search" placeholder="Поиск по контенту…" aria-label="Поиск по контенту">
+      <select id="contentPack" aria-label="Контент-пак"></select>
+      <button type="button" id="contentRandom">Случайно</button>
+    </div>
+    <div class="content-body" id="contentBody"></div>
+    <div class="content-import" id="contentImport" hidden>
+      <p>CSV с колонками <code>type,title,tags,text</code> и полями для НПС: <code>role,want,fear,secret,quirk,voice</code>. Типы: <code>treasure</code>, <code>loot</code>, <code>npc</code>, <code>advice</code>.</p>
+      <div class="content-import-actions">
+        <input id="contentCsvFile" type="file" accept=".csv,text/csv" hidden>
+        <button type="button" id="contentCsvPick">Выбрать CSV</button>
+        <button type="button" id="contentCsvTemplate">Скачать шаблон</button>
+      </div>
+      <div class="hint" id="contentImportStatus"></div>
+      <h3>Мои паки</h3>
+      <div id="contentPacksList"></div>
+    </div>
+    <div class="content-foot"><span class="hint" id="contentCount"></span></div>
+  </div>
+</div>
+
 <!-- Global search modal (Ctrl+K) -->
 <div class="modal" id="goModal" hidden>
   <div class="modal-box modal-lg">
@@ -1410,49 +1557,54 @@
   </div>
 </div>
 
-<script src="js/data/shop-data.js?v=1.5.3"></script>
-<script src="js/data/shop-catalog-data.js?v=1.5.3"></script>
-<script src="js/data/app-data.js?v=1.5.3"></script>
-<script src="js/data/rules-data.js?v=1.5.3"></script>
-<script src="js/data/class-progress-data.js?v=1.5.3"></script>
-<script src="js/data/books-data.js?v=1.5.3"></script>
-<script src="js/data/srd-data.js?v=1.5.3"></script>
-<script src="js/data/srd-chars-data.js?v=1.5.3"></script>
-<script src="js/data/feats-data.js?v=1.5.3"></script>
-<script src="js/data/adventure-cast.js?v=1.5.3"></script>
-<script src="js/data/tiles-data.js?v=1.5.3"></script>
-<script src="js/icons.js?v=1.5.3"></script>
-<script src="js/app/core/01-state.js?v=1.5.3"></script>
-<script src="js/app/ui/02-render.js?v=1.5.3"></script>
-<script src="js/app/ui/03-ui.js?v=1.5.3"></script>
-<script src="js/app/ui/04-events.js?v=1.5.3"></script>
-<script src="js/app/data/05-rules.js?v=1.5.3"></script>
-<script src="js/app/ui/06-modals.js?v=1.5.3"></script>
-<script src="js/app/data/07-bestiary.js?v=1.5.3"></script>
-<script src="js/app/data/08-content.js?v=1.5.3"></script>
-<script src="js/app/media/09-music.js?v=1.5.3"></script>
-<script src="js/app/media/10-map.js?v=1.5.3"></script>
-<script src="js/app/ui/11-search.js?v=1.5.3"></script>
-<script src="js/app/pages/12-sessions.js?v=1.5.3"></script>
-<script src="js/app/pages/13-battle.js?v=1.5.3"></script>
-<script src="js/app/pages/14-generators.js?v=1.5.3"></script>
-<script src="js/app/ui/15-cards.js?v=1.5.3"></script>
-<script src="js/app/ui/16-print.js?v=1.5.3"></script>
-<script src="js/app/ui/17-sessions-ext.js?v=1.5.3"></script>
-<script src="js/app/ui/18-map-ext.js?v=1.5.3"></script>
-<script src="js/app/ui/19-polish.js?v=1.5.3"></script>
-<script src="js/app/ui/20-timer.js?v=1.5.3"></script>
-<script src="js/app/ui/21-favorites.js?v=1.5.3"></script>
-<script src="js/app/ui/22-hud.js?v=1.5.3"></script>
-<script src="js/app/ui/23-smoke.js?v=1.5.3"></script>
-<script src="js/app/ui/24-reference.js?v=1.5.3"></script>
-<script src="js/app/ui/26-encounter.js?v=1.5.3"></script>
-<script src="js/app/ui/27-character.js?v=1.5.3"></script>
-<script src="js/app/ui/28-home-dashboard.js?v=1.5.3"></script>
-<script src="js/app/ui/29-table-mode.js?v=1.5.3"></script>
-<script src="js/app/media/30-ambience.js?v=1.5.3"></script>
-<script src="js/app/ui/31-handouts.js?v=1.5.3"></script>
-<script src="js/app/ui/32-chronicle.js?v=1.5.3"></script>
-<script src="js/app/ui/33-canvas.js?v=1.5.3"></script>
+<script src="js/data/shop-data.js?v=1.6.0"></script>
+<script src="js/data/shop-catalog-data.js?v=1.6.0"></script>
+<script src="js/data/app-data.js?v=1.6.0"></script>
+<script src="js/data/rules-data.js?v=1.6.0"></script>
+<script src="js/data/class-progress-data.js?v=1.6.0"></script>
+<script src="js/data/books-data.js?v=1.6.0"></script>
+<script src="js/data/srd-data.js?v=1.6.0"></script>
+<script src="js/data/srd-chars-data.js?v=1.6.0"></script>
+<script src="js/data/conditions-data.js?v=1.6.0"></script>
+<script src="js/data/content-packs.js?v=1.6.0"></script>
+<script src="js/data/content-packs-extra.js?v=1.6.0"></script>
+<script src="js/data/feats-data.js?v=1.6.0"></script>
+<script src="js/data/adventure-cast.js?v=1.6.0"></script>
+<script src="js/data/tiles-data.js?v=1.6.0"></script>
+<script src="js/icons.js?v=1.6.0"></script>
+<script src="js/app/core/01-state.js?v=1.6.0"></script>
+<script src="js/app/ui/02-render.js?v=1.6.0"></script>
+<script src="js/app/ui/03-ui.js?v=1.6.0"></script>
+<script src="js/app/ui/04-events.js?v=1.6.0"></script>
+<script src="js/app/data/05-rules.js?v=1.6.0"></script>
+<script src="js/app/ui/06-modals.js?v=1.6.0"></script>
+<script src="js/app/data/07-bestiary.js?v=1.6.0"></script>
+<script src="js/app/data/08-content.js?v=1.6.0"></script>
+<script src="js/app/media/09-music.js?v=1.6.0"></script>
+<script src="js/app/media/10-map.js?v=1.6.0"></script>
+<script src="js/app/ui/11-search.js?v=1.6.0"></script>
+<script src="js/app/pages/12-sessions.js?v=1.6.0"></script>
+<script src="js/app/pages/13-battle.js?v=1.6.0"></script>
+<script src="js/app/pages/14-generators.js?v=1.6.0"></script>
+<script src="js/app/ui/15-cards.js?v=1.6.0"></script>
+<script src="js/app/ui/16-print.js?v=1.6.0"></script>
+<script src="js/app/ui/17-sessions-ext.js?v=1.6.0"></script>
+<script src="js/app/ui/18-map-ext.js?v=1.6.0"></script>
+<script src="js/app/ui/19-polish.js?v=1.6.0"></script>
+<script src="js/app/ui/20-timer.js?v=1.6.0"></script>
+<script src="js/app/ui/21-favorites.js?v=1.6.0"></script>
+<script src="js/app/ui/22-hud.js?v=1.6.0"></script>
+<script src="js/app/ui/23-smoke.js?v=1.6.0"></script>
+<script src="js/app/ui/24-reference.js?v=1.6.0"></script>
+<script src="js/app/ui/26-encounter.js?v=1.6.0"></script>
+<script src="js/app/ui/27-character.js?v=1.6.0"></script>
+<script src="js/app/ui/28-home-dashboard.js?v=1.6.0"></script>
+<script src="js/app/ui/29-table-mode.js?v=1.6.0"></script>
+<script src="js/app/media/30-ambience.js?v=1.6.0"></script>
+<script src="js/app/ui/31-handouts.js?v=1.6.0"></script>
+<script src="js/app/ui/32-chronicle.js?v=1.6.0"></script>
+<script src="js/app/ui/33-canvas.js?v=1.6.0"></script>
+<script src="js/app/ui/34-print-kit.js?v=1.6.0"></script>
+<script src="js/app/ui/35-content.js?v=1.6.0"></script>
 </body>
 </html>

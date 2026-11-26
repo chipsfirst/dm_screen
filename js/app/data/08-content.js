@@ -481,6 +481,15 @@ document.getElementById('fileInput').addEventListener('change', e=>{
             extra=true;
           }catch(e){}
         }
+        if(Array.isArray(data.contentPacks)){
+          try{
+            const packs = typeof window.sanitizeContentPacks === 'function'
+              ? window.sanitizeContentPacks(data.contentPacks)
+              : data.contentPacks;
+            localStorage.setItem('shirma_content_packs_v1', JSON.stringify(packs));
+            if(packs.length) extra=true;
+          }catch(e){}
+        }
         if(extra){ toast('Восстановлены сессии/карта/бой — применяю…'); setTimeout(()=>location.reload(), 700); }
       }
     }catch(err){ uiAlert('Ошибка чтения файла'); }

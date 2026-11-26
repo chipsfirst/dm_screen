@@ -25,6 +25,13 @@
     return (typeof blocks !== 'undefined' ? blocks : []).filter(b => b && b.type === 'pc');
   }
   function lastPc(){ const a = pcs(); return a[a.length - 1]; }
+  function noteCount(){
+    return (typeof blocks !== 'undefined' ? blocks : []).filter(b => b && b.type === 'note').length;
+  }
+  function setMeta(id, text){
+    const el = document.getElementById(id);
+    if(el) el.textContent = text;
+  }
   const STATUS_ICONS = { session:'sessions', pc:'character', map:'map', battle:'battle' };
   function render(){
     const ss = sessionsCount();
@@ -32,7 +39,18 @@
     const pc = pcList[pcList.length - 1];
     const map = mapLabel();
     const bp = (typeof battleParts !== 'undefined' ? battleParts : []);
+    const notes = noteCount();
+    const allCards = (typeof blocks !== 'undefined' ? blocks.length : 0);
+    const itemCards = (window.SRD_ITEMS && Array.isArray(window.SRD_ITEMS.items)) ? window.SRD_ITEMS.items.length : 0;
+    const stateCards = Array.isArray(window.CONDITIONS_2024) ? window.CONDITIONS_2024.length : 0;
     const empty = !ss.length && !pcList.length && !map && !bp.length;
+    setMeta('ppPartyMeta', 'в партии: ' + pcList.length);
+    setMeta('ppInitMeta', bp.length ? 'в бою: ' + bp.length : 'из партии: ' + pcList.length);
+    setMeta('ppNpcMeta', 'заметок: ' + notes);
+    setMeta('ppItemsMeta', itemCards ? 'карточек: ' + itemCards : 'SRD 5.2.1');
+    setMeta('ppStateMeta', stateCards ? 'состояний: ' + stateCards : 'карточки и жетоны');
+    setMeta('ppBattleMeta', bp.length ? 'участников: ' + bp.length : 'нет боя');
+    setMeta('ppScreenMeta', 'карточек: ' + allCards);
     const start = document.getElementById('pultStart');
     const title = document.getElementById('dashTitle');
     const box = document.getElementById('dashLast');
@@ -89,8 +107,18 @@
       document.getElementById('btnGen')?.click();
     } else if(kind === 'library'){
       document.getElementById('btnLibrary')?.click();
+    } else if(kind === 'content'){
+      if(typeof window.openContentPacks === 'function') window.openContentPacks();
+      else document.getElementById('btnContentPacks')?.click();
     }
     setTimeout(render, 250);
+  }
+  function openPrint(kind){
+    if(kind === 'handouts'){ document.getElementById('btnHandouts')?.click(); return; }
+    if(kind === 'battle'){ document.getElementById('btnPrintBattle')?.click(); return; }
+    if(kind === 'screen'){ document.getElementById('btnPrintAll')?.click(); return; }
+    if(typeof window.openPrintKit === 'function') window.openPrintKit(kind);
+    else toast('Печать недоступна');
   }
   function show(on){
     dash.hidden = !on;
@@ -101,6 +129,8 @@
     if(on) render();
   }
   root.addEventListener('click', e => {
+    const printAct = e.target.closest('[data-print-act]');
+    if(printAct){ e.preventDefault(); openPrint(printAct.dataset.printAct); return; }
     const pult = e.target.closest('[data-pult]');
     if(pult){ e.preventDefault(); open(pult.dataset.pult); return; }
     const row = e.target.closest('[data-dash-open]');
@@ -108,6 +138,12 @@
   });
   document.getElementById('dashTraining')?.addEventListener('click', () => {
     if(typeof window.startQuickStart === 'function') window.startQuickStart();
+  });
+  document.getElementById('pultChronicle')?.addEventListener('click', () => {
+    document.getElementById('btnChronicle')?.click();
+  });
+  document.getElementById('pultTableMode')?.addEventListener('click', () => {
+    document.getElementById('btnTableMode')?.click();
   });
   document.querySelectorAll('.tab').forEach(t => {
     if(t.dataset.tab === 'home') t.addEventListener('click', () => setTimeout(render, 60));

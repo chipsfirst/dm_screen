@@ -37,6 +37,8 @@ const APP_PARTS = [
   'js/app/ui/31-handouts.js',
   'js/app/ui/32-chronicle.js',
   'js/app/ui/33-canvas.js',
+  'js/app/ui/34-print-kit.js',
+  'js/app/ui/35-content.js',
 ];
 const files = [
   'tests/dom-stub.js',
@@ -48,6 +50,9 @@ const files = [
   'js/data/books-data.js',
   'js/data/srd-data.js',
   'js/data/srd-chars-data.js',
+  'js/data/conditions-data.js',
+  'js/data/content-packs.js',
+  'js/data/content-packs-extra.js',
   'js/icons.js',
   ...APP_PARTS,
 ];
@@ -200,9 +205,15 @@ for(const [name, cls] of Object.entries(progress || {})){
   if(!cls.subclass || !cls.subclass.name_ru) fail(`прогрессия: у класса ${name} нет подкласса`);
 }
 
-for(const name of ['openRulesPanel','openCharacterBuilder','openPrintAllCards','buildBattleTrackerSheet','openPrintBattle','renderHomeDashboard']){
+for(const name of ['openRulesPanel','openCharacterBuilder','openPrintAllCards','buildBattleTrackerSheet','openPrintBattle','renderHomeDashboard','buildConditionSheets','buildStateTokenSheets','buildInitTokenSheets','openContentPacks']){
   if(typeof vm.runInContext(name, ctx) !== 'function') fail(`не загружена функция ${name}`);
 }
+const conditionCount = vm.runInContext('CONDITIONS_2024.length', ctx);
+if(conditionCount !== 15) fail(`состояния: ${conditionCount}, ожидалось 15`);
+const packPresets = vm.runInContext('CONTENT_PACK_PRESETS', ctx);
+if(!Array.isArray(packPresets) || packPresets.length < 3) fail(`контент-паки: паков ${packPresets && packPresets.length}, ожидалось не меньше 3`);
+const packItems = packPresets.reduce((n,p)=> n + (p.items || []).length, 0);
+if(packItems < 100) fail(`контент-паки: записей ${packItems}, ожидалось не меньше 100`);
 
 const backup = vm.runInContext('buildBackupPayload()', ctx);
 if(!backup || backup.version !== 5) fail('резервная копия: неверная версия');
