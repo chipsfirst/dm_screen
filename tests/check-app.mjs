@@ -53,6 +53,8 @@ const files = [
   'js/data/conditions-data.js',
   'js/data/content-packs.js',
   'js/data/content-packs-extra.js',
+  'js/data/content-packs-more.js',
+  'js/data/content-packs-court-academy.js',
   'js/icons.js',
   ...APP_PARTS,
 ];
@@ -211,9 +213,9 @@ for(const name of ['openRulesPanel','openCharacterBuilder','openPrintAllCards','
 const conditionCount = vm.runInContext('CONDITIONS_2024.length', ctx);
 if(conditionCount !== 15) fail(`состояния: ${conditionCount}, ожидалось 15`);
 const packPresets = vm.runInContext('CONTENT_PACK_PRESETS', ctx);
-if(!Array.isArray(packPresets) || packPresets.length < 3) fail(`контент-паки: паков ${packPresets && packPresets.length}, ожидалось не меньше 3`);
+if(!Array.isArray(packPresets) || packPresets.length < 7) fail(`контент-паки: паков ${packPresets && packPresets.length}, ожидалось не меньше 7`);
 const packItems = packPresets.reduce((n,p)=> n + (p.items || []).length, 0);
-if(packItems < 100) fail(`контент-паки: записей ${packItems}, ожидалось не меньше 100`);
+if(packItems < 270) fail(`контент-паки: записей ${packItems}, ожидалось не меньше 270`);
 
 const backup = vm.runInContext('buildBackupPayload()', ctx);
 if(!backup || backup.version !== 5) fail('резервная копия: неверная версия');

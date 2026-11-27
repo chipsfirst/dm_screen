@@ -36,3 +36,6 @@ build/
 
 # Промежуточный файл сборки CoS (данные уже в bestiary-data.js)
 bestiary-cos.js
+
+# Приватные паки (не публикуются)
+private-packs/

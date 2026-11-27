@@ -4,13 +4,22 @@
   if(!modal) return;
 
   const PACK_KEY = 'shirma_content_packs_v1';
-  const TYPE_LABEL = { treasure:'Сокровище', loot:'Лут', npc:'НПС', advice:'Совет' };
-  const TYPE_ORDER = ['treasure','loot','npc','advice'];
+  const TYPE_LABEL = {
+    treasure:'Сокровище', loot:'Лут', npc:'НПС', advice:'Совет',
+    hook:'Зацепка', location:'Локация', scene:'Сцена', monster:'Монстр'
+  };
+  const TYPE_ORDER = ['treasure','loot','npc','advice','hook','location','scene','monster'];
+  const ADVENTURE_TYPES = ['hook','location','scene','monster','npc'];
+  const TAB_ORDER = ['treasure','loot','npc','advice','adventure','import'];
   const TYPE_ALIAS = {
     treasure:['treasure','сокровище','сокровища','клад'],
     loot:['loot','лут','предмет','добыча'],
     npc:['npc','нпс','персонаж'],
-    advice:['advice','совет','советы']
+    advice:['advice','совет','советы'],
+    hook:['hook','зацепка','зацепки','сюжет'],
+    location:['location','локация','локации','место'],
+    scene:['scene','сцена','сцены'],
+    monster:['monster','монстр','монстры','статблок']
   };
   const FIELD_ALIAS = {
     type:['type','тип'],
@@ -27,7 +36,12 @@
     quirk:['quirk','привычка','манера'],
     voice:['voice','голос'],
     moment:['moment','момент'],
-    example:['example','пример']
+    example:['example','пример'],
+    chapter:['chapter','глава'],
+    clue:['clue','улика','подсказка'],
+    danger:['danger','опасность','угроза'],
+    reward:['reward','награда'],
+    bestiary:['bestiary','бестиарий','монстр_бестиария']
   };
 
   const esc = v => (typeof escapeHtml === 'function' ? escapeHtml(String(v == null ? '' : v)) : String(v == null ? '' : v));
@@ -68,7 +82,12 @@
       quirk:clean(raw.quirk, 400),
       voice:clean(raw.voice, 400),
       moment:clean(raw.moment, 60),
-      example:clean(raw.example, 900)
+      example:clean(raw.example, 900),
+      chapter:clean(raw.chapter, 80),
+      clue:clean(raw.clue, 900),
+      danger:clean(raw.danger, 900),
+      reward:clean(raw.reward, 600),
+      bestiary:clean(raw.bestiary, 120)
     };
   }
   function sanitizePacks(raw){
@@ -82,6 +101,8 @@
         title:clean(p.title, 80) || 'Мой пак',
         description:clean(p.description, 300),
         license:clean(p.license, 120),
+        kind:p.kind === 'adventure' || items.some(x => ADVENTURE_TYPES.includes(x.type)) ? 'adventure' : 'content',
+        private:true,
         builtin:false,
         items
       };
@@ -106,7 +127,9 @@
       (p.items || []).forEach((it, i) => out.push(Object.assign({}, it, {
         _id:p.id + ':' + i,
         _pack:p.title,
-        _packId:p.id
+        _packId:p.id,
+        _kind:p.kind || 'content',
+        _private:!!p.private
       })));
     });
     return out;
@@ -118,6 +141,8 @@
     if(it.type === 'loot') return it.rarity || '';
     if(it.type === 'npc') return it.role || '';
     if(it.type === 'advice') return it.moment || '';
+    if(it.type === 'hook' || it.type === 'location' || it.type === 'scene') return it.chapter || '';
+    if(it.type === 'monster') return [it.chapter, it.bestiary].filter(Boolean).join(' · ');
     return '';
   }
   function detailsOf(it){
@@ -128,6 +153,12 @@
       add('Привычка', it.quirk); add('Голос', it.voice);
     } else if(it.type === 'advice'){
       add('Пример', it.example);
+    } else if(it.type === 'hook'){
+      add('Улика', it.clue);
+    } else if(it.type === 'location' || it.type === 'scene'){
+      add('Опасность', it.danger); add('Награда', it.reward);
+    } else if(it.type === 'monster'){
+      add('Бестиарий', it.bestiary);
     } else {
       add('Зацепка', it.hook);
     }
@@ -139,14 +170,14 @@
     return `<article class="content-card${featured === it._id ? ' is-featured' : ''}" data-content-id="${esc(it._id)}">
       <div class="content-card-top">
         <span class="content-kind k-${esc(it.type)}">${esc(TYPE_LABEL[it.type])}</span>
-        <span class="content-pack">${esc(it._pack)}</span>
+        <span class="content-pack">${esc(it._pack)}${it._private ? ' · приватный' : ''}</span>
       </div>
       <h3>${esc(it.title)}</h3>
       ${meta ? `<div class="content-meta">${esc(meta)}</div>` : ''}
       ${it.text ? `<p>${esc(it.text)}</p>` : ''}
       ${detailsOf(it)}
       ${tags ? `<div class="content-tags">${tags}</div>` : ''}
-      <div class="content-actions"><button type="button" data-content-add="${esc(it._id)}">На ширму</button></div>
+      <div class="content-actions"><button type="button" data-content-add="${esc(it._id)}">${it.type === 'monster' && it.bestiary ? 'В бестиарий' : 'На ширму'}</button></div>
     </article>`;
   }
 
@@ -162,7 +193,7 @@
   function renderPackSelect(){
     const packs = allPacks();
     packSelect.innerHTML = '<option value="all">Все паки</option>' + packs.map(p =>
-      `<option value="${esc(p.id)}">${esc(p.title)}${p.builtin ? '' : ' · мой'}</option>`
+      `<option value="${esc(p.id)}">${esc(p.title)}${p.kind === 'adventure' ? ' · приключение' : ''}${p.builtin ? '' : ' · приватный'}</option>`
     ).join('');
     if(!packs.some(p => p.id === selectedPack)) selectedPack = 'all';
     packSelect.value = selectedPack;
@@ -170,10 +201,13 @@
   function match(it){
     if(selectedPack !== 'all' && it._packId !== selectedPack) return false;
     if(!query) return true;
-    return norm([it.title, it.text, it.hook, it.role, it.want, it.fear, it.secret, it.quirk, it.voice, it.moment, it.example, (it.tags || []).join(' ')].join(' ')).indexOf(query) >= 0;
+    return norm([it.title, it.text, it.hook, it.role, it.want, it.fear, it.secret, it.quirk, it.voice, it.moment, it.example, it.chapter, it.clue, it.danger, it.reward, it.bestiary, (it.tags || []).join(' ')].join(' ')).indexOf(query) >= 0;
   }
   function currentItems(){
-    let list = flatItems().filter(it => it.type === activeTab && match(it));
+    let list = flatItems().filter(it => {
+      if(activeTab === 'adventure') return it._kind === 'adventure' && ADVENTURE_TYPES.includes(it.type) && match(it);
+      return it.type === activeTab && match(it);
+    });
     if(featured){
       const i = list.findIndex(it => it._id === featured);
       if(i > 0) list.unshift(list.splice(i, 1)[0]);
@@ -207,7 +241,7 @@
       : '<div class="lib-empty">Своих паков пока нет. Загрузите CSV или скачайте шаблон.</div>';
   }
   function setTab(tab){
-    activeTab = (tab === 'import' || TYPE_ORDER.includes(tab)) ? tab : 'treasure';
+    activeTab = TAB_ORDER.includes(tab) ? tab : 'treasure';
     featured = null;
     modal.querySelectorAll('[data-content-tab]').forEach(b => {
       const on = b.dataset.contentTab === activeTab;
@@ -227,13 +261,27 @@
     if(it.quirk) lines.push('Привычка: ' + it.quirk);
     if(it.voice) lines.push('Голос: ' + it.voice);
     if(it.hook) lines.push('', 'Зацепка: ' + it.hook);
+    if(it.clue) lines.push('', 'Улика: ' + it.clue);
+    if(it.danger) lines.push('', 'Опасность: ' + it.danger);
+    if(it.reward) lines.push('', 'Награда: ' + it.reward);
+    if(it.bestiary) lines.push('', 'Бестиарий: ' + it.bestiary);
     if(it.example) lines.push('', 'Пример: ' + it.example);
     if(it.tags && it.tags.length) lines.push('', 'Теги: ' + it.tags.join(', '));
     return lines.join('\n');
   }
-  function addToScreen(id){
+  async function addToScreen(id){
     const it = findItem(id);
     if(!it) return;
+    if(it.type === 'monster' && it.bestiary && typeof addMonsterBlock === 'function'){
+      if(typeof ensureBestiary === 'function') await ensureBestiary().catch(()=>{});
+      const pool = (window.BESTIARY || []).concat(typeof bestAll !== 'undefined' && Array.isArray(bestAll) ? bestAll : []);
+      const mon = pool.find(x => x && (x.n === it.bestiary || x.en === it.bestiary));
+      if(mon){
+        closeModal(modal);
+        addMonsterBlock(mon);
+        return;
+      }
+    }
     const b = makeBlock('note', it.title);
     Object.assign(b, freeCascadePos());
     b.text = textForNote(it);
@@ -286,7 +334,10 @@
     return map;
   }
   function importCsv(text, filename){
-    const rows = parseCsv(text);
+    const rows = parseCsv(text).filter(r => {
+      const first = String((r && r[0]) || '').trim().replace(/^\ufeff/, '');
+      return !first.startsWith('#');
+    });
     if(rows.length < 2){ importStatus = 'В CSV нет строк с данными.'; renderImport(); return; }
     const map = headerMap(rows[0]);
     if(map.type === undefined || map.title === undefined){
@@ -317,15 +368,52 @@
     setTab(items[0].type);
     toast('Контент-пак загружен: ' + items.length);
   }
+  function importJson(text, filename){
+    let data;
+    try{ data = JSON.parse(text); }
+    catch(e){ importStatus = 'JSON не прочитан: проверьте синтаксис.'; renderImport(); return; }
+    const raw = Array.isArray(data) ? data : (data && Array.isArray(data.packs) ? data.packs : [data]);
+    const packs = sanitizePacks(raw);
+    if(!packs.length){ importStatus = 'В JSON нет паков с корректными записями.'; renderImport(); return; }
+    packs.forEach((p, i) => {
+      if(userPacks.some(x => x.id === p.id)) p.id = p.id + '-' + Date.now().toString(36) + '-' + i;
+      p.private = true;
+      userPacks.push(p);
+    });
+    savePacks();
+    const first = packs[0];
+    selectedPack = first.id;
+    const n = packs.reduce((sum, p) => sum + p.items.length, 0);
+    importStatus = `Импортировано ${packs.length} паков, ${n} записей.`;
+    renderPackSelect();
+    setTab(first.kind === 'adventure' ? 'adventure' : (TYPE_ORDER.includes(first.items[0] && first.items[0].type) ? first.items[0].type : 'treasure'));
+    toast('Приватный пак загружен: ' + n);
+  }
   function downloadTemplate(){
-    const headers = ['type','title','tags','tier','rarity','text','hook','role','want','fear','secret','quirk','voice','moment','example'];
-    const rows = [
-      ['treasure','Кошелёк карманника','город;улица','1–4','','4d6 см и 1d6 зм.','Монета — жетон гильдии.','','','','','','','',''],
-      ['loot','Ключ с тремя бородками','город;ключ','','обычный','Подходит к трём замкам.','Один замок — в доме союзника.','','','','','','','',''],
-      ['npc','Барнабас Толстый','таверна','','','','','трактирщик','Купить соседнюю таверну','Пожара','Продаёт слухи','Протирает кружку','Громкий, добродушный','',''],
-      ['advice','Одна привычка — уже характер','нпс;отыгрыш','','','Дайте НПС одну привычку.','','','','','','','','Перед сессией','Трактирщик протирает кружку, когда лжёт.']
+    const headers = ['type','title','tags','tier','rarity','text','hook','role','want','fear','secret','quirk','voice','moment','example','chapter','clue','danger','reward','bestiary'];
+    const comments = [
+      ['# Шаблон контент-пака. Строки, начинающиеся с #, при импорте пропускаются.'],
+      ['# type: treasure | loot | npc | advice | hook | location | scene | monster.'],
+      ['# title: название; tags: теги через ; (например, город;таверна).'],
+      ['# tier: полоса уровней для сокровищ; rarity: редкость для лута.'],
+      ['# text: основной текст; hook: зацепка для сокровища или лута.'],
+      ['# role, want, fear, secret, quirk, voice: поля НПС.'],
+      ['# moment, example: когда уместен совет и пример.'],
+      ['# chapter: глава приключения; clue: улика; danger: опасность; reward: награда.'],
+      ['# bestiary: точное имя статблока в бестиарии для type=monster.'],
+      ['# Пустые поля оставляйте пустыми. Строку заголовков ниже не меняйте.']
     ];
-    const csv = '\ufeff' + [headers, ...rows].map(r => r.map(x => `"${String(x).replace(/"/g, '""')}"`).join(',')).join('\r\n');
+    const rows = [
+      ['treasure','Кошелёк карманника','город;улица','1–4','','4d6 см и 1d6 зм.','Монета — жетон гильдии.','','','','','','','','','','','','',''],
+      ['loot','Ключ с тремя бородками','город;ключ','','обычный','Подходит к трём замкам.','Один замок — в доме союзника.','','','','','','','','','','','','',''],
+      ['npc','Барнабас Толстый','таверна','','','','','трактирщик','Купить соседнюю таверну','Пожара','Продаёт слухи','Протирает кружку','Громкий, добродушный','','','','','',''],
+      ['advice','Одна привычка — уже характер','нпс;отыгрыш','','','Дайте НПС одну привычку.','','','','','','','','Перед сессией','Трактирщик протирает кружку, когда лжёт.','','','','',''],
+      ['hook','Письмо без подписи','Баровия;начало','','','Письмо приглашает в Баровию.','','','','','','','','','','Начало','Печать на письме совпадает с гербом замка.','','',''],
+      ['location','Старая мельница','Баровия;локация','','','Кто здесь живёт и что можно узнать.','','','','','','','','','','Баровия','','Стража или хозяин','Что найдёт группа',''],
+      ['scene','Похороны без слёз','Баровия;сцена','','','Что происходит и кто вовлечён.','','','','','','','','','','Баровия','','Кто сорвёт сцену','Что получат герои',''],
+      ['monster','Страд фон Зарович','Баровия;финал','','','Как использовать в сцене, не копируя статблок.','','','','','','','','','','Замок Равенлофт','','Он не должен убивать сразу','Разговор вместо боя','Страд фон Зарович']
+    ];
+    const csv = '\ufeff' + [...comments, headers, ...rows].map(r => r.map(x => `"${String(x).replace(/"/g, '""')}"`).join(',')).join('\r\n');
     if(typeof saveFile === 'function') saveFile('content-pack-template.csv', csv, 'text/csv');
     else toast('Шаблон недоступен: нет сохранения файла');
   }
@@ -364,6 +452,19 @@
   document.getElementById('contentRandom')?.addEventListener('click', randomPick);
   search?.addEventListener('input', () => { query = norm(search.value); featured = null; render(); });
   packSelect?.addEventListener('change', () => { selectedPack = packSelect.value; featured = null; render(); });
+  document.getElementById('contentJsonPick')?.addEventListener('click', () => document.getElementById('contentJsonFile')?.click());
+  document.getElementById('contentJsonFile')?.addEventListener('change', e => {
+    const file = e.target.files && e.target.files[0];
+    if(!file) return;
+    if(typeof file.text === 'function'){
+      file.text().then(txt => importJson(txt, file.name)).catch(() => { importStatus = 'Не удалось прочитать JSON.'; renderImport(); });
+    } else {
+      const r = new FileReader();
+      r.onload = () => importJson(String(r.result || ''), file.name);
+      r.readAsText(file);
+    }
+    e.target.value = '';
+  });
   document.getElementById('contentCsvPick')?.addEventListener('click', () => document.getElementById('contentCsvFile')?.click());
   document.getElementById('contentCsvFile')?.addEventListener('change', e => {
     const file = e.target.files && e.target.files[0];

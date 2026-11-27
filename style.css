@@ -3250,6 +3250,10 @@ body.table-mode footer{display:none!important}
 .content-kind.k-loot{color:#6fa8dc; border-color:#6fa8dc}
 .content-kind.k-npc{color:#86c48f; border-color:#86c48f}
 .content-kind.k-advice{color:#c9a3e6; border-color:#c9a3e6}
+.content-kind.k-hook{color:#e0a458; border-color:#e0a458}
+.content-kind.k-location{color:#7fb3e6; border-color:#7fb3e6}
+.content-kind.k-scene{color:#d98a8a; border-color:#d98a8a}
+.content-kind.k-monster{color:#b45f5f; border-color:#b45f5f}
 .content-pack{font-size:10.5px; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
 .content-card h3{font-size:16px; margin:0; line-height:1.2; overflow-wrap:anywhere}
 .content-meta{font-size:11px; color:var(--accent2); text-transform:uppercase; letter-spacing:.04em}
